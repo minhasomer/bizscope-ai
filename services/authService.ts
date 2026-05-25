@@ -1,0 +1,530 @@
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { ProfileService } from './profileService';
+import { getEffectivePlan } from '../src/utils/planUtils';
+import { isDemoMode } from '../src/config/appConfig';
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  fullName?: string;
+  avatarUrl?: string;
+  /**
+   * Resolved effective plan (SubscriptionPlan string).
+   * In live mode this is derived from role + subscription_tier.
+   * In demo mode this comes from the demo-switcher localStorage key.
+   */
+  plan: string;
+  /** Raw role from the Supabase profiles table. Defaults to 'Explorer' in mock mode. */
+  role: string;
+  /** Raw subscription_tier from the Supabase profiles table. Defaults to 'Explorer' in mock mode. */
+  subscription_tier: string;
+}
+
+export interface AuthState {
+  user: UserProfile | null;
+  loading: boolean;
+  isMock: boolean;
+  error: string | null;
+}
+
+// ─── Storage keys ───────────────────────────────────────────────────────────
+
+/**
+ * Mock/demo sessions are stored in sessionStorage, NOT localStorage.
+ *
+ * sessionStorage is:
+ *  - Preserved across same-tab page refreshes (so F5 keeps the session)
+ *  - Cleared when the tab or browser window is closed
+ *  - Isolated per tab (no cross-tab bleed)
+ *
+ * This prevents the most common auth bug: a stale mock session from a previous
+ * browser run appearing as "signed in" on the next visit.
+ */
+const MOCK_USER_KEY = 'bizscope_mock_user';
+
+// ─── Internal helpers ──────────────────────────────────────────────────────
+
+/**
+ * Resolve plan/role/subscription_tier from an active Supabase session.
+ *
+ * Always reads the public.profiles table when Supabase is configured.
+ * isDemoMode controls AI/Stripe mock behaviour — it does NOT skip the DB.
+ *
+ * In Demo Mode with real auth the role still comes from the DB, but the
+ * effective plan may be overridden by the demo plan-switcher stored in
+ * localStorage (so the DevAdminPanel preview persists across refreshes).
+ */
+async function resolvePlanFromSession(
+  userId: string,
+  email: string,
+  authMeta: Record<string, unknown>,
+): Promise<{ plan: string; role: string; subscription_tier: string }> {
+  console.log('[Auth] Resolving profile — userId:', userId, '| email:', email);
+
+  const profile = await ProfileService.ensureProfileExists(
+    userId,
+    email,
+    (authMeta.full_name ?? authMeta.fullName ?? authMeta.name ?? '') as string,
+    (authMeta.avatar_url ?? authMeta.picture ?? '') as string,
+  );
+
+  if (!profile) {
+    console.warn('[Auth] Profile unavailable — falling back to Explorer defaults');
+    return { plan: 'Explorer', role: 'Explorer', subscription_tier: 'Explorer' };
+  }
+
+  // In Demo Mode respect any plan override the switcher wrote to localStorage,
+  // but always use the real role from the DB (not a hardcoded 'Explorer').
+  let plan: string;
+  if (isDemoMode) {
+    plan =
+      localStorage.getItem(`bizscope_user_plan_${email}`) ??
+      localStorage.getItem('bizscope_user_plan') ??
+      getEffectivePlan({ role: profile.role, subscription_tier: profile.subscription_tier }, null);
+  } else {
+    plan = getEffectivePlan(
+      { role: profile.role, subscription_tier: profile.subscription_tier },
+      null,
+    );
+  }
+
+  console.log('[Auth] Final effective role:', profile.role, '| subscription_tier:', profile.subscription_tier, '| plan:', plan);
+  return { plan, role: profile.role, subscription_tier: profile.subscription_tier };
+}
+
+// ─── AuthService ────────────────────────────────────────────────────────────
+
+export class AuthService {
+  public static isSupabaseActive(): boolean {
+    return isSupabaseConfigured && !!supabase;
+  }
+
+  public static isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // ── Session bootstrap ────────────────────────────────────────────────────
+
+  /**
+   * Load the initial session on page load (called once from App.tsx).
+   *
+   * Decision tree:
+   *  1. Supabase configured → only trust Supabase session. If no Supabase session,
+   *     the user is NOT signed in. Never fall through to mock recovery — that would
+   *     auto-sign-in with stale localStorage/sessionStorage data after logout.
+   *  2. Supabase NOT configured → pure sandbox environment; restore mock session
+   *     from sessionStorage if one exists (written by signInAsDemo / signIn mock path).
+   */
+  public static async getInitialSession(): Promise<{ user: UserProfile | null; isMock: boolean }> {
+    if (this.isSupabaseActive()) {
+      try {
+        const { data: { session }, error } = await supabase!.auth.getSession();
+        if (error) throw error;
+
+        if (session?.user) {
+          const authUser = session.user;
+          const meta = (authUser.user_metadata ?? {}) as Record<string, unknown>;
+          const email = authUser.email ?? '';
+
+          // FAST PATH: build identity directly from the JWT — no DB call.
+          //
+          // resolvePlanFromSession() (DB round-trip: 500 ms–8 s) is intentionally
+          // skipped here. Instead we seed the plan from the localStorage cache that
+          // the subscription writes on every successful profile fetch. On first-ever
+          // load the cache is empty and we default to 'Explorer'; the
+          // INITIAL_SESSION handler in subscribeToAuthChanges fires concurrently
+          // and updates plan/role from the DB in the background.
+          const cachedPlan = (
+            localStorage.getItem(`bizscope_user_plan_${email}`) ??
+            localStorage.getItem('bizscope_user_plan') ??
+            'Explorer'
+          );
+
+          localStorage.setItem('bizscope_user_email', email);
+
+          console.log('[Auth] getInitialSession fast-path — plan from cache:', cachedPlan);
+
+          return {
+            user: {
+              id: authUser.id,
+              email,
+              fullName: (meta.full_name ?? meta.fullName ?? meta.name ?? email.split('@')[0]) as string,
+              avatarUrl:
+                (meta.avatar_url ?? meta.picture ?? '') as string ||
+                `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
+              plan: cachedPlan,
+              // role and subscription_tier are updated by the INITIAL_SESSION
+              // subscription handler once the DB profile fetch completes.
+              role: 'Explorer',
+              subscription_tier: 'Explorer',
+            },
+            isMock: false,
+          };
+        }
+      } catch (err) {
+        console.error('[AuthService] getInitialSession error:', err);
+      }
+
+      // Supabase is configured but returned no session → the user is signed out.
+      // DO NOT fall through to mock recovery — a stale sessionStorage/localStorage
+      // entry must not silently restore a ghost session after logout.
+      return { user: null, isMock: false };
+    }
+
+    // ── Supabase NOT configured → pure sandbox ──────────────────────────────
+    // Attempt to restore a mock session that was explicitly created this browser
+    // session (stored in sessionStorage, not localStorage).
+    try {
+      const stored = sessionStorage.getItem(MOCK_USER_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as UserProfile;
+        if (parsed?.email) {
+          localStorage.setItem('bizscope_user_email', parsed.email);
+          return {
+            user: { role: 'Explorer', subscription_tier: 'Explorer', ...parsed },
+            isMock: true,
+          };
+        }
+      }
+    } catch {
+      // Corrupt sessionStorage — start fresh.
+      sessionStorage.removeItem(MOCK_USER_KEY);
+    }
+
+    return { user: null, isMock: true };
+  }
+
+  // ── Auth actions ─────────────────────────────────────────────────────────
+
+  /**
+   * Create a demo-only session without touching Supabase.
+   * Only available when Supabase is NOT configured (env vars missing).
+   * When Supabase IS configured, real auth must be used instead.
+   * Session stored in sessionStorage — discarded when the tab closes.
+   */
+  public static signInAsDemo(plan: string): UserProfile {
+    if (this.isSupabaseActive()) {
+      throw new Error(
+        'Demo login is not available when Supabase is configured. Use your real credentials or Google sign-in.',
+      );
+    }
+    console.log('[Auth] Using demo login — Supabase not configured');
+
+    const planSlug = plan.toLowerCase().replace(/\+/g, 'plus').replace(/\s+/g, '-');
+    const demoUser: UserProfile = {
+      id: `demo-${planSlug}-user`,
+      email: `demo_${planSlug}@bizscope.demo`,
+      fullName: `Demo ${plan} User`,
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=Demo${plan}`,
+      plan,
+      role: 'Explorer',
+      subscription_tier: 'Explorer',
+    };
+
+    sessionStorage.setItem(MOCK_USER_KEY, JSON.stringify(demoUser));
+    return demoUser;
+  }
+
+  public static async signUp(
+    email: string,
+    password: string,
+    fullName: string,
+    defaultPlan: string = 'Explorer',
+  ): Promise<UserProfile> {
+    if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
+    if (password.length < 6) throw new Error('Password must be at least 6 characters long.');
+
+    if (this.isSupabaseActive()) {
+      const { data, error } = await supabase!.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${fullName || email}`,
+          },
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      const user = data.user;
+      if (!user) throw new Error('Signup succeeded but no user was returned. Please check confirmation email.');
+
+      if (isDemoMode) {
+        localStorage.setItem(`bizscope_user_plan_${email}`, defaultPlan);
+      }
+      localStorage.setItem('bizscope_user_email', email);
+
+      return {
+        id: user.id,
+        email: user.email ?? email,
+        fullName,
+        avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${fullName || email}`,
+        plan: defaultPlan,
+        role: 'Explorer',
+        subscription_tier: 'Explorer',
+      };
+    }
+
+    // Mock flow (no Supabase) — store in sessionStorage.
+    await new Promise(r => setTimeout(r, 800));
+    const emailLower = email.toLowerCase().trim();
+    const mockUser: UserProfile = {
+      id: `mock-user-${Math.random().toString(36).substring(2, 10)}`,
+      email: emailLower,
+      fullName: fullName || emailLower.split('@')[0],
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${fullName || emailLower}`,
+      plan: defaultPlan,
+      role: 'Explorer',
+      subscription_tier: 'Explorer',
+    };
+    sessionStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+    localStorage.setItem(`bizscope_user_plan_${emailLower}`, defaultPlan);
+    localStorage.setItem('bizscope_user_plan', defaultPlan);
+    localStorage.setItem('bizscope_user_email', emailLower);
+    return mockUser;
+  }
+
+  public static async signIn(email: string, password: string): Promise<UserProfile> {
+    if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
+    if (!password) throw new Error('Please input your account password.');
+
+    if (this.isSupabaseActive()) {
+      const { data, error } = await supabase!.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+      const user = data.user;
+      if (!user) throw new Error('A severe runtime error occurred during sign in.');
+
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const emailAddr = user.email ?? email;
+      const { plan, role, subscription_tier } = await resolvePlanFromSession(user.id, emailAddr, meta);
+
+      localStorage.setItem('bizscope_user_email', emailAddr);
+      if (isDemoMode) localStorage.setItem('bizscope_user_plan', plan);
+
+      return {
+        id: user.id,
+        email: emailAddr,
+        fullName: (meta.full_name ?? meta.fullName ?? emailAddr.split('@')[0]) as string,
+        avatarUrl:
+          (meta.avatar_url ?? '') as string ||
+          `https://api.dicebear.com/7.x/initials/svg?seed=${emailAddr}`,
+        plan,
+        role,
+        subscription_tier,
+      };
+    }
+
+    // Mock flow (no Supabase) — store in sessionStorage.
+    await new Promise(r => setTimeout(r, 600));
+    const emailLower = email.toLowerCase().trim();
+    if (password.length < 4) throw new Error('Please enter a valid password (min 4 characters).');
+    const savedPlan = localStorage.getItem(`bizscope_user_plan_${emailLower}`) || 'Explorer';
+    const mockUser: UserProfile = {
+      id: `mock-user-${Array.from(emailLower).reduce((a, c) => a + c.charCodeAt(0), 0)}`,
+      email: emailLower,
+      fullName: emailLower.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' '),
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${emailLower}`,
+      plan: savedPlan,
+      role: 'Explorer',
+      subscription_tier: 'Explorer',
+    };
+    sessionStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+    localStorage.setItem(`bizscope_user_plan_${emailLower}`, savedPlan);
+    localStorage.setItem('bizscope_user_plan', savedPlan);
+    localStorage.setItem('bizscope_user_email', emailLower);
+    return mockUser;
+  }
+
+  /**
+   * Always redirects to real Google OAuth via Supabase.
+   * Never creates a mock user — if Supabase is not configured, throws a clear error.
+   * Demo login (signInAsDemo) is a separate, unrelated code path.
+   */
+  public static async signInWithGoogle(): Promise<{ url: string }> {
+    if (!this.isSupabaseActive()) {
+      throw new Error(
+        'Google sign-in requires Supabase. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment.',
+      );
+    }
+    console.log('[Auth] Using real Supabase Google OAuth');
+    const { data, error } = await supabase!.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) throw new Error(error.message);
+    if (!data.url) {
+      throw new Error(
+        'Google sign-in is not configured. Enable the Google provider in Supabase Dashboard → Authentication → Providers.',
+      );
+    }
+    return { url: data.url };
+  }
+
+  public static async resetPassword(email: string): Promise<boolean> {
+    if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
+    if (this.isSupabaseActive()) {
+      const { error } = await supabase!.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw new Error(error.message);
+      return true;
+    }
+    await new Promise(r => setTimeout(r, 500));
+    return true;
+  }
+
+  /**
+   * Sign out of both Supabase and any mock/demo session.
+   * Clears sessionStorage (demo sessions) AND any legacy localStorage mock keys
+   * from older app versions so nothing can auto-restore a ghost session.
+   */
+  public static async signOut(): Promise<void> {
+    if (this.isSupabaseActive()) {
+      try {
+        await supabase!.auth.signOut();
+      } catch (err) {
+        console.error('[AuthService] Supabase signOut error:', err);
+      }
+    }
+
+    // Clear mock/demo session state from both storage types.
+    // sessionStorage holds current demo sessions; localStorage holds legacy entries.
+    sessionStorage.removeItem(MOCK_USER_KEY);
+    localStorage.removeItem(MOCK_USER_KEY);
+    localStorage.removeItem('bizscope_user_email');
+  }
+
+  // ── Profile updates ──────────────────────────────────────────────────────
+
+  public static async updateProfile(userEmail: string, fullName: string): Promise<UserProfile> {
+    if (!fullName?.trim()) throw new Error('Full name cannot be blank.');
+
+    if (this.isSupabaseActive()) {
+      const { data, error } = await supabase!.auth.updateUser({
+        data: { full_name: fullName.trim() },
+      });
+      if (error) throw new Error(error.message);
+
+      const authUser = data.user!;
+      const meta = (authUser.user_metadata ?? {}) as Record<string, unknown>;
+      const emailAddr = authUser.email ?? userEmail;
+
+      await ProfileService.updateDisplayName(authUser.id, fullName.trim());
+
+      const profile = await ProfileService.getUserProfile(authUser.id);
+      const { plan, role, subscription_tier } = profile
+        ? {
+            plan: isDemoMode
+              ? localStorage.getItem(`bizscope_user_plan_${emailAddr}`) || 'Explorer'
+              : getEffectivePlan(
+                  { role: profile.role, subscription_tier: profile.subscription_tier },
+                  null,
+                ),
+            role: profile.role,
+            subscription_tier: profile.subscription_tier,
+          }
+        : { plan: 'Explorer', role: 'Explorer', subscription_tier: 'Explorer' };
+
+      return {
+        id: authUser.id,
+        email: emailAddr,
+        fullName: fullName.trim(),
+        avatarUrl:
+          (meta.avatar_url ?? '') as string ||
+          `https://api.dicebear.com/7.x/initials/svg?seed=${fullName.trim()}`,
+        plan,
+        role,
+        subscription_tier,
+      };
+    }
+
+    // Mock update — patch the sessionStorage record.
+    const stored = sessionStorage.getItem(MOCK_USER_KEY);
+    if (!stored) throw new Error('No active user session found to update.');
+    const parsed: UserProfile = JSON.parse(stored);
+    parsed.fullName = fullName.trim();
+    parsed.avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${fullName.trim()}`;
+    sessionStorage.setItem(MOCK_USER_KEY, JSON.stringify(parsed));
+    return parsed;
+  }
+
+  /** Persist the active demo-mode plan switcher value. No-op in live mode. */
+  public static saveUserPlan(email: string, plan: string): void {
+    if (!isDemoMode) return;
+    const emailLower = email.toLowerCase().trim();
+    localStorage.setItem(`bizscope_user_plan_${emailLower}`, plan);
+    localStorage.setItem('bizscope_user_plan', plan);
+  }
+
+  // ── Real-time auth state ─────────────────────────────────────────────────
+
+  public static subscribeToAuthChanges(
+    onUserChange: (user: UserProfile | null) => void,
+  ): () => void {
+    if (!this.isSupabaseActive() || !supabase) return () => {};
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          // Clear ALL mock/demo state so nothing ghost-signs-in on next load.
+          sessionStorage.removeItem(MOCK_USER_KEY);
+          localStorage.removeItem(MOCK_USER_KEY);
+          localStorage.removeItem('bizscope_user_email');
+          onUserChange(null);
+          return;
+        }
+
+        if (
+          session?.user &&
+          (event === 'INITIAL_SESSION' ||
+            event === 'SIGNED_IN' ||
+            event === 'TOKEN_REFRESHED' ||
+            event === 'USER_UPDATED' ||
+            event === 'PASSWORD_RECOVERY')
+        ) {
+          const authUser = session.user;
+          const meta = (authUser.user_metadata ?? {}) as Record<string, unknown>;
+          const email = authUser.email ?? '';
+
+          localStorage.setItem('bizscope_user_email', email);
+
+          try {
+            const { plan, role, subscription_tier } = await resolvePlanFromSession(
+              authUser.id,
+              email,
+              meta,
+            );
+
+            onUserChange({
+              id: authUser.id,
+              email,
+              fullName: (meta.full_name ?? meta.fullName ?? meta.name ?? email.split('@')[0]) as string,
+              avatarUrl:
+                (meta.avatar_url ?? meta.picture ?? '') as string ||
+                `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
+              plan,
+              role,
+              subscription_tier,
+            });
+          } catch (err) {
+            console.error('[AuthService] subscribeToAuthChanges profile fetch failed:', err);
+            onUserChange({
+              id: authUser.id,
+              email,
+              fullName: (meta.full_name ?? email.split('@')[0]) as string,
+              avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
+              plan: 'Explorer',
+              role: 'Explorer',
+              subscription_tier: 'Explorer',
+            });
+          }
+        }
+      },
+    );
+
+    return () => subscription.unsubscribe();
+  }
+}

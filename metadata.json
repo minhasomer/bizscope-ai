@@ -1,0 +1,10 @@
+{
+  "name": "Business Viability Portal",
+  "description": "An AI-powered portal for entrepreneurs to analyze the viability of a new business in a specific location. It provides a detailed report on competition, market trends, and a viability score using Gemini, census data concepts, and Bureau of Labor Statistics insights.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
