@@ -350,9 +350,13 @@ export class AuthService {
       );
     }
     console.log('[Auth] Using real Supabase Google OAuth');
+    // Prefer VITE_APP_URL so one fixed canonical origin can be added to
+    // Supabase's Allowed Redirect URLs list in the dashboard.
+    // Falls back to window.location.origin for local dev.
+    const redirectTo = (import.meta.env.VITE_APP_URL as string | undefined) || window.location.origin;
     const { data, error } = await supabase!.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo },
     });
     if (error) throw new Error(error.message);
     if (!data.url) {
@@ -366,8 +370,9 @@ export class AuthService {
   public static async resetPassword(email: string): Promise<boolean> {
     if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
     if (this.isSupabaseActive()) {
+      const redirectTo = (import.meta.env.VITE_APP_URL as string | undefined) || window.location.origin;
       const { error } = await supabase!.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
+        redirectTo,
       });
       if (error) throw new Error(error.message);
       return true;

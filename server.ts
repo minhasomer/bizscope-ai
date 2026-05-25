@@ -1106,7 +1106,9 @@ async function startServer() {
 
     try {
       const stripe = getStripe();
-      const appUrl = process.env.APP_URL || "http://localhost:3000";
+      // Derive base URL from the request so Stripe redirects back to wherever
+      // the server is actually running — not a hardcoded localhost fallback.
+      const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         payment_method_types: ["card"],
@@ -1141,7 +1143,8 @@ async function startServer() {
         });
       }
 
-      const appUrl = process.env.APP_URL || "http://localhost:3000";
+      // Derive base URL from the request so Stripe returns to the correct host.
+      const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: customers.data[0].id,
         return_url: `${appUrl}/billing`,
