@@ -41,13 +41,16 @@
 import { isSupabaseConfigured } from '../../services/supabaseClient';
 
 // ─── Raw environment reads ───────────────────────────────────────────────────
-// The only place in the codebase that touches process.env directly.
-// VITE_DEMO_MODE is injected into process.env by vite.config.ts define block,
-// so it works in both the Vite browser bundle and the Express server context
-// without needing import.meta.env (which would add TS errors here).
-
-const _rawDemoMode: string | undefined =
-  typeof process !== 'undefined' ? process.env?.VITE_DEMO_MODE : undefined;
+// VITE_DEMO_MODE is statically replaced at build time by vite.config.ts's
+// define block (both in the Vite browser bundle and in the Express server).
+//
+// IMPORTANT: do NOT wrap this in `typeof process !== 'undefined'`.
+// That guard defeats the static replacement: Vite replaces the token
+// `process.env.VITE_DEMO_MODE` before runtime, but the ternary condition
+// `typeof process !== 'undefined'` is evaluated at browser runtime where
+// there is no `process` global — so the whole expression becomes `undefined`
+// and demo mode silently turns off in production.
+const _rawDemoMode: string | undefined = process.env.VITE_DEMO_MODE;
 
 // ─── Derived booleans ────────────────────────────────────────────────────────
 
