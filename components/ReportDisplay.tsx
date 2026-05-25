@@ -716,7 +716,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 )}
                             </div>
                         )}
-                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">Generated Study Study</span>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">Generated Study</span>
                         <h2 className="text-3xl font-black text-gray-900 tracking-tight sm:text-4xl mb-1 capitalize leading-none">
                           {report.businessType}
                         </h2>
@@ -742,7 +742,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
             {/* Print Friendly Meta Block */}
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
-              <span>BizScope Study Study &bull; Confidentially Generated</span>
+              <span>BizScope Study &bull; Confidentially Generated</span>
               <span>Coordinates: Lat {report.targetCoordinates?.latitude ?? "N/A"} / Lng {report.targetCoordinates?.longitude ?? "N/A"}</span>
               <span>Active Plan Parameter: {currentPlan}</span>
             </div>
