@@ -6,6 +6,7 @@ import { mockRegionalReport } from '../src/data/mockRegionalReport.js';
 import { mockOpportunities } from '../src/data/mockOpportunities.js';
 import { appConfig } from '../src/config/appConfig';
 import { assertLiveService } from '../src/lib/guardrails';
+import { supabase } from './supabaseClient';
 
 /**
  * Whether Demo Mode is active.
@@ -574,12 +575,15 @@ export const generateViabilityReport = async (
         // Guardrail: this branch must never execute in Demo Mode.
         // All AI analysis goes through the Express backend — never directly to Gemini.
         assertLiveService('Gemini /api/analyze');
+        const sessionResult = await supabase?.auth.getSession();
+        const token = sessionResult?.data?.session?.access_token ?? null;
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-plan-tier': planTier,
-                'x-user-email': localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai'
+                'x-user-email': localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
             body: JSON.stringify({
                 businessType,
@@ -780,12 +784,15 @@ export const generateRegionalAnalysis = async (
     // Guardrail: this branch must never execute in Demo Mode.
     // Regional analysis goes through the Express backend — never directly to Gemini.
     assertLiveService('Gemini /api/regional-analysis');
+    const regSessionResult = await supabase?.auth.getSession();
+    const regToken = regSessionResult?.data?.session?.access_token ?? null;
     const response = await fetch('/api/regional-analysis', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-plan-tier': planTier,
-        'x-user-email': localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai'
+        'x-user-email': localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai',
+        ...(regToken ? { 'Authorization': `Bearer ${regToken}` } : {}),
       },
       body: JSON.stringify({
         businessType,

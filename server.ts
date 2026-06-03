@@ -3,6 +3,7 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import Stripe from "stripe";
 import { GEMINI_MODELS, normalizeTierToBudgetPlan, getReportBudget, estimateCost } from './src/config/aiBudget.js';
+import { createClient } from '@supabase/supabase-js';
 
 enum Type {
   STRING = "STRING",
@@ -494,6 +495,62 @@ const getStripe = (): Stripe => {
   return new Stripe(key, { apiVersion: "2026-04-22.dahlia" as any });
 };
 
+const _supabaseUrl = process.env.SUPABASE_URL;
+const _supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = (_supabaseUrl && _supabaseServiceKey)
+  ? createClient(_supabaseUrl, _supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+  : null;
+
+if (!supabaseAdmin) {
+  console.warn('[PlanAuth] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set. ' +
+    'Server-side plan verification is DISABLED — all requests treated as Explorer. ' +
+    'Set both env vars and redeploy to enable enforcement.');
+}
+
+function getServerSidePlan(role: string, subscription_tier: string): string {
+  const r = (role ?? '').trim().toLowerCase();
+  if (r === 'admin') return 'Enterprise';
+  if (r === 'betatester' || r === 'beta_tester' || r === 'beta_vip') return 'Pro+';
+  return normalizeTierToBudgetPlan(subscription_tier);
+}
+
+async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
+  verifiedEmail: string;
+  verifiedPlan: string;
+}> {
+  const FALLBACK = { verifiedEmail: 'anonymous@bizscope.ai', verifiedPlan: 'Explorer' };
+  if (!supabaseAdmin) return FALLBACK;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token) {
+    console.log('[PlanAuth] No Bearer token — defaulting to Explorer');
+    return FALLBACK;
+  }
+  try {
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !user) {
+      console.warn('[PlanAuth] Token invalid:', userError?.message ?? 'no user returned');
+      return FALLBACK;
+    }
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role, subscription_tier')
+      .eq('id', user.id)
+      .single();
+    if (profileError || !profile) {
+      console.warn('[PlanAuth] Profile not found for user:', user.id, '—', profileError?.message ?? 'null profile');
+      return { verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedPlan: 'Explorer' };
+    }
+    const verifiedPlan = getServerSidePlan(profile.role, profile.subscription_tier);
+    console.log(`[PlanAuth] Verified uid=${user.id} role=${profile.role} tier=${profile.subscription_tier} → plan=${verifiedPlan}`);
+    return { verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedPlan };
+  } catch (err: any) {
+    console.error('[PlanAuth] verifyAndGetPlan exception:', err.message);
+    return FALLBACK;
+  }
+}
+
 // Main server launcher
 async function startServer() {
   const app = express();
@@ -700,9 +757,10 @@ async function startServer() {
   // API 1: /api/analyze
   app.post("/api/analyze", async (req: Request, res: Response) => {
     const { businessType, location, userLocation } = req.body;
-    
-    const planTier = (req.headers["x-plan-tier"] as string) || (req.body.planTier as string) || "Explorer";
-    const userEmail = (req.headers["x-user-email"] as string) || (req.body.userEmail as string) || "anonymous@bizscope.ai";
+
+    const { verifiedEmail: userEmail, verifiedPlan: planTier } = await verifyAndGetPlan(
+      req.headers["authorization"] as string | undefined
+    );
 
     // Enforce limits on the server-side to secure the live deployment
     const limitCheck = checkServerLimit(userEmail, planTier, false);
@@ -995,8 +1053,9 @@ async function startServer() {
   app.post("/api/regional-analysis", async (req: Request, res: Response) => {
     const { businessType, location } = req.body;
 
-    const planTier = (req.headers["x-plan-tier"] as string) || (req.body.planTier as string) || "Explorer";
-    const userEmail = (req.headers["x-user-email"] as string) || (req.body.userEmail as string) || "anonymous@bizscope.ai";
+    const { verifiedEmail: userEmail, verifiedPlan: planTier } = await verifyAndGetPlan(
+      req.headers["authorization"] as string | undefined
+    );
 
     // Enforce limits on the server-side to secure the live deployment
     const limitCheck = checkServerLimit(userEmail, planTier, true);
