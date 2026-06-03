@@ -34,6 +34,7 @@ import { FranchiseOpportunitiesTemplate } from './components/seo/FranchiseOpport
 import { MarketGapsTemplate } from './components/seo/MarketGapsTemplate';
 import { SampleReports } from './components/SampleReports';
 import { ReportSummaryCard } from './components/ReportSummaryCard';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
 
 const formatResetTime = (date: Date | null): string => {
   if (!date) return 'No reset cycle required';
@@ -88,18 +89,21 @@ const App: React.FC = () => {
   // Load session on mount + subscribe to real-time auth state changes
   useEffect(() => {
     // 1. Subscribe first so OAuth redirects & token refreshes are never missed
-    const unsubscribe = AuthService.subscribeToAuthChanges((user) => {
-      setCurrentUser(user);
-      if (user) {
-        setBaseUserPlan(user.plan as SubscriptionPlan);
-        localStorage.setItem('bizscope_user_email', user.email);
-      } else {
-        setBaseUserPlan('Explorer');
-        setPreviewRole(null);
-        setCurrentView('home');
-      }
-      setAuthLoading(false);
-    });
+    const unsubscribe = AuthService.subscribeToAuthChanges(
+      (user) => {
+        setCurrentUser(user);
+        if (user) {
+          setBaseUserPlan(user.plan as SubscriptionPlan);
+          localStorage.setItem('bizscope_user_email', user.email);
+        } else {
+          setBaseUserPlan('Explorer');
+          setPreviewRole(null);
+          setCurrentView('home');
+        }
+        setAuthLoading(false);
+      },
+      () => setCurrentView('reset-password'),
+    );
 
     // 2. Load the existing session (page refresh / direct visit).
     //
@@ -597,6 +601,10 @@ const App: React.FC = () => {
               onDeleteReport={handleDeleteReport}
             />
           </div>
+        );
+      case 'reset-password':
+        return (
+          <ResetPasswordPage onSuccess={() => setCurrentView('dashboard')} />
         );
       case 'billing':
         return (

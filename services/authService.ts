@@ -466,8 +466,16 @@ export class AuthService {
 
   // ── Real-time auth state ─────────────────────────────────────────────────
 
+  /** Set a new password for the currently authenticated user (used during PASSWORD_RECOVERY session). */
+  public static async updatePassword(newPassword: string): Promise<void> {
+    if (!supabase) throw new Error('Supabase is not configured.');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }
+
   public static subscribeToAuthChanges(
     onUserChange: (user: UserProfile | null) => void,
+    onPasswordRecovery?: () => void,
   ): () => void {
     if (!this.isSupabaseActive() || !supabase) return () => {};
 
@@ -514,6 +522,7 @@ export class AuthService {
               role,
               subscription_tier,
             });
+            if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
           } catch (err) {
             console.error('[AuthService] subscribeToAuthChanges profile fetch failed:', err);
             onUserChange({
@@ -525,6 +534,7 @@ export class AuthService {
               role: 'Explorer',
               subscription_tier: 'Explorer',
             });
+            if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
           }
         }
       },
