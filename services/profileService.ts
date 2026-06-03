@@ -17,10 +17,12 @@ export class ProfileService {
   }
 
   /**
-   * Fetch a user's profile row from the profiles table.
-   * Returns null if Supabase is not configured or the row doesn't exist.
+   * Internal: fetches a profile with a tri-state result so ensureProfileExists()
+   * can distinguish "timed out" (Supabase Web Lock contention — row may already
+   * exist) from "genuinely missing" (PGRST116 — row needs to be created).
+   * External callers should use getUserProfile(), which normalises 'timeout' → null.
    */
-  static async getUserProfile(userId: string): Promise<SupabaseProfile | null> {
+  private static async _fetchProfile(userId: string): Promise<SupabaseProfile | null | 'timeout'> {
     if (!this.isActive()) return null;
 
     console.log('[Profile] Fetching profile for user:', userId);
@@ -161,12 +163,23 @@ export class ProfileService {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('timed out')) {
         console.error('[Profile] getUserProfile TIMEOUT for user:', userId,
-          '— Supabase did not respond within', TIMEOUT_MS, 'ms; falling back to null');
-      } else {
-        console.error('[Profile] getUserProfile exception for user:', userId, '—', msg);
+          '— Supabase did not respond within', TIMEOUT_MS, 'ms');
+        return 'timeout';
       }
+      console.error('[Profile] getUserProfile exception for user:', userId, '—', msg);
       return null;
     }
+  }
+
+  /**
+   * Fetch a user's profile row from the profiles table.
+   * Returns null if Supabase is not configured, the row doesn't exist, or a
+   * timeout occurred. Callers that need to distinguish timeout from missing
+   * should use the private _fetchProfile() method within this class.
+   */
+  static async getUserProfile(userId: string): Promise<SupabaseProfile | null> {
+    const result = await this._fetchProfile(userId);
+    return result === 'timeout' ? null : result;
   }
 
   /**
@@ -192,9 +205,18 @@ export class ProfileService {
   ): Promise<SupabaseProfile | null> {
     if (!this.isActive()) return null;
 
-    // 1. Try to read the existing row first (trigger may have already created it)
-    const existing = await this.getUserProfile(userId);
-    if (existing) return existing;
+    // 1. Try to read the existing row first (trigger may have already created it).
+    //    Use _fetchProfile() to distinguish "timed out" from "genuinely missing".
+    //    On timeout, skip INSERT — the row likely exists; next auth event will retry.
+    const fetchResult = await this._fetchProfile(userId);
+    if (fetchResult === 'timeout') {
+      console.warn(
+        '[Profile] Skipping INSERT — profile query timed out; profile may already exist. ' +
+        'Will retry on next auth event. User:', userId,
+      );
+      return null;
+    }
+    if (fetchResult) return fetchResult;
 
     // 2. Row is missing — insert with defaults
     console.log('[Profile] No profile found — creating row for user:', userId, '| email:', email);
