@@ -324,11 +324,26 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
       .select('role, subscription_tier')
       .eq('id', user.id)
       .single();
+
+    // ── Profile query diagnostic (safe: no secrets, no PII beyond uid/role) ──
+    console.log('[analyze diag] profile query:', {
+      queryField:          'id',
+      userIdFromJwt:       user.id,
+      profileFound:        !!profile,
+      profileErrorCode:    profileError?.code    ?? null,
+      profileErrorMessage: profileError?.message ?? null,
+      returnedRole:        profile?.role         ?? null,
+      returnedTier:        profile?.subscription_tier ?? null,
+    });
+
     if (profileError || !profile) {
+      console.error('[BetaAuth] profiles lookup failed — uid:', user.id,
+        '| code:', profileError?.code ?? 'null',
+        '| msg:',  profileError?.message ?? 'no profile row');
       return { ...FALLBACK, verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedUserId: user.id };
     }
     const verifiedPlan = getServerSidePlan(profile.role, profile.subscription_tier);
-    console.log(`[BetaAuth] uid=${user.id} role=${profile.role} → plan=${verifiedPlan}`);
+    console.log(`[BetaAuth] uid=${user.id} role=${profile.role} tier=${profile.subscription_tier} → plan=${verifiedPlan}`);
     return {
       verifiedEmail: user.email ?? FALLBACK.verifiedEmail,
       verifiedPlan,
