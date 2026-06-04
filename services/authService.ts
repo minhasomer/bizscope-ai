@@ -91,6 +91,15 @@ async function resolvePlanFromSession(
   }
 
   console.log('[Auth] Final effective role:', profile.role, '| subscription_tier:', profile.subscription_tier, '| plan:', plan);
+
+  // Cache role + tier so the fast path returns the real role on the next page load,
+  // even when the Supabase Web Lock is held by a background token refresh and the
+  // profile DB query times out (8 s). Same caching pattern as plan above.
+  try {
+    localStorage.setItem(`bizscope_user_role_${email}`, profile.role);
+    localStorage.setItem(`bizscope_user_tier_${email}`, profile.subscription_tier);
+  } catch { /* ignore quota errors */ }
+
   return { plan, role: profile.role, subscription_tier: profile.subscription_tier };
 }
 
@@ -141,10 +150,12 @@ export class AuthService {
             localStorage.getItem('bizscope_user_plan') ??
             'Explorer'
           );
+          const cachedRole = localStorage.getItem(`bizscope_user_role_${email}`) ?? 'Explorer';
+          const cachedTier = localStorage.getItem(`bizscope_user_tier_${email}`) ?? 'Explorer';
 
           localStorage.setItem('bizscope_user_email', email);
 
-          console.log('[Auth] getInitialSession fast-path — plan from cache:', cachedPlan);
+          console.log('[Auth] getInitialSession fast-path — plan from cache:', cachedPlan, '| role from cache:', cachedRole);
 
           return {
             user: {
@@ -155,10 +166,13 @@ export class AuthService {
                 (meta.avatar_url ?? meta.picture ?? '') as string ||
                 `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
               plan: cachedPlan,
-              // role and subscription_tier are updated by the INITIAL_SESSION
-              // subscription handler once the DB profile fetch completes.
-              role: 'Explorer',
-              subscription_tier: 'Explorer',
+              // role and subscription_tier are seeded from localStorage cache written by
+              // resolvePlanFromSession on a previous successful profile fetch. This ensures
+              // the correct role is available immediately even when the Supabase Web Lock
+              // is held by a background token refresh and the profile DB query times out.
+              // The INITIAL_SESSION handler will overwrite these once the lock releases.
+              role: cachedRole,
+              subscription_tier: cachedTier,
             },
             isMock: false,
           };
