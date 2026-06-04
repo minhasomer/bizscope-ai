@@ -487,6 +487,8 @@ export const generateViabilityReport = async (
     }
 
     let result: ViabilityReport;
+    const _useLive = !(appConfig.isDemoMode && !isBetaRoleEnabled(userRole));
+    console.log(`[BizScope] report routing: role="${userRole}" isDemoMode=${appConfig.isDemoMode} isBetaRoleEnabled=${isBetaRoleEnabled(userRole)} → ${_useLive ? 'LIVE /api/analyze' : 'MOCK'}`);
     if (appConfig.isDemoMode && !isBetaRoleEnabled(userRole)) {
         setLoadingMessage("Checking environment cache...");
         await new Promise(resolve => setTimeout(resolve, 600));

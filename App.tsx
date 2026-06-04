@@ -9,7 +9,7 @@ import { OpportunityExplorer } from './components/OpportunityExplorer';
 import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
 import { generateViabilityReport } from './services/geminiService';
-import { isDemoMode } from './src/config/appConfig';
+import { isDemoMode, isBetaRoleEnabled } from './src/config/appConfig';
 import type { ViabilityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { mockSavedReports } from './src/data/mockSavedReports.js';
@@ -369,9 +369,10 @@ const App: React.FC = () => {
       // Cache hit → fall through; runAnalysis will serve it from cache immediately.
     }
 
-    // Live-mode cost protection: show confirmation to Admin users on first generation.
+    // Live-mode cost protection: show confirmation whenever a real API call would be made.
+    // Uses isBetaRoleEnabled so this fires even when VITE_DEMO_MODE=true (beta path).
     // Regen is already guarded by showRegenConfirm inside ReportDisplay — skip it here.
-    if (!isDemoMode && willCallApi && !forceRegenerate && isAdmin(currentUser?.role ?? '')) {
+    if (isBetaRoleEnabled(currentUser?.role ?? '') && willCallApi && !forceRegenerate) {
       setPendingLiveRequest({ businessType, location, forceRegenerate });
       return;
     }
