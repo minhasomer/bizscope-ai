@@ -342,7 +342,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setLoadingMessage('');
     }
-  }, [userLocation, userPlan]);
+  }, [userLocation, userPlan, currentUser]);
 
   /**
    * Entry point for all standard report requests.
