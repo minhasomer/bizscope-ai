@@ -313,37 +313,78 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   verifiedUserId: string | null;
 }> {
   const FALLBACK = { verifiedEmail: 'anonymous@bizscope.ai', verifiedPlan: 'Explorer', verifiedRole: '', verifiedUserId: null as string | null };
-  if (!supabaseAdmin) return FALLBACK;
+
+  // [3] Auth header present — no value logged, only presence
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
-  if (!token) return FALLBACK;
+  console.log('[analyze diag] auth header present:', { hasHeader: !!authHeader, tokenParsed: !!token });
+
+  if (!supabaseAdmin) {
+    console.log('[analyze diag] getUser result: skipped — supabaseAdmin null');
+    console.log('[analyze diag] profile query attempted: skipped — supabaseAdmin null');
+    console.log('[analyze diag] profile query result: skipped — supabaseAdmin null');
+    console.log('[analyze diag] final verification result:', { verifiedRole: '', verifiedPlan: 'Explorer', verifiedUserIdPresent: false, reason: 'supabaseAdmin null' });
+    return FALLBACK;
+  }
+  if (!token) {
+    console.log('[analyze diag] getUser result: skipped — no Bearer token in Authorization header');
+    console.log('[analyze diag] profile query attempted: skipped — no token');
+    console.log('[analyze diag] profile query result: skipped — no token');
+    console.log('[analyze diag] final verification result:', { verifiedRole: '', verifiedPlan: 'Explorer', verifiedUserIdPresent: false, reason: 'no token' });
+    return FALLBACK;
+  }
+
   try {
+    // [4] getUser result
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError || !user) return FALLBACK;
+    console.log('[analyze diag] getUser result:', {
+      userFound:        !!user,
+      userId:           user?.id           ?? null,
+      userEmail:        user?.email        ?? null,
+      authErrorCode:    (userError as any)?.code    ?? null,
+      authErrorMessage: (userError as any)?.message ?? null,
+    });
+
+    if (userError || !user) {
+      console.log('[analyze diag] profile query attempted: skipped — getUser failed');
+      console.log('[analyze diag] profile query result: skipped — getUser failed');
+      console.log('[analyze diag] final verification result:', { verifiedRole: '', verifiedPlan: 'Explorer', verifiedUserIdPresent: false, reason: 'getUser failed' });
+      return FALLBACK;
+    }
+
+    // [5] Profile query attempted
+    console.log('[analyze diag] profile query attempted:', { queryField: 'id', userId: user.id });
+
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role, subscription_tier')
       .eq('id', user.id)
       .single();
 
-    // ── Profile query diagnostic (safe: no secrets, no PII beyond uid/role) ──
-    console.log('[analyze diag] profile query:', {
+    // [6] Profile query result
+    console.log('[analyze diag] profile query result:', {
       queryField:          'id',
-      userIdFromJwt:       user.id,
       profileFound:        !!profile,
-      profileErrorCode:    profileError?.code    ?? null,
-      profileErrorMessage: profileError?.message ?? null,
-      returnedRole:        profile?.role         ?? null,
-      returnedTier:        profile?.subscription_tier ?? null,
+      profileErrorCode:    (profileError as any)?.code    ?? null,
+      profileErrorMessage: (profileError as any)?.message ?? null,
+      returnedRole:        profile?.role                  ?? null,
+      returnedTier:        profile?.subscription_tier     ?? null,
     });
 
     if (profileError || !profile) {
-      console.error('[BetaAuth] profiles lookup failed — uid:', user.id,
-        '| code:', profileError?.code ?? 'null',
-        '| msg:',  profileError?.message ?? 'no profile row');
+      console.log('[analyze diag] final verification result:', { verifiedRole: '', verifiedPlan: 'Explorer', verifiedUserIdPresent: true, reason: 'profile lookup failed' });
       return { ...FALLBACK, verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedUserId: user.id };
     }
+
     const verifiedPlan = getServerSidePlan(profile.role, profile.subscription_tier);
-    console.log(`[BetaAuth] uid=${user.id} role=${profile.role} tier=${profile.subscription_tier} → plan=${verifiedPlan}`);
+
+    // [7] Final verification result
+    console.log('[analyze diag] final verification result:', {
+      verifiedRole:          profile.role ?? '',
+      verifiedPlan,
+      verifiedUserIdPresent: true,
+      reason:                'success',
+    });
+
     return {
       verifiedEmail: user.email ?? FALLBACK.verifiedEmail,
       verifiedPlan,
@@ -351,7 +392,8 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
       verifiedUserId: user.id,
     };
   } catch (err: any) {
-    console.error('[BetaAuth] verifyAndGetPlan error:', err.message);
+    console.error('[BetaAuth] verifyAndGetPlan exception:', err.message);
+    console.log('[analyze diag] final verification result:', { verifiedRole: '', verifiedPlan: 'Explorer', verifiedUserIdPresent: false, reason: `exception: ${err.message}` });
     return FALLBACK;
   }
 }
@@ -369,6 +411,9 @@ export default async function handler(
   req: IncomingMessage & { body?: any },
   res: ServerResponse,
 ): Promise<void> {
+  // [1] Request received — logged before any gate so it always appears
+  console.log('[analyze diag] request received:', { method: req.method, hasAuthHeader: !!req.headers['authorization'] });
+
   // Server-side kill switch — flip REAL_REPORTS_ENABLED=false to disable instantly.
   if (process.env.REAL_REPORTS_ENABLED !== 'true') {
     return json(res, 503, { error: 'This endpoint is not available.', code: 'NOT_AVAILABLE' });
@@ -378,24 +423,22 @@ export default async function handler(
     return json(res, 405, { error: 'Method not allowed.', code: 'METHOD_NOT_ALLOWED' });
   }
 
+  // [2] Env check — logged before verifyAndGetPlan so it always appears even if
+  //     verifyAndGetPlan exits early. verifiedRole/Plan are logged inside [7].
+  console.log('[analyze diag] env check:', {
+    hasSupabaseUrl:           !!process.env.SUPABASE_URL,
+    hasServiceRoleKey:        !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    hasRealReportsEnabled:    !!process.env.REAL_REPORTS_ENABLED,
+    realReportsEnabledValue:  process.env.REAL_REPORTS_ENABLED,
+    hasGeminiApiKey:          !!process.env.GEMINI_API_KEY,
+    supabaseAdminInitialized: !!supabaseAdmin,
+  });
+
   // Auth + role gate: only Admin and BetaTester proceed.
+  // [3]-[7] are logged inside verifyAndGetPlan at every exit point.
   const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
-
-  // ── Temporary env/auth diagnostic (no secret values logged) ─────────────────
-  console.log('[analyze diag] env check:', {
-    hasSupabaseUrl:            !!process.env.SUPABASE_URL,
-    hasServiceRoleKey:         !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    hasRealReportsEnabled:     !!process.env.REAL_REPORTS_ENABLED,
-    realReportsEnabledValue:   process.env.REAL_REPORTS_ENABLED,   // 'true' | 'false' | undefined — safe
-    hasGeminiApiKey:           !!process.env.GEMINI_API_KEY,
-    supabaseAdminInitialized:  !!supabaseAdmin,
-    verifiedRole,
-    verifiedPlan,
-    verifiedUserIdPresent:     !!verifiedUserId,
-  });
-  // ────────────────────────────────────────────────────────────────────────────
 
   if (!BETA_ROLES.includes(verifiedRole)) {
     return json(res, 403, {
