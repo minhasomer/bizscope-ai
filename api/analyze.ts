@@ -504,7 +504,22 @@ export default async function handler(
     let competitionInfo = 'No competitor data available.';
     let marketInfo = 'No trend data available.';
 
+    // ── helper: extract safe Gemini error fields for logging ────────────────
+    function geminiErrDiag(err: unknown): Record<string, unknown> {
+      if (!err || typeof err !== 'object') return { raw: String(err) };
+      const e = err as Record<string, unknown>;
+      return {
+        status:  e['status']  ?? e['httpStatus'] ?? null,
+        code:    e['code']    ?? null,
+        message: typeof e['message'] === 'string' ? e['message'].slice(0, 300) : null,
+        // errorDetails is a Gemini SDK field on quota/rate errors
+        errorDetails: Array.isArray(e['errorDetails']) ? e['errorDetails'] : null,
+      };
+    }
+
     // Phase 1: competitor lookup via Maps grounding
+    const phase1Prompt = `List the top 5 direct competitors for a new '${businessType}' in or very near '${location}'. For each, provide the name and address.`;
+    console.log('[analyze diag] phase 1 start:', { phase: 1, model, promptChars: phase1Prompt.length, tool: 'googleMaps' });
     try {
       const mapsConfig: any = { tools: [{ googleMaps: {} }] };
       if (userLocation?.latitude && userLocation?.longitude) {
@@ -515,7 +530,7 @@ export default async function handler(
       const mapsRes = await withTimeout(
         ai.models.generateContent({
           model,
-          contents: `List the top 5 direct competitors for a new '${businessType}' in or very near '${location}'. For each, provide the name and address.`,
+          contents: phase1Prompt,
           config: mapsConfig,
         }),
         20000,
@@ -523,16 +538,19 @@ export default async function handler(
       );
       competitionInfo = mapsRes.text || competitionInfo;
       sources.push(...getGroundingSources(mapsRes));
+      console.log('[analyze diag] phase 1 success:', { phase: 1, responseChars: competitionInfo.length });
     } catch (err) {
-      console.warn('[analyze] Maps phase failed, continuing:', err);
+      console.warn('[analyze] phase 1 (Maps) failed:', geminiErrDiag(err));
     }
 
     // Phase 2: census + trends via Search grounding
+    const phase2Prompt = `Find the latest US Census data for '${location}': specifically Total Population and Median Household Income. Also research market trends and financial benchmarks for opening a '${businessType}' in '${location}'.`;
+    console.log('[analyze diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, tool: 'googleSearch' });
     try {
       const searchRes = await withTimeout(
         ai.models.generateContent({
           model,
-          contents: `Find the latest US Census data for '${location}': specifically Total Population and Median Household Income. Also research market trends and financial benchmarks for opening a '${businessType}' in '${location}'.`,
+          contents: phase2Prompt,
           config: { tools: [{ googleSearch: {} }] },
         }),
         20000,
@@ -540,8 +558,9 @@ export default async function handler(
       );
       marketInfo = searchRes.text || marketInfo;
       sources.push(...getGroundingSources(searchRes));
+      console.log('[analyze diag] phase 2 success:', { phase: 2, responseChars: marketInfo.length });
     } catch (err) {
-      console.warn('[analyze] Search phase failed, continuing:', err);
+      console.warn('[analyze] phase 2 (Search) failed:', geminiErrDiag(err));
     }
 
     // Phase 3: synthesis
@@ -573,6 +592,7 @@ Synthesize the data into a comprehensive JSON report. Do not output any wrapping
 Estimate latitude/longitude for '${location}' and each competitor for map visualisation.
     `.trim();
 
+    console.log('[analyze diag] phase 3 start:', { phase: 3, model, promptChars: prompt.length, maxOutputTokens: budget.maxOutputTokens });
     const fallback = getViabilityReportFallback(businessType, location);
     const synthesis = await withTimeout(
       ai.models.generateContent({
@@ -658,17 +678,35 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
 
     return json(res, 200, parsed);
   } catch (err: any) {
-    console.error('[analyze] handler error:', err.message);
+    // Log the full structured Gemini error so we can distinguish:
+    //   RESOURCE_EXHAUSTED / 429 → free-tier quota (RPM / TPM / RPD)
+    //   NOT_FOUND            → wrong model ID
+    //   INVALID_ARGUMENT     → bad request / schema mismatch
+    //   UNAVAILABLE          → transient Gemini outage
+    const errStatus  = err?.status  ?? err?.httpStatus ?? null;
+    const errCode    = err?.code    ?? null;
+    const errMessage = typeof err?.message === 'string' ? err.message.slice(0, 500) : String(err);
+    const errDetails = Array.isArray(err?.errorDetails) ? err.errorDetails : null;
+    console.error('[analyze] phase 3 error:', { status: errStatus, code: errCode, message: errMessage, errorDetails: errDetails });
 
-    let status = 502;
-    let code = 'MODEL_ERROR';
-    let message = err.message || 'An unexpected error occurred.';
+    let httpStatus = 502;
+    let resCode = 'MODEL_ERROR';
+    let resMessage = err.message || 'An unexpected error occurred.';
 
-    if (message.includes('API key')) { status = 401; code = 'MISSING_API_KEY'; }
-    else if (message.includes('429') || message.toLowerCase().includes('rate limit')) { status = 429; code = 'RATE_LIMIT'; message = 'Gemini rate limit hit. Please try again shortly.'; }
-    else if (message.includes('timeout')) { status = 504; code = 'TIMEOUT'; message = 'Analysis timed out. Please try again.'; }
-    else if (message.includes('malformed_response')) { status = 502; code = 'MALFORMED_RESPONSE'; }
+    const msgLower = errMessage.toLowerCase();
+    const isRateLimit =
+      errStatus === 429 ||
+      errCode === 429 ||
+      msgLower.includes('429') ||
+      msgLower.includes('rate limit') ||
+      msgLower.includes('resource_exhausted') ||
+      msgLower.includes('quota');
 
-    return json(res, status, { error: message, code });
+    if (resMessage.includes('API key'))  { httpStatus = 401; resCode = 'MISSING_API_KEY'; }
+    else if (isRateLimit)                { httpStatus = 429; resCode = 'RATE_LIMIT'; resMessage = 'Gemini rate limit hit. Please try again shortly.'; }
+    else if (msgLower.includes('timeout')) { httpStatus = 504; resCode = 'TIMEOUT'; resMessage = 'Analysis timed out. Please try again.'; }
+    else if (msgLower.includes('malformed_response')) { httpStatus = 502; resCode = 'MALFORMED_RESPONSE'; }
+
+    return json(res, httpStatus, { error: resMessage, code: resCode });
   }
 }
