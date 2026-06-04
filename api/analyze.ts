@@ -299,6 +299,26 @@ const supabaseAdmin = (() => {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 })();
 
+// ─── Key-type diagnostic (runs once at cold start, never logs the key) ────────
+// Decodes the SUPABASE_SERVICE_ROLE_KEY JWT payload to verify the 'role' claim.
+// service_role key → role: 'service_role' (bypasses RLS)
+// anon/publishable key → role: 'anon' (subject to RLS → causes 42501)
+const _srKeyDiag = (() => {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  const isJwt     = key.startsWith('eyJ');
+  const isSbSecret = key.startsWith('sb_secret');
+  let roleClaim: string = isJwt ? 'decode-error' : 'not-a-jwt';
+  if (isJwt) {
+    try {
+      // JWT payload is the second base64url segment
+      const b64 = key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) as Record<string, unknown>;
+      roleClaim = typeof payload.role === 'string' ? payload.role : 'missing';
+    } catch { /* roleClaim stays 'decode-error' */ }
+  }
+  return { isJwt, isSbSecret, roleClaim };
+})();
+
 function getServerSidePlan(role: string, subscription_tier: string): string {
   const r = (role ?? '').trim().toLowerCase();
   if (r === 'admin') return 'Enterprise';
@@ -317,6 +337,18 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   // [3] Auth header present — no value logged, only presence
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
   console.log('[analyze diag] auth header present:', { hasHeader: !!authHeader, tokenParsed: !!token });
+
+  // Key-type check: if roleClaim !== 'service_role' the admin client will run as
+  // the anon PostgreSQL role, causing 42501 on every profiles query.
+  console.log('[analyze diag] service role key type:', _srKeyDiag);
+  if (_srKeyDiag.roleClaim !== 'service_role') {
+    console.error(
+      '[BetaAuth] WRONG KEY — SUPABASE_SERVICE_ROLE_KEY role claim is',
+      JSON.stringify(_srKeyDiag.roleClaim),
+      '(expected "service_role"). The anon/publishable key was likely pasted instead.',
+      'Every profiles query will fail with 42501 until this is corrected in Vercel.',
+    );
+  }
 
   if (!supabaseAdmin) {
     console.log('[analyze diag] getUser result: skipped — supabaseAdmin null');
