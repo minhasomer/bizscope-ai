@@ -368,6 +368,20 @@ export default async function handler(
     req.headers['authorization'] as string | undefined,
   );
 
+  // ── Temporary env/auth diagnostic (no secret values logged) ─────────────────
+  console.log('[analyze diag] env check:', {
+    hasSupabaseUrl:            !!process.env.SUPABASE_URL,
+    hasServiceRoleKey:         !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    hasRealReportsEnabled:     !!process.env.REAL_REPORTS_ENABLED,
+    realReportsEnabledValue:   process.env.REAL_REPORTS_ENABLED,   // 'true' | 'false' | undefined — safe
+    hasGeminiApiKey:           !!process.env.GEMINI_API_KEY,
+    supabaseAdminInitialized:  !!supabaseAdmin,
+    verifiedRole,
+    verifiedPlan,
+    verifiedUserIdPresent:     !!verifiedUserId,
+  });
+  // ────────────────────────────────────────────────────────────────────────────
+
   if (!BETA_ROLES.includes(verifiedRole)) {
     return json(res, 403, {
       error: 'Real reports are restricted to beta users.',
