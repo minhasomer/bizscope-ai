@@ -293,6 +293,7 @@ const App: React.FC = () => {
     location: string,
     forceRegenerate: boolean,
   ) => {
+    console.log(`[BizScope] runAnalysis: biz="${businessType}" loc="${location}" forceRegen=${forceRegenerate} role="${currentUser?.role ?? ''}" plan="${userPlan}"`);
     setIsLoading(true);
     setError(null);
     setReport(null);
@@ -308,6 +309,7 @@ const App: React.FC = () => {
         await ReportCacheService.invalidate(businessType, location, 'standard', userPlan);
       }
 
+      console.log(`[BizScope] calling generateViabilityReport: role="${currentUser?.role ?? ''}" plan="${userPlan}" forceRegen=${forceRegenerate}`);
       const fullReport = await generateViabilityReport(
         businessType,
         location,
@@ -355,6 +357,7 @@ const App: React.FC = () => {
     location: string,
     forceRegenerate: boolean = false,
   ) => {
+    console.log(`[BizScope] handleAnalysisRequest: biz="${businessType}" loc="${location}" forceRegen=${forceRegenerate} role="${currentUser?.role ?? ''}" plan="${userPlan}" betaEnabled=${isBetaRoleEnabled(currentUser?.role ?? '')}`);
     const currentUsage = UsageTrackerService.getDetails(userPlan);
     let willCallApi = forceRegenerate;
 
@@ -373,10 +376,12 @@ const App: React.FC = () => {
     // Uses isBetaRoleEnabled so this fires even when VITE_DEMO_MODE=true (beta path).
     // Regen is already guarded by showRegenConfirm inside ReportDisplay — skip it here.
     if (isBetaRoleEnabled(currentUser?.role ?? '') && willCallApi && !forceRegenerate) {
+      console.log(`[BizScope] handleAnalysisRequest: opening LiveModeConfirmModal`);
       setPendingLiveRequest({ businessType, location, forceRegenerate });
       return;
     }
 
+    console.log(`[BizScope] handleAnalysisRequest: calling runAnalysis`);
     await runAnalysis(businessType, location, forceRegenerate);
   }, [userPlan, currentUser, runAnalysis]);
 
