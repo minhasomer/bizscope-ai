@@ -544,6 +544,43 @@ export class AuthService {
               subscription_tier,
             });
             if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
+
+            // If INITIAL_SESSION resolved to Explorer with no cached role, the
+            // profile fetch likely hit Supabase Web Lock contention during the
+            // background token refresh and timed out at 8 s.  Schedule a single
+            // retry 15 s later — by then the lock will have released and the
+            // real role (e.g. Admin) will be readable from the DB.
+            if (
+              event === 'INITIAL_SESSION' &&
+              role === 'Explorer' &&
+              !localStorage.getItem(`bizscope_user_role_${email}`)
+            ) {
+              console.log('[Auth] INITIAL_SESSION returned Explorer with empty role cache — scheduling profile retry in 15 s');
+              setTimeout(async () => {
+                console.log('[Auth] Profile retry — re-fetching after Web Lock window');
+                try {
+                  const retry = await resolvePlanFromSession(authUser.id, email, meta);
+                  if (retry.role !== 'Explorer') {
+                    console.log('[Auth] Profile retry succeeded — role:', retry.role, '| plan:', retry.plan);
+                    onUserChange({
+                      id: authUser.id,
+                      email,
+                      fullName: (meta.full_name ?? meta.fullName ?? meta.name ?? email.split('@')[0]) as string,
+                      avatarUrl:
+                        (meta.avatar_url ?? meta.picture ?? '') as string ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
+                      plan: retry.plan,
+                      role: retry.role,
+                      subscription_tier: retry.subscription_tier,
+                    });
+                  } else {
+                    console.warn('[Auth] Profile retry still returned Explorer — Web Lock may still be held');
+                  }
+                } catch (retryErr) {
+                  console.error('[Auth] Profile retry failed:', retryErr);
+                }
+              }, 15_000);
+            }
           } catch (err) {
             console.error('[AuthService] subscribeToAuthChanges profile fetch failed:', err);
             // Use cached role/tier so a token-refresh Web Lock timeout does not
