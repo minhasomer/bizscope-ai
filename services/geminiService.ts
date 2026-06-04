@@ -4,7 +4,7 @@ import { mockReport } from '../src/data/mockReport.js';
 import { ReportCacheService } from './reportCacheService';
 import { mockRegionalReport } from '../src/data/mockRegionalReport.js';
 import { mockOpportunities } from '../src/data/mockOpportunities.js';
-import { appConfig } from '../src/config/appConfig';
+import { appConfig, isBetaRoleEnabled } from '../src/config/appConfig';
 import { assertLiveService } from '../src/lib/guardrails';
 import { supabase } from './supabaseClient';
 
@@ -473,7 +473,8 @@ export const generateViabilityReport = async (
     userLocation: UserLocation | null,
     setLoadingMessage: (message: string) => void,
     planTier: string = 'Explorer',
-    forceRegenerate: boolean = false
+    forceRegenerate: boolean = false,
+    userRole: string = ''
 ): Promise<ViabilityReport> => {
     if (!forceRegenerate) {
         setLoadingMessage("Checking cache records...");
@@ -486,7 +487,7 @@ export const generateViabilityReport = async (
     }
 
     let result: ViabilityReport;
-    if (appConfig.isDemoMode) {
+    if (appConfig.isDemoMode && !isBetaRoleEnabled(userRole)) {
         setLoadingMessage("Checking environment cache...");
         await new Promise(resolve => setTimeout(resolve, 600));
         setLoadingMessage("Analyzing local competition with Google Maps...");
@@ -572,9 +573,9 @@ export const generateViabilityReport = async (
 
         result = customized as ViabilityReport;
     } else {
-        // Guardrail: this branch must never execute in Demo Mode.
-        // All AI analysis goes through the Express backend — never directly to Gemini.
-        assertLiveService('Gemini /api/analyze');
+        // assertLiveService is intentionally omitted here. Beta-role users reach
+        // this branch while VITE_DEMO_MODE=true — that is by design. The server
+        // enforces the role gate independently; this is a frontend routing decision.
         const sessionResult = await supabase?.auth.getSession();
         const token = sessionResult?.data?.session?.access_token ?? null;
         const response = await fetch('/api/analyze', {

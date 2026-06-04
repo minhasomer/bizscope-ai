@@ -315,6 +315,7 @@ const App: React.FC = () => {
         setLoadingMessage,
         userPlan,
         forceRegenerate,
+        currentUser?.role ?? '',
       );
       setReport(fullReport);
 

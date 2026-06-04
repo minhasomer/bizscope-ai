@@ -158,3 +158,26 @@ export const isDemoMode: boolean = appConfig.isDemoMode;
 
 /** True when Supabase env vars are present. @see appConfig.useRealAuth */
 export const useRealAuth: boolean = appConfig.useRealAuth;
+
+// ─── Beta real-reports gate ──────────────────────────────────────────────────
+
+const _realReportsEnabled: boolean =
+  process.env.VITE_REAL_REPORTS_ENABLED === 'true' ||
+  (process.env.VITE_REAL_REPORTS_ENABLED as unknown) === true;
+
+const _betaRoles: string[] = (process.env.VITE_BETA_ROLES ?? '')
+  .split(',').map(r => r.trim()).filter(Boolean);
+
+/**
+ * True when VITE_REAL_REPORTS_ENABLED=true AND the given role is in VITE_BETA_ROLES.
+ *
+ * Used in geminiService to route beta users to real Gemini even when
+ * VITE_DEMO_MODE=true. The server independently enforces its own role gate —
+ * this is a frontend routing decision only.
+ *
+ * Initial deploy:  VITE_BETA_ROLES=Admin
+ * Expand to beta:  VITE_BETA_ROLES=Admin,BetaTester  (no code change needed)
+ * Kill switch:     VITE_REAL_REPORTS_ENABLED=false and redeploy
+ */
+export const isBetaRoleEnabled = (role: string): boolean =>
+  _realReportsEnabled && _betaRoles.includes(role);
