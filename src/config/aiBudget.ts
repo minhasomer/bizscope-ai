@@ -22,38 +22,40 @@
 
 // ─── Gemini model IDs ─────────────────────────────────────────────────────────
 //
-// TODO: Verify these model IDs against the Gemini API before production.
-//   List available models via SDK:
-//     const list = await ai.models.list();
-//   Or via REST:
-//     GET https://generativelanguage.googleapis.com/v1beta/models?key=GEMINI_API_KEY
+// Verified against @google/genai v1.52.0 / Gemini API v1beta.
+// gemini-1.5-flash and gemini-1.5-pro were removed from v1beta and cause
+// NOT_FOUND 404. Current stable replacements:
+//   standard → gemini-2.0-flash   (fast, cheap, v1beta stable)
+//   regional → gemini-2.5-pro     (high quality, v1beta stable)
 //
-// The previous placeholder names ('gemini-3.5-flash', 'gemini-3.1-pro-preview')
-// do not correspond to real Gemini model IDs and will cause runtime failures.
+// To list all available models for your API key:
+//   GET https://generativelanguage.googleapis.com/v1beta/models?key=GEMINI_API_KEY
 //
-// The IDs below are the documented stable models as of the @google/genai v1.x SDK.
-// If newer models are available and preferred (e.g. gemini-2.0-flash, gemini-2.5-flash),
-// update GEMINI_MODELS here — AI_BUDGET, MODEL_PRICING, and server.ts will all
-// pick up the change automatically.
+// To update: change GEMINI_MODELS below — AI_BUDGET, MODEL_PRICING, and
+// server.ts all derive model IDs from this object automatically.
 
 export const GEMINI_MODELS = {
-  /** Flash-tier model — standard reports (fast, cost-efficient). */
-  standard: 'gemini-1.5-flash',
-  /** Pro-tier model — Regional Intelligence reports (higher reasoning). */
-  regional: 'gemini-1.5-pro',
+  /** Flash-tier model — standard reports (fast, cost-efficient).
+   *  gemini-1.5-flash was removed from v1beta; gemini-2.0-flash is the
+   *  direct replacement — same tier, lower cost, stable on @google/genai v1.x. */
+  standard: 'gemini-2.0-flash',
+  /** Pro-tier model — Regional Intelligence reports (higher reasoning).
+   *  gemini-1.5-pro was removed from v1beta; gemini-2.5-pro is the
+   *  current high-quality replacement on @google/genai v1.x. */
+  regional: 'gemini-2.5-pro',
 } as const;
 
 // ─── Model pricing constants ──────────────────────────────────────────────────
-// USD per 1,000 tokens — conservative estimates, verify before production.
+// USD per 1,000 tokens — verify current rates at https://ai.google.dev/gemini-api/docs/pricing
 // Keys are derived from GEMINI_MODELS so a model rename stays consistent.
 
 export const MODEL_PRICING: Record<string, { inputPer1kTokens: number; outputPer1kTokens: number }> = {
-  // Flash-tier (standard reports)
+  // gemini-2.0-flash (standard reports)
   [GEMINI_MODELS.standard]: {
-    inputPer1kTokens:  0.00015,  // ~$0.15 / 1M input tokens
-    outputPer1kTokens: 0.00060,  // ~$0.60 / 1M output tokens
+    inputPer1kTokens:  0.00010,  // ~$0.10 / 1M input tokens
+    outputPer1kTokens: 0.00040,  // ~$0.40 / 1M output tokens
   },
-  // Pro-tier (regional reports)
+  // gemini-2.5-pro (regional reports)
   [GEMINI_MODELS.regional]: {
     inputPer1kTokens:  0.00125,  // ~$1.25 / 1M input tokens
     outputPer1kTokens: 0.01000,  // ~$10.00 / 1M output tokens

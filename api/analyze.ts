@@ -499,6 +499,7 @@ export default async function handler(
     const normalizedPlan = normalizeTierToBudgetPlan(verifiedPlan);
     const budget = getReportBudget(normalizedPlan, 'standard');
     const model = budget.model;
+    console.log('[analyze diag] model selected:', { normalizedPlan, model, maxOutputTokens: budget.maxOutputTokens });
     let sources: { title: string; uri: string }[] = [];
     let competitionInfo = 'No competitor data available.';
     let marketInfo = 'No trend data available.';
