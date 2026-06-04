@@ -71,8 +71,15 @@ async function resolvePlanFromSession(
   );
 
   if (!profile) {
-    console.warn('[Auth] Profile unavailable — falling back to Explorer defaults');
-    return { plan: 'Explorer', role: 'Explorer', subscription_tier: 'Explorer' };
+    // Prefer cached role/tier from a previous successful fetch so a Web Lock timeout
+    // does not downgrade an Admin back to Explorer for the rest of the session.
+    const cachedRole = localStorage.getItem(`bizscope_user_role_${email}`) ?? 'Explorer';
+    const cachedTier = localStorage.getItem(`bizscope_user_tier_${email}`) ?? 'Explorer';
+    const fallbackPlan = isDemoMode
+      ? (localStorage.getItem(`bizscope_user_plan_${email}`) ?? localStorage.getItem('bizscope_user_plan') ?? getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null))
+      : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null);
+    console.warn('[Auth] Profile unavailable — using cached role:', cachedRole, '| plan:', fallbackPlan);
+    return { plan: fallbackPlan, role: cachedRole, subscription_tier: cachedTier };
   }
 
   // In Demo Mode respect any plan override the switcher wrote to localStorage,
@@ -539,14 +546,20 @@ export class AuthService {
             if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
           } catch (err) {
             console.error('[AuthService] subscribeToAuthChanges profile fetch failed:', err);
+            // Use cached role/tier so a token-refresh Web Lock timeout does not
+            // downgrade an Admin to Explorer for the duration of the session.
+            const cachedRole = localStorage.getItem(`bizscope_user_role_${email}`) ?? 'Explorer';
+            const cachedTier = localStorage.getItem(`bizscope_user_tier_${email}`) ?? 'Explorer';
             onUserChange({
               id: authUser.id,
               email,
               fullName: (meta.full_name ?? email.split('@')[0]) as string,
               avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
-              plan: 'Explorer',
-              role: 'Explorer',
-              subscription_tier: 'Explorer',
+              plan: isDemoMode
+                ? (localStorage.getItem(`bizscope_user_plan_${email}`) ?? localStorage.getItem('bizscope_user_plan') ?? getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null))
+                : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null),
+              role: cachedRole,
+              subscription_tier: cachedTier,
             });
             if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
           }

@@ -357,17 +357,22 @@ const App: React.FC = () => {
     location: string,
     forceRegenerate: boolean = false,
   ) => {
-    console.log(`[BizScope] handleAnalysisRequest: biz="${businessType}" loc="${location}" forceRegen=${forceRegenerate} role="${currentUser?.role ?? ''}" plan="${userPlan}" betaEnabled=${isBetaRoleEnabled(currentUser?.role ?? '')}`);
+    const role = currentUser?.role ?? '';
+    // Admin and Enterprise users have unlimited quota — never hit the client-side limit modal.
+    const isUnlimited = isAdmin(role) || userPlan === 'Enterprise';
     const currentUsage = UsageTrackerService.getDetails(userPlan);
+
+    console.log(`[BizScope] handleAnalysisRequest: biz="${businessType}" loc="${location}" forceRegen=${forceRegenerate} role="${role}" plan="${userPlan}" betaEnabled=${isBetaRoleEnabled(role)} isUnlimited=${isUnlimited} canRunStandard=${currentUsage.canRunStandard}`);
+
     let willCallApi = forceRegenerate;
 
     if (forceRegenerate) {
-      if (!currentUsage.canRunStandard) { setShowLimitModal(true); return; }
+      if (!isUnlimited && !currentUsage.canRunStandard) { setShowLimitModal(true); return; }
     } else {
       const cachedReport = await ReportCacheService.get(businessType, location, 'standard', userPlan);
       if (!cachedReport) {
         willCallApi = true;
-        if (!currentUsage.canRunStandard) { setShowLimitModal(true); return; }
+        if (!isUnlimited && !currentUsage.canRunStandard) { setShowLimitModal(true); return; }
       }
       // Cache hit → fall through; runAnalysis will serve it from cache immediately.
     }
@@ -375,7 +380,7 @@ const App: React.FC = () => {
     // Live-mode cost protection: show confirmation whenever a real API call would be made.
     // Uses isBetaRoleEnabled so this fires even when VITE_DEMO_MODE=true (beta path).
     // Regen is already guarded by showRegenConfirm inside ReportDisplay — skip it here.
-    if (isBetaRoleEnabled(currentUser?.role ?? '') && willCallApi && !forceRegenerate) {
+    if (isBetaRoleEnabled(role) && willCallApi && !forceRegenerate) {
       console.log(`[BizScope] handleAnalysisRequest: opening LiveModeConfirmModal`);
       setPendingLiveRequest({ businessType, location, forceRegenerate });
       return;
