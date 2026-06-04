@@ -147,6 +147,16 @@ export interface ViabilityReport {
   // Cache metadata
   loadedFromCache?: boolean;
   cachedAt?: string;
+
+  // Generation metadata — present on live Gemini reports, absent on mock
+  generationMeta?: {
+    model: string;
+    isLiveGenerated: boolean;
+    estimatedCostUsd: number | null;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    generatedAt: string;
+  };
 }
 
 export interface NearbyRegionData {

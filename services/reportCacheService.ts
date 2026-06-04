@@ -7,6 +7,8 @@ export interface CacheEntry {
   planTier: string;
   report: any;
   timestamp: string; // ISO String
+  modelId?: string;          // Gemini model that generated this entry; absent for mock
+  isLiveGenerated?: boolean; // false/absent = mock, true = real Gemini call
 }
 
 export class ReportCacheService {
@@ -173,6 +175,8 @@ export class ReportCacheService {
       planTier,
       report: cleanedReport,
       timestamp,
+      modelId: report.generationMeta?.model,
+      isLiveGenerated: report.generationMeta?.isLiveGenerated,
     };
 
     this.saveAllEntries(entries);

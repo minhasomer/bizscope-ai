@@ -2,10 +2,10 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
-  GEMINI_MODELS,
   normalizeTierToBudgetPlan,
   getReportBudget,
   estimateCost,
+  wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
 
 export const maxDuration = 60;
@@ -390,9 +390,9 @@ export default async function handler(
 
   try {
     const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
-    const model = GEMINI_MODELS.standard;
     const normalizedPlan = normalizeTierToBudgetPlan(verifiedPlan);
     const budget = getReportBudget(normalizedPlan, 'standard');
+    const model = budget.model;
     let sources: { title: string; uri: string }[] = [];
     let competitionInfo = 'No competitor data available.';
     let marketInfo = 'No trend data available.';
@@ -483,8 +483,14 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
     );
 
     const usage = (synthesis as any).usageMetadata;
-    const cost = estimateCost(model, usage?.promptTokenCount ?? 0, usage?.candidatesTokenCount ?? 0, 2);
-    console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} in=${usage?.promptTokenCount ?? '?'} out=${usage?.candidatesTokenCount ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)}`);
+    const inputTokens: number | null = usage?.promptTokenCount ?? null;
+    const outputTokens: number | null = usage?.candidatesTokenCount ?? null;
+    const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 2);
+    console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)}`);
+
+    if (wouldExceedHardCap(cost.estimatedCostUsd, budget)) {
+      console.warn(`[AICost] OVER_HARD_CAP role=${verifiedRole} plan=${normalizedPlan} cap=$${budget.hardCapUsd} actual=$${cost.estimatedCostUsd.toFixed(5)}`);
+    }
 
     const parsed = cleanAndParseJSON(synthesis.text || '', fallback);
     parsed.groundingSources = sources.length > 0 ? sources : fallback.groundingSources;
@@ -509,6 +515,15 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
         },
       );
     }
+
+    parsed.generationMeta = {
+      model,
+      isLiveGenerated: true,
+      estimatedCostUsd: cost.estimatedCostUsd,
+      inputTokens,
+      outputTokens,
+      generatedAt: new Date().toISOString(),
+    };
 
     return json(res, 200, parsed);
   } catch (err: any) {
