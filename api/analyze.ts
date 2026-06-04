@@ -310,8 +310,9 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   verifiedEmail: string;
   verifiedPlan: string;
   verifiedRole: string;
+  verifiedUserId: string | null;
 }> {
-  const FALLBACK = { verifiedEmail: 'anonymous@bizscope.ai', verifiedPlan: 'Explorer', verifiedRole: '' };
+  const FALLBACK = { verifiedEmail: 'anonymous@bizscope.ai', verifiedPlan: 'Explorer', verifiedRole: '', verifiedUserId: null as string | null };
   if (!supabaseAdmin) return FALLBACK;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
   if (!token) return FALLBACK;
@@ -324,7 +325,7 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
       .eq('id', user.id)
       .single();
     if (profileError || !profile) {
-      return { ...FALLBACK, verifiedEmail: user.email ?? FALLBACK.verifiedEmail };
+      return { ...FALLBACK, verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedUserId: user.id };
     }
     const verifiedPlan = getServerSidePlan(profile.role, profile.subscription_tier);
     console.log(`[BetaAuth] uid=${user.id} role=${profile.role} → plan=${verifiedPlan}`);
@@ -332,6 +333,7 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
       verifiedEmail: user.email ?? FALLBACK.verifiedEmail,
       verifiedPlan,
       verifiedRole: profile.role ?? '',
+      verifiedUserId: user.id,
     };
   } catch (err: any) {
     console.error('[BetaAuth] verifyAndGetPlan error:', err.message);
@@ -362,7 +364,7 @@ export default async function handler(
   }
 
   // Auth + role gate: only Admin and BetaTester proceed.
-  const { verifiedEmail, verifiedPlan, verifiedRole } = await verifyAndGetPlan(
+  const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
 
@@ -488,7 +490,8 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
     const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 2);
     console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)}`);
 
-    if (wouldExceedHardCap(cost.estimatedCostUsd, budget)) {
+    const withinHardCap = !wouldExceedHardCap(cost.estimatedCostUsd, budget);
+    if (!withinHardCap) {
       console.warn(`[AICost] OVER_HARD_CAP role=${verifiedRole} plan=${normalizedPlan} cap=$${budget.hardCapUsd} actual=$${cost.estimatedCostUsd.toFixed(5)}`);
     }
 
@@ -524,6 +527,29 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
       outputTokens,
       generatedAt: new Date().toISOString(),
     };
+
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('usage_logs').insert({
+          user_id: verifiedUserId,
+          user_email: verifiedEmail,
+          user_role: verifiedRole,
+          plan: normalizedPlan,
+          report_type: 'standard',
+          model,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          grounding_calls: 2,
+          estimated_cost_usd: cost.estimatedCostUsd,
+          within_hard_cap: withinHardCap,
+          business_type: businessType,
+          location,
+        });
+        console.log(`[UsageLog] Logged: ${verifiedEmail} plan=${normalizedPlan} cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+      }
+    } catch (logErr: any) {
+      console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
+    }
 
     return json(res, 200, parsed);
   } catch (err: any) {
