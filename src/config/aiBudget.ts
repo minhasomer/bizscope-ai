@@ -23,10 +23,15 @@
 // ─── Gemini model IDs ─────────────────────────────────────────────────────────
 //
 // Verified against @google/genai v1.52.0 / Gemini API v1beta.
-// gemini-1.5-flash and gemini-1.5-pro were removed from v1beta and cause
-// NOT_FOUND 404. Current stable replacements:
-//   standard → gemini-2.0-flash   (fast, cheap, v1beta stable)
-//   regional → gemini-2.5-pro     (high quality, v1beta stable)
+// Migration history:
+//   gemini-1.5-flash → removed from v1beta (NOT_FOUND)
+//   gemini-2.0-flash → removed ("no longer available", NOT_FOUND)
+//   gemini-2.5-flash → current stable Flash model; the @google/genai v1.52.0
+//                      SDK README quickstart uses this exact ID.
+//   gemini-2.5-pro   → current stable Pro model; unchanged.
+//
+// NOTE: "gemini-3.5-flash" does not exist in Google's model catalogue.
+// Google's Flash naming follows 1.5 → 2.0 → 2.5 — there is no 3.x series.
 //
 // To list all available models for your API key:
 //   GET https://generativelanguage.googleapis.com/v1beta/models?key=GEMINI_API_KEY
@@ -36,12 +41,10 @@
 
 export const GEMINI_MODELS = {
   /** Flash-tier model — standard reports (fast, cost-efficient).
-   *  gemini-1.5-flash was removed from v1beta; gemini-2.0-flash is the
-   *  direct replacement — same tier, lower cost, stable on @google/genai v1.x. */
-  standard: 'gemini-2.0-flash',
+   *  Confirmed in @google/genai v1.52.0 SDK README quickstart. */
+  standard: 'gemini-2.5-flash',
   /** Pro-tier model — Regional Intelligence reports (higher reasoning).
-   *  gemini-1.5-pro was removed from v1beta; gemini-2.5-pro is the
-   *  current high-quality replacement on @google/genai v1.x. */
+   *  Current stable Pro model; not deprecated as of v1.52.0. */
   regional: 'gemini-2.5-pro',
 } as const;
 
@@ -50,10 +53,10 @@ export const GEMINI_MODELS = {
 // Keys are derived from GEMINI_MODELS so a model rename stays consistent.
 
 export const MODEL_PRICING: Record<string, { inputPer1kTokens: number; outputPer1kTokens: number }> = {
-  // gemini-2.0-flash (standard reports)
+  // gemini-2.5-flash (standard reports) — similar pricing to 2.0-flash
   [GEMINI_MODELS.standard]: {
-    inputPer1kTokens:  0.00010,  // ~$0.10 / 1M input tokens
-    outputPer1kTokens: 0.00040,  // ~$0.40 / 1M output tokens
+    inputPer1kTokens:  0.00010,  // ~$0.10 / 1M input tokens (non-thinking)
+    outputPer1kTokens: 0.00040,  // ~$0.40 / 1M output tokens (non-thinking)
   },
   // gemini-2.5-pro (regional reports)
   [GEMINI_MODELS.regional]: {
