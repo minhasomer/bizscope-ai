@@ -108,7 +108,7 @@ export const LockedSection: React.FC<LockedSectionProps> = ({
           </div>
 
           <span className="inline-block bg-indigo-50 text-indigo-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-3">
-            {requiredPlan === 'Pro+' ? 'Pro+ Feature Gated' : 'Pro Feature Gated'}
+            {requiredPlan === 'Pro+' ? 'Pro+ Feature' : 'Pro Feature'}
           </span>
 
           <h4 className="text-sm font-black text-gray-900 tracking-tight mb-2 uppercase">
@@ -418,9 +418,9 @@ const ReportSubNav: React.FC<{ activeSection: string; setActiveSection: (id: str
     { id: 'overview', label: 'Executive Summary' },
     { id: 'financials', label: 'Financial Projections' },
     { id: 'strategy', label: 'Risks & Success Factors' },
-    { id: 'competition', label: 'Competition & Hotspots' },
+    { id: 'competition', label: 'Competition' },
     { id: 'demographics', label: 'Demographics & Trends' },
-    { id: 'regional', label: 'Regional Study' },
+    { id: 'regional', label: 'Regional Insights' },
   ];
 
   const handleScrollTo = (id: string) => {
@@ -676,7 +676,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     try {
       await SavedReportsService.saveReport(report);
       setIsSaved(true);
-      setSaveSuccess('Dossier Saved to Ledger!');
+      setSaveSuccess('Report saved!');
       setTimeout(() => setSaveSuccess(''), 2500);
     } catch(e) {
       console.error(e);
@@ -752,13 +752,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 )}
                             </div>
                         )}
-                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">Generated Study</span>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">Business Analysis</span>
                         <h2 className="text-3xl font-black text-gray-900 tracking-tight sm:text-4xl mb-1 capitalize leading-none">
                           {report.businessType}
                         </h2>
                         <p className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-1 mb-4 font-semibold uppercase tracking-wide">
                           <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>Target Locality: <strong className="text-blue-600">{report.location}</strong></span>
+                          <span>Location: <strong className="text-blue-600">{report.location}</strong></span>
                         </p>
                         
                         <div className={`inline-block px-3.5 py-1.5 rounded-xl border font-black text-xs uppercase tracking-wider mb-4 ${recStyle.bg}`}>
@@ -780,7 +780,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
               <span>BizScope Study &bull; Confidentially Generated</span>
               <span>Coordinates: Lat {report.targetCoordinates?.latitude ?? "N/A"} / Lng {report.targetCoordinates?.longitude ?? "N/A"}</span>
-              <span>Active Plan Parameter: {currentPlan}</span>
+              <span>{currentPlan} Plan</span>
             </div>
 
             {/* Quick Actions Footer Section */}
@@ -799,7 +799,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-extrabold text-xs  border border-gray-200 cursor-pointer"
                 >
                     <Map className="w-3.5 h-3.5" />
-                    <span>Open Competitor Map Popup</span>
+                    <span>View Competitor Map</span>
                 </button>
                 <button 
                   onClick={handleSaveReport}
@@ -808,14 +808,14 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   }`}
                 >
                     <span>{canSaveReports(currentPlan) ? '💾' : '🔒'}</span> 
-                    <span>{isSaved ? 'Dossier Saved to Ledger' : canSaveReports(currentPlan) ? 'Save to Dashboard' : 'Save Report (Pro Upgrade)'}</span>
+                    <span>{isSaved ? 'Saved to Dashboard' : canSaveReports(currentPlan) ? 'Save to Dashboard' : 'Save Report (Pro)'}</span>
                 </button>
                 <button 
                   onClick={handleExportPDF}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-xl transition-colors font-extrabold text-xs cursor-pointer"
                 >
                     <span>{canExportPdf(currentPlan) ? '📄' : '🔒'}</span> 
-                    <span>Dossier PDF Export</span>
+                    <span>Download PDF</span>
                 </button>
                 {saveSuccess && (
                   <span className="inline-flex items-center text-xs text-green-600 font-bold bg-green-50 border border-green-200 px-3 py-1 rounded-md animate-pulse">
@@ -841,13 +841,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
         {/* Print Dossier Header Title Block */}
         <div className="hidden print:block border-b-4 border-gray-900 pb-5 mb-5 whitespace-normal">
-            <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">BizScope Market Intelligence Dossier</h1>
-            <p className="text-xs font-mono text-gray-400 mt-1 uppercase">Automated Corporate study &bull; Confidential Business Viability Study</p>
+            <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">BizScope Business Analysis</h1>
+            <p className="text-xs font-mono text-gray-400 mt-1 uppercase">Confidential Business Analysis Report</p>
             <div className="mt-5 grid grid-cols-4 gap-6 text-sm border-t border-gray-100 pt-4">
-                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Business Profile</span> {report.businessType}</div>
-                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Target Locality</span> {report.location}</div>
-                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Viability Index</span> {report.viabilityScore} / 100</div>
-                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Generated Plan</span> {currentPlan} Profile</div>
+                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Business</span> {report.businessType}</div>
+                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Location</span> {report.location}</div>
+                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Viability Score</span> {report.viabilityScore} / 100</div>
+                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Plan</span> {currentPlan}</div>
             </div>
         </div>
 
@@ -866,7 +866,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             {/* Financial Outlook Card with Locked Pro indicators */}
             {report.financialProjections && (
               <SectionCard
-                  title="Financial Outlook & ROI projections"
+                  title="Financial Projections"
                   id="financials"
                   className="border-l-4 border-l-blue-500 shadow-sm"
                   icon={<Coins className="w-5 h-5 text-blue-600" />}
@@ -875,11 +875,11 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                       {/* Basic Startup Cost Range - Always visible to free tier */}
                       <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-150 flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div>
-                              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estimated Startup Venture Budget</p>
+                              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estimated Startup Cost</p>
                               <p className="text-2xl font-black text-gray-900 mt-1">{report.financialProjections.startupCostRange}</p>
                           </div>
                           <div className="flex-1 md:max-w-md">
-                              <p className="text-xs text-gray-405 font-bold uppercase tracking-wider">Startup Allocation Breakdown</p>
+                              <p className="text-xs text-gray-405 font-bold uppercase tracking-wider">Cost Breakdown</p>
                               <p className="text-xs text-gray-650 mt-1 leading-relaxed italic">{report.financialProjections.startupCostBreakdown}</p>
                           </div>
                       </div>
@@ -938,7 +938,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                               {/* Additional Key Stats Grid */}
                               {report.financialProjections.keyStats && report.financialProjections.keyStats.length > 0 && (
                                    <div className="md:col-span-2 pt-4 border-t border-gray-100">
-                                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Key Financial Benchmarks</p>
+                                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Key Financial Stats</p>
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                           {report.financialProjections.keyStats.map((stat, i) => (
                                               <div key={i} className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
@@ -958,7 +958,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             {/* Strategic Risks & Success Factors card */}
             {(report.riskAssessment || report.successFactors) && (
                <SectionCard
-                  title="Strategic risk & success blueprints"
+                  title="Risks & Success Factors"
                   id="strategy"
                   icon={<ShieldCheck className="w-5 h-5 text-indigo-600" />}
                >
@@ -967,7 +967,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                       {report.riskAssessment && (
                           <div className="space-y-4">
                               <h4 className="font-black text-xs text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 flex items-center gap-1.5">
-                                  <span className="text-yellow-600">⚠️</span> Potential Risks Checked
+                                  <span className="text-yellow-600">⚠️</span> Business Risks
                               </h4>
                               <div className="space-y-4">
                                   {/* First Risk item - Always visible to provide high-quality initial value */}
@@ -1077,10 +1077,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 whitespace-normal">
                 {/* Competition analysis summary lists */}
                 <SectionCard 
-                  title="Competitor Audit Ledger" 
+                  title="Nearby Competitors"
                   icon={<Compass className="w-5 h-5 text-indigo-600" />}
                 >
-                  <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Active Competitive Entities</p>
+                  <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Competitors in this area</p>
                   <p className="mb-4 text-sm text-gray-700 leading-relaxed">{report.competitionAnalysis.summary}</p>
                   <ul className="space-y-4">
                     {report.competitionAnalysis.competitors.map((comp, index) => (
@@ -1095,10 +1095,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
                 {/* Market Trends */}
                 <SectionCard 
-                  title="Dynamic Market Trends" 
+                  title="Market Trends"
                   icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
                 >
-                  <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Growth drivers & consumer behavior</p>
+                  <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">What's driving demand</p>
                   <p className="mb-4 text-sm text-gray-750 leading-relaxed">{report.marketTrends.summary}</p>
                   <ul className="space-y-4">
                     {report.marketTrends.trends.map((item, index) => (
@@ -1116,11 +1116,11 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
             {/* Demographics Insight snapshot card - Always fully visible */}
             <SectionCard 
-              title="Demographics Census Metrics" 
+              title="Local Demographics"
               id="demographics"
               icon={<Building className="w-5 h-5 text-rose-500" />}
             >
-              <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Household, Income & Density Snapshots</p>
+              <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Local population & income</p>
               <p className="mb-6 text-sm text-gray-750 leading-relaxed">{report.demographicInsights.summary}</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {report.demographicInsights.demographics.map((demo, index) => (
@@ -1142,7 +1142,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 badge={
                   !canViewFullFinancials(currentPlan) && (
                     <span className="bg-purple-100 text-purple-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                        PRO DATA MODULE
+                        Pro Feature
                     </span>
                   )
                 }
@@ -1158,7 +1158,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         <div className="bg-purple-50/50 border border-purple-100 text-purple-900 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between text-xs gap-3 print:hidden">
                             <span className="flex items-center gap-1.5 font-semibold">
                                 <Check className="w-4 h-4 text-purple-500 shrink-0" />
-                                <span>Pro Market Intelligence Active</span>
+                                <span>Pro Insights Active</span>
                             </span>
                             <span className="text-[10px] text-purple-600 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-full font-bold uppercase tracking-wide">
                                 General industry benchmarks — not location-specific
@@ -1192,19 +1192,19 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         </div>
 
                         <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150">
-                            <h4 className="font-extrabold text-gray-800 mb-3 text-xs uppercase tracking-wider">Premium Micro-Location Hotspots & Launch Timelines</h4>
+                            <h4 className="font-extrabold text-gray-800 mb-3 text-xs uppercase tracking-wider">Best Areas to Launch</h4>
                             <div className="space-y-3.5 text-xs text-gray-600">
                                 <div className="flex gap-2">
                                     <span className="text-blue-500 shrink-0 font-bold">&bull;</span>
-                                    <p><strong>Primary Commuter Crossways</strong>: {launchText.commuter}</p>
+                                    <p><strong>High-traffic locations</strong>: {launchText.commuter}</p>
                                 </div>
                                 <div className="flex gap-2">
                                     <span className="text-blue-500 shrink-0 font-bold">&bull;</span>
-                                    <p><strong>Secondary Residential Nodes</strong>: {launchText.residential}</p>
+                                    <p><strong>Residential areas</strong>: {launchText.residential}</p>
                                 </div>
                                 <div className="flex gap-2">
                                     <span className="text-blue-500 shrink-0 font-bold">&bull;</span>
-                                    <p><strong>Weekend Lifestyle Alignment</strong>: {launchText.lifestyle}</p>
+                                    <p><strong>Weekend activity areas</strong>: {launchText.lifestyle}</p>
                                 </div>
                             </div>
                         </div>
@@ -1213,14 +1213,14 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             </SectionCard>
              {/* Regional Intelligence & Adjacent ZIP codes - Pro+ */}
             <SectionCard
-                title="Regional adjacent ZIP & multi-district study"
+                title="Nearby Areas & Regional Insights"
                 id="regional"
                 className="border-l-4 border-l-indigo-500"
                 icon={<Globe className="w-5 h-5 text-indigo-600" />}
                 badge={
                   !canViewRegionalIntelligence(currentPlan) && (
                     <span className="bg-indigo-100 text-indigo-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                        PRO+ DATA MODULE
+                        Pro+ Feature
                     </span>
                   )
                 }
@@ -1238,7 +1238,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <AlertTriangle className="h-6 w-6 text-amber-500 animate-pulse" />
                             </div>
                             <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                                Regional Study Quota Exhausted
+                                Monthly Regional Limit Reached
                             </span>
                             <h4 className="text-sm font-black text-gray-950 tracking-tight uppercase">
                                 Limit Reached (10/Month)
@@ -1257,7 +1257,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         <div className="py-12 flex flex-col items-center justify-center space-y-3">
                             <Sparkles className="w-8 h-8 text-indigo-500 animate-spin" />
                             <p className="text-xs font-mono font-black text-indigo-700 animate-pulse uppercase tracking-widest">
-                                Compiling Regional Datasets...
+                                Loading regional data...
                             </p>
                         </div>
                     ) : regionalData ? (
@@ -1265,22 +1265,22 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             <div className="bg-indigo-50/50 border border-indigo-100 text-indigo-900 p-4 rounded-2xl text-xs flex items-center gap-2 print:hidden">
                                 <Check className="w-4 h-4 text-indigo-500 shrink-0" />
                                 <span>
-                                    <strong>Pro+ Regional Intelligence Active:</strong> Market context modeled for surrounding sectors near <strong>{report.location}</strong>.
+                                    <strong>Pro+ Regional Insights Active:</strong> Market context modeled for surrounding sectors near <strong>{report.location}</strong>.
                                 </span>
                             </div>
 
                             {/* 1. Nearby ZIP Opportunity Analysis / Surrounding Suburbs Analysis */}
                             <div>
                                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
-                                    {regionalData.isZipMode ? "Nearby ZIP Opportunity Analysis" : "Surrounding Suburbs Market Context"}
+                                    {regionalData.isZipMode ? "Nearby ZIP Codes" : "Nearby Suburbs"}
                                 </p>
                                 <div className="overflow-x-auto rounded-2xl border border-gray-150 bg-gray-50/30">
                                     <table className="w-full min-w-[480px] text-left border-collapse text-xs">
                                         <thead>
                                             <tr className="bg-gray-100 border-b border-gray-150 font-black text-gray-400 uppercase tracking-wider">
-                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Target District" : "Sub-District Suburb"}</th>
-                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Income Benchmark" : "Growth Status"}</th>
-                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Active Competitors" : "Direct Saturation"}</th>
+                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Area" : "Suburb"}</th>
+                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Income Level" : "Growth Status"}</th>
+                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Active Competitors" : "Competition"}</th>
                                                 <th className="py-3.5 px-4 text-right text-[10px]">Potential Opportunity</th>
                                             </tr>
                                         </thead>
@@ -1327,7 +1327,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <div className="bg-gray-50/80 border border-gray-200 p-5 rounded-2xl">
                                     <h4 className="font-extrabold text-gray-800 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <Globe className="w-4 h-4 text-indigo-500" />
-                                        <span>15–25 Mile Economic Radius pull</span>
+                                        <span>Wider Economic Region (15–25 miles)</span>
                                     </h4>
                                     <p className="text-xs text-gray-600 leading-relaxed">{regionalData.economicRadius}</p>
                                 </div>
@@ -1335,7 +1335,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <div className="bg-gray-50/80 border border-gray-200 p-5 rounded-2xl">
                                     <h4 className="font-extrabold text-gray-800 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                        <span>Competitive Saturation Spillover</span>
+                                        <span>Nearby Market Competition</span>
                                     </h4>
                                     <p className="text-xs text-gray-600 leading-relaxed">{regionalData.competitiveSpillover}</p>
                                 </div>
@@ -1345,7 +1345,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             <div className="bg-indigo-50/25 p-6 rounded-2xl border border-indigo-100">
                                 <p className="text-xs font-black text-indigo-750 uppercase tracking-widest mb-4 flex items-center gap-1.5">
                                     <Layers className="w-4 h-4 text-indigo-500" />
-                                    <span>Strategic Expansion Playbook (12 Months)</span>
+                                    <span>Expansion Plan (Next 12 Months)</span>
                                 </p>
                                 <p className="text-xs text-gray-600 mb-4 leading-relaxed">{regionalData.expansionPotential}</p>
                                 
@@ -1374,14 +1374,14 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     <ShieldCheck className="w-5 h-5" />
                                 </div>
                                 <div className="text-left">
-                                    <h5 className="font-extrabold text-emerald-900 text-xs uppercase tracking-wider mb-1">Regional Expansion Advice & Playbook</h5>
+                                    <h5 className="font-extrabold text-emerald-900 text-xs uppercase tracking-wider mb-1">Expansion Recommendation</h5>
                                     <p className="text-xs text-emerald-800 leading-relaxed">{regionalData.regionalRecommendation}</p>
                                 </div>
                             </div>
                         </div>
                     ) : (
                         <div className="text-center py-10">
-                            <p className="text-xs text-gray-400 uppercase tracking-wider font-mono">Failed to load active regional parameters index.</p>
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-mono">Regional data couldn't be loaded.</p>
                         </div>
                     )}
                 </LockedSection>
@@ -1661,11 +1661,11 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     <Lock className="h-5 w-5 animate-pulse" />
                                 </div>
                                 <h3 className="text-base font-black text-gray-900 uppercase" id="gate-modal-title">
-                                    {showUpgradeGateModal === 'save' ? 'Dossier Ledger Saving Locked' : 'PDF Export Locked'}
+                                    {showUpgradeGateModal === 'save' ? 'Save Reports — Pro Required' : 'PDF Export Locked'}
                                 </h3>
                                 <p className="text-xs text-gray-500 mt-2 leading-relaxed">
                                     {showUpgradeGateModal === 'save'
-                                        ? 'Saving reports to your Venture Hub dashboard requires a Pro plan or above.'
+                                        ? 'Saving reports requires a Pro plan or above.'
                                         : 'PDF export is available on Pro and above. Upgrade your plan to download polished advisory reports.'}
                                 </p>
                             </div>
@@ -1681,7 +1681,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                               onClick={() => setShowUpgradeGateModal(null)}
                               className="w-full inline-flex justify-center rounded-xl border border-gray-200 shadow-xs px-4 py-2 bg-white text-xs font-bold text-gray-705 hover:bg-gray-50 transition-colors cursor-pointer"
                             >
-                              Dismiss Gating
+                              Cancel
                             </button>
                         </div>
                     </div>
@@ -1701,9 +1701,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               <div className="p-6 border-b border-gray-100 flex justify-between items-start">
                 <div className="text-left font-sans">
                   <h3 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-1.5 uppercase">
-                    <span>📄</span> PDF Dossier Workspace
+                    <span>📄</span> Export PDF
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">Configure layout options and print physical vector-exact PDF advisory files.</p>
+                  <p className="text-xs text-gray-500 mt-1">Customize and download your report as a PDF.</p>
                 </div>
                 <button
                   type="button"
@@ -1720,8 +1720,8 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 {/* Plan status alert badge */}
                 <div className="p-3 bg-gray-50 rounded-xl border border-gray-150 text-xs flex justify-between items-center">
                   <div className="text-left font-sans">
-                    <p className="text-[10px] uppercase font-extrabold text-gray-400">Current Plan Tier</p>
-                    <p className="font-bold text-gray-800">{currentPlan} Account Status</p>
+                    <p className="text-[10px] uppercase font-extrabold text-gray-400">Your Plan</p>
+                    <p className="font-bold text-gray-800">{currentPlan}</p>
                   </div>
                   <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-tight ${
                     currentPlan === 'Enterprise' ? 'bg-emerald-50 text-emerald-800 border-emerald-250 border' :
@@ -1734,7 +1734,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
                 {/* Scope Coverage highlights based on Plan */}
                 <div className="space-y-2 text-left">
-                  <h4 className="text-[10px] uppercase font-black tracking-wider text-gray-400">Included Study Fields:</h4>
+                  <h4 className="text-[10px] uppercase font-black tracking-wider text-gray-400">What's included:</h4>
                   
                   <div className="grid grid-cols-2 gap-2 text-[10px]">
                     <div className="p-2.5 bg-green-50 border border-green-100 rounded-lg flex items-center gap-1.5 text-green-800 font-bold">
@@ -1746,17 +1746,17 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     
                     {/* Financial block depending on Pro / Pro+ / Enterprise */}
                     <div className="p-2.5 bg-green-50 border border-green-100 rounded-lg flex items-center gap-1.5 text-green-800 font-bold">
-                      <span>✓</span> Pro Pro-Forma Cashflows
+                      <span>✓</span> Financial Projections
                     </div>
 
                     {/* Regional Block - Only Pro+ and Enterprise */}
                     {canViewRegionalIntelligence(currentPlan) ? (
                       <div className="p-2.5 bg-green-50 border border-green-100 rounded-lg flex items-center gap-1.5 text-green-800 font-bold">
-                        <span>✓</span> Pro+ Regional ZIP Index
+                        <span>✓</span> Regional Insights
                       </div>
                     ) : (
                       <div className="p-2.5 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-1.5 text-amber-800 font-bold" title="Requires Pro+ subscription">
-                        <span>🔒</span> Regional Datasets Excluded
+                        <span>🔒</span> Regional Insights (Pro+ only)
                       </div>
                     )}
                   </div>
@@ -1785,7 +1785,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                           className="w-4 h-4 text-emerald-600 rounded border-gray-350 focus:ring-emerald-500 cursor-pointer"
                         />
                         <label htmlFor="btn-wl-mode" className="text-xs font-bold text-gray-700 cursor-pointer">
-                          Activate Corporate White-Label Mode
+                          Enable White-Label Mode
                         </label>
                       </div>
 

@@ -499,20 +499,20 @@ const App: React.FC = () => {
                 <Lock className="h-8 w-8 animate-pulse" />
               </div>
               <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-3">
-                Pro Feature Gated
+                Pro Feature
               </span>
               <h3 className="text-3xl font-black text-gray-900 tracking-tight mb-2">
-                Venture Ledger Locked
+                Reports Dashboard — Pro Required
               </h3>
               <p className="text-gray-500 max-w-lg mb-6 text-sm leading-relaxed">
-                Cataloging and tracking your custom generated viability studies inside your persistent workspace dashboard requires a <strong>Pro</strong> subscription tier.
+                Saving and reviewing your business reports requires a <strong>Pro</strong> plan.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setCurrentView('pricing')}
                   className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
                 >
-                  View Upgrades / Hot-Swap Plan
+                  View Plans
                 </button>
                 <button 
                   onClick={() => setCurrentView('home')}
@@ -533,7 +533,7 @@ const App: React.FC = () => {
           <div className="max-w-5xl mx-auto py-8 px-4 min-h-[70vh] print:hidden animate-fade-in">
             <div className="mb-5 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Venture Dashboard</h1>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Reports Dashboard</h1>
                 <p className="text-sm text-slate-500 mt-0.5">
                   Manage and compare your saved business viability reports.
                 </p>
@@ -543,7 +543,7 @@ const App: React.FC = () => {
                   onClick={() => setCurrentView('home')}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-md cursor-pointer transition-colors"
                 >
-                  🚀 New Analysis Request
+                  New Report
                 </button>
                 <button
                    onClick={() => setCurrentView('opportunities')}
@@ -563,7 +563,7 @@ const App: React.FC = () => {
 
               {/* Standard Quota */}
               <div className="bg-gradient-to-br from-white to-violet-50/40 border border-violet-100/80 p-5 rounded-2xl flex flex-col gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-widest">Standard Quota</p>
+                <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-widest">Reports Used</p>
                 <p className="text-3xl font-bold text-slate-900">
                   {usage.standardLimit === null ? '∞' : `${usage.standardUsed}/${usage.standardLimit}`}
                 </p>
@@ -574,7 +574,7 @@ const App: React.FC = () => {
 
               {/* Regional Quota */}
               <div className="bg-gradient-to-br from-white to-slate-50/60 border border-slate-100/80 p-5 rounded-2xl flex flex-col gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Regional Quota</p>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Regional Reports</p>
                 <p className="text-3xl font-bold text-slate-900">
                   {usage.regionalLimit === 0 ? '—' : usage.regionalLimit === null ? '∞' : `${usage.regionalUsed}/${usage.regionalLimit}`}
                 </p>
@@ -1071,7 +1071,7 @@ const App: React.FC = () => {
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <h3 className="text-base font-bold text-gray-900" id="modal-title">
-                   Explorer Tier Limit Hit
+                   Monthly Report Limit Reached
                 </h3>
                 <p className="text-xs text-gray-500 mt-2 leading-relaxed">
                    Explorer accounts are limited to <strong>3 standard reports/month</strong>.

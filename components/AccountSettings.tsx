@@ -93,7 +93,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
             </div>
 
             <h3 className="text-base font-black text-gray-900 tracking-tight leading-short truncate">
-              {user.fullName || 'Active Venture Member'}
+              {user.fullName || 'BizScope Member'}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5 font-mono truncate">{user.email}</p>
 

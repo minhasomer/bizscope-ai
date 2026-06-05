@@ -145,7 +145,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
     setIsDeleting(true);
     try {
       await SavedReportsService.deleteReport(reportToDelete.id);
-      triggerToast(`Dossier for "${reportToDelete.businessType}" deleted successfully.`);
+      triggerToast(`Report for "${reportToDelete.businessType}" deleted.`);
       setReportToDelete(null);
     } catch (_) {
     } finally {
@@ -261,11 +261,11 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
             <div className="flex items-center gap-2">
               <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm">📁</span>
               <h3 className="text-lg font-bold text-slate-900 tracking-tight">
-                Private Venture Ledger
+                Saved Reports
               </h3>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Analyze, categorize, and cross-reference saved feasibility studies ({localReports.length} total)
+              Browse and compare your saved business reports ({localReports.length} total)
             </p>
             <p className="text-[10px] text-gray-400/70 mt-0.5">
               Stored on this device
@@ -274,7 +274,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
 
           {/* Quick Stats badges */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tiers:</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Types:</span>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50/70 py-1 px-2.5 rounded-lg border border-purple-100">
               <Sparkles className="w-3 h-3" /> Regional {localReports.filter(r => r.reportType === 'regional').length}
             </span>
@@ -510,12 +510,12 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                     className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all text-xs font-medium rounded-xl"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    Open Report Dossier
+                    Open Report
                   </button>
                   <button
                     onClick={() => setReportToDelete(report)}
                     className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors rounded-xl"
-                    title="Delete Saved Dossier"
+                    title="Delete Report"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -538,7 +538,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
             </div>
 
             <h3 className="text-lg font-black text-gray-900 leading-snug">
-              Confirm Dossier Deletion
+              Delete This Report?
             </h3>
             <p className="text-xs text-gray-500 mt-2">
               Are you sure you want to permanently delete the saved report for{' '}

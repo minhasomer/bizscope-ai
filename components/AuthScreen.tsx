@@ -138,7 +138,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           </h2>
         </div>
         <p className="text-xs text-gray-400 font-mono mt-1 uppercase tracking-widest">
-          {mode === 'forgot' ? 'Security Recovery Hub' : 'Market Intelligence Ledger'}
+          {mode === 'forgot' ? 'Password Recovery' : 'Sign In to BizScope'}
         </p>
       </div>
 

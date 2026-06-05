@@ -785,7 +785,7 @@ const OpportunityDossierModal: React.FC<{
           <div className="flex-grow min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <Sparkles className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
-              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Full Business Intelligence Dossier</span>
+              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Full Business Analysis</span>
             </div>
             <h2 className="text-base font-black text-slate-900 leading-tight">{opportunity.businessType}</h2>
             <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
@@ -810,7 +810,7 @@ const OpportunityDossierModal: React.FC<{
             <div className="bg-indigo-600 text-white rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-2.5">
                 <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
-                <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Executive Opportunity Summary</span>
+                <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Opportunity Overview</span>
               </div>
               <p className="text-sm leading-relaxed text-indigo-50">{opportunity.executiveSummary}</p>
             </div>
@@ -836,9 +836,9 @@ const OpportunityDossierModal: React.FC<{
           {!canViewDossier ? (
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-8 text-center">
               <Lock className="w-10 h-10 text-indigo-300 mx-auto mb-3" />
-              <h4 className="text-base font-black text-slate-800 mb-2">Full Dossier Available on Pro</h4>
+              <h4 className="text-base font-black text-slate-800 mb-2">Full Analysis — Pro Required</h4>
               <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-                Upgrade to <strong>Pro</strong> to unlock the complete business intelligence dossier — market analysis, competitive landscape, financial projections, risk assessment, and scorecard.
+                Upgrade to <strong>Pro</strong> to unlock the complete business analysis — market breakdown, competitive landscape, financial projections, risk assessment, and scorecard.
               </p>
               <button
                 onClick={onUpgrade}
@@ -850,9 +850,9 @@ const OpportunityDossierModal: React.FC<{
           ) : !hasDossier ? (
             <div className="bg-slate-100 border border-slate-200 rounded-2xl p-8 text-center">
               <Info className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-              <h4 className="text-sm font-bold text-slate-600 mb-1">Full Dossier Not Available</h4>
+              <h4 className="text-sm font-bold text-slate-600 mb-1">Full Analysis Not Available</h4>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Extended analysis data was not included in this report. Generate a fresh analysis to access the full dossier.
+                Detailed analysis wasn't included. Run a new search to get the full breakdown.
               </p>
             </div>
           ) : (
@@ -930,7 +930,7 @@ const OpportunityDossierModal: React.FC<{
                     <p className="text-sm text-slate-700 leading-relaxed flex-grow">{opportunity.competitiveLandscape.summary}</p>
                     {opportunity.competitiveLandscape.marketSaturation && (
                       <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${SATURATION_STYLES[opportunity.competitiveLandscape.marketSaturation] ?? 'bg-slate-100 text-slate-700'}`}>
-                        {opportunity.competitiveLandscape.marketSaturation} Saturation
+                        {opportunity.competitiveLandscape.marketSaturation} Competition
                       </span>
                     )}
                   </div>
