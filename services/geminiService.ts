@@ -579,6 +579,17 @@ export const generateViabilityReport = async (
         // assertLiveService is intentionally omitted here. Beta-role users reach
         // this branch while VITE_DEMO_MODE=true — that is by design. The server
         // enforces the role gate independently; this is a frontend routing decision.
+
+        // Schedule progress messages so the loader doesn't freeze for the ~30-40s API call.
+        setLoadingMessage("Connecting to analysis server...");
+        const _progressTimers = [
+            setTimeout(() => setLoadingMessage("Analyzing competition and market demand..."), 5000),
+            setTimeout(() => setLoadingMessage("Researching financial benchmarks and local data..."), 13000),
+            setTimeout(() => setLoadingMessage("Synthesizing risk factors and revenue projections..."), 23000),
+            setTimeout(() => setLoadingMessage("Building your comprehensive viability report..."), 33000),
+        ];
+        const _clearProgressTimers = () => _progressTimers.forEach(t => clearTimeout(t));
+
         const sessionResult = await supabase?.auth.getSession();
         const token = sessionResult?.data?.session?.access_token ?? null;
         const response = await fetch('/api/analyze', {
@@ -597,6 +608,8 @@ export const generateViabilityReport = async (
                 userEmail: localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai'
             })
         });
+
+        _clearProgressTimers();
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

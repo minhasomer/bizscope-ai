@@ -150,18 +150,23 @@ const App: React.FC = () => {
   const [usage, setUsage] = useState<UsageDetails>(() => UsageTrackerService.getDetails(baseUserPlan));
 
   useEffect(() => {
+    // Refresh usage whenever the effective plan changes — this catches the async
+    // auth load race where baseUserPlan starts as 'Explorer' then resolves to the
+    // real plan (e.g. 'Enterprise'), preventing a stale quota on the Dashboard.
+    const u = UsageTrackerService.getDetails(userPlan);
+    setUsage(u);
+    setReportsRunCount(u.standardUsed);
+
     const handleUsageUpdate = () => {
-      const u = UsageTrackerService.getDetails(userPlan);
-      setUsage(u);
-      setReportsRunCount(u.standardUsed);
+      const fresh = UsageTrackerService.getDetails(userPlan);
+      setUsage(fresh);
+      setReportsRunCount(fresh.standardUsed);
     };
     window.addEventListener('bizscope_usage_update', handleUsageUpdate);
-    // Initialize standard count
-    setReportsRunCount(usage.standardUsed);
     return () => {
       window.removeEventListener('bizscope_usage_update', handleUsageUpdate);
     };
-  }, [userPlan, usage.standardUsed]);
+  }, [userPlan]);
 
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
   const [savedReports, setSavedReports] = useState<ViabilityReport[]>([]);
@@ -299,11 +304,6 @@ const App: React.FC = () => {
     setReport(null);
     setCurrentView('home');
 
-    setTimeout(() => {
-      const resultsElement = document.getElementById('results-section');
-      if (resultsElement) resultsElement.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-
     try {
       if (forceRegenerate) {
         await ReportCacheService.invalidate(businessType, location, 'standard', userPlan);
@@ -320,6 +320,10 @@ const App: React.FC = () => {
         currentUser?.role ?? '',
       );
       setReport(fullReport);
+      setTimeout(() => {
+        const resultsElement = document.getElementById('results-section');
+        if (resultsElement) resultsElement.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
 
       if (fullReport && !fullReport.loadedFromCache) {
         await UsageTrackerService.incrementStandardUsage(userPlan);
@@ -1024,8 +1028,6 @@ const App: React.FC = () => {
               <>
                 <Sparkles className="w-3 h-3 text-emerald-400" />
                 <span className="text-emerald-300 font-semibold">AI-Powered Analysis Active</span>
-                <span className="text-slate-600">·</span>
-                <span className="text-slate-400">Sandbox Mode</span>
               </>
             ) : (
               <>
@@ -1112,16 +1114,6 @@ const App: React.FC = () => {
                   className="w-full inline-flex justify-center rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                    Configure Plans
-                </button>
-                <button
-                  onClick={() => {
-                    setReportsRunCount(0);
-                    localStorage.setItem('bizscope_reports_run_count', '0');
-                    setShowLimitModal(false);
-                  }}
-                  className="w-full inline-flex justify-center rounded-xl border border-transparent text-[10px] font-black text-gray-400 hover:text-gray-600 cursor-pointer text-center"
-                >
-                   (Bypass Limit for testing)
                 </button>
               </div>
             </div>

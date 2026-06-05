@@ -133,6 +133,14 @@ export const LockedSection: React.FC<LockedSectionProps> = ({
   );
 };
 
+// Format a raw dollar integer with the appropriate magnitude suffix (k / M / B)
+function formatRevLabel(n: number): string {
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)         return `$${Math.round(n / 1_000)}k`;
+  return `$${n.toLocaleString()}`;
+}
+
 // Year-over-Year Revenue accumulator curve
 const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3 }) => {
   const val1 = parseInt(year1.replace(/[^0-9]/g, '')) || 340000;
@@ -143,7 +151,7 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
   const points = [
     { year: 'Launch', value: val0, label: '$0' },
     { year: 'Year 1', value: val1, label: year1 },
-    { year: 'Year 2', value: val2, label: `$${Math.round(val2 / 1000)}k` },
+    { year: 'Year 2', value: val2, label: formatRevLabel(val2) },
     { year: 'Year 3', value: val3, label: year3 }
   ];
 
