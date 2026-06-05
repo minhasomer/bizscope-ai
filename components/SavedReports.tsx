@@ -268,7 +268,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
               Analyze, categorize, and cross-reference saved feasibility studies ({localReports.length} total)
             </p>
             <p className="text-[10px] text-gray-400/70 mt-0.5">
-              Stored on this device · cloud sync planned for a future release
+              Stored on this device
             </p>
           </div>
 

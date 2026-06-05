@@ -7,8 +7,6 @@ import {
   CreditCard,
   LogOut,
   KeyRound,
-  ShieldCheck,
-  Sparkles,
   RefreshCw,
   Award,
   CheckCircle,
@@ -46,7 +44,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 
     try {
       await onUpdateProfile(fullName.trim());
-      setSuccessMsg('Account profile meta updated successfully!');
+      setSuccessMsg('Profile updated successfully.');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to update profile name.');
     } finally {
@@ -61,9 +59,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
     try {
       await AuthService.resetPassword(user.email);
       setResetSent(true);
-      setSuccessMsg('A password recovery email has been successfully queued.');
+      setSuccessMsg('A password reset email has been sent to your inbox.');
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Password request was unable to process.');
+      setErrorMsg(err?.message || 'Unable to send password reset email. Please try again.');
     } finally {
       setIsUpdating(false);
     }
@@ -122,32 +120,6 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
             </div>
           </div>
 
-          {/* Connection Status Diagnostics */}
-          <div className="bg-white p-5 rounded-3xl border border-gray-150 shadow-xs">
-            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Live System Info</h4>
-            <div className="space-y-3 font-mono text-[11px] text-gray-550">
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span>Identity Bridge</span>
-                {AuthService.isSupabaseActive() ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-700 font-extrabold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                    <ShieldCheck className="w-3 h-3" /> Supabase Sec
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-purple-700 font-extrabold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
-                    <Sparkles className="w-3 h-3" /> Sandbox Mode
-                  </span>
-                )}
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span>Data Scans</span>
-                <span className="text-gray-900 font-bold">Standard Indexed</span>
-              </div>
-              <div className="flex justify-between items-center py-1.5">
-                <span>Session Expiry</span>
-                <span className="text-gray-700 font-bold">Auto-persisted</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Side: Account Settings configuration form */}
@@ -155,7 +127,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
           <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm">
             <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
               <Settings className="w-5 h-5 text-gray-500" />
-              <h3 className="text-lg font-black text-gray-900 tracking-tight uppercase">Profile Parameters</h3>
+              <h3 className="text-lg font-black text-gray-900 tracking-tight uppercase">Profile Settings</h3>
             </div>
 
             {successMsg && (
@@ -215,7 +187,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                   {isUpdating ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : null}
-                  <span>Save Configuration</span>
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>
@@ -225,14 +197,14 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
           <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm">
             <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
               <KeyRound className="w-5 h-5 text-gray-500" />
-              <h3 className="text-lg font-black text-gray-900 tracking-tight uppercase">Security Protocols</h3>
+              <h3 className="text-lg font-black text-gray-900 tracking-tight uppercase">Security</h3>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h4 className="text-xs font-bold text-gray-850">Trigger Password Reset</h4>
+                <h4 className="text-xs font-bold text-gray-850">Change Password</h4>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  We will compile a secure validation key link and email it directly to <strong>{user.email}</strong> dynamically.
+                  We'll send a password reset link to <strong>{user.email}</strong>.
                 </p>
               </div>
               <button
@@ -242,7 +214,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                 className="shrink-0 inline-flex items-center gap-1.5 px-4.5 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-xs font-bold text-gray-700 rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 id="reset-pwd-settings-btn"
               >
-                <span>{resetSent ? 'Dispatched' : 'Request Token'}</span>
+                <span>{resetSent ? 'Sent' : 'Send Reset Link'}</span>
               </button>
             </div>
           </div>

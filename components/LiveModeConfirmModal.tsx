@@ -139,16 +139,11 @@ export const LiveModeConfirmModal: React.FC<LiveModeConfirmModalProps> = ({
             <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-3">
               <Key className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-px" />
               <p className="text-[11px] text-amber-800 leading-relaxed">
-                Requires{' '}
+                Requires a server-side{' '}
                 <code className="font-mono bg-amber-100 border border-amber-200 px-1 py-0.5 rounded text-[10px]">
                   GEMINI_API_KEY
                 </code>{' '}
-                in your server-side{' '}
-                <code className="font-mono bg-amber-100 border border-amber-200 px-1 py-0.5 rounded text-[10px]">
-                  .env.local
-                </code>
-                . If missing, the request will fail with a 401 error and no credits will be
-                charged.
+                to be configured. If missing, the request will fail with a 401 error and no credits will be charged.
               </p>
             </div>
 

@@ -1504,15 +1504,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <span className="text-gray-700">{new Date(report.cachedAt).toLocaleString()}</span>
                             </div>
                         ) : null}
-                        {report.generationMeta?.model && (
-                            <div>
-                                <span className="font-black uppercase text-gray-400 text-[10px] tracking-wider block mb-0.5">AI Model</span>
-                                <span className="text-gray-700 font-mono">{report.generationMeta.model}</span>
-                            </div>
-                        )}
                         <div>
                             <span className="font-black uppercase text-gray-400 text-[10px] tracking-wider block mb-0.5">Data Source</span>
-                            <span className="text-gray-700">{report.generationMeta?.isLiveGenerated ? 'Live Gemini AI' : 'Offline demo data'}</span>
+                            <span className="text-gray-700">{report.generationMeta?.isLiveGenerated ? 'AI-generated' : 'Demo data'}</span>
                         </div>
                     </div>
                     <div className="border-t border-gray-100 pt-3">
@@ -1555,10 +1549,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 </div>
                 
                 <p className="text-xs text-gray-500 leading-relaxed mb-6">
-                  You are in <strong>Live Code Mode</strong>. Regenerating this viability study will call the Gemini AI APIs again to parse live Google Maps competitive grids, run real-time market census indices, and synthesize brand strategy models. 
+                  Regenerating this viability study will run a fresh AI analysis for this business and location.
                   <br />
                   <br />
-                  This forces a cache bypass and may count towards any live API quota limits. Do you wish to proceed?
+                  This bypasses any cached result and will count towards your report quota. Do you wish to proceed?
                 </p>
 
                 <div className="flex gap-3 justify-end">
@@ -1898,7 +1892,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   onClick={() => { setShowExportModal(false); setExportError(null); setExportSuccess(null); }}
                   className="text-xs text-gray-500 hover:text-gray-800 font-bold hover:underline cursor-pointer"
                 >
-                  Discard Workspace
+                  Close
                 </button>
 
                 <button
@@ -1926,7 +1920,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   }}
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  🚀 Compile and Export PDF
+                  Export PDF
                 </button>
               </div>
 

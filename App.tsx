@@ -341,7 +341,7 @@ const App: React.FC = () => {
         rawMessage.toLowerCase().includes('missing gemini api key');
       setError(
         isMissingKey
-          ? `${rawMessage} — Ensure GEMINI_API_KEY is set in your server-side .env.local and restart the dev server.`
+          ? `${rawMessage} — Contact support if this issue persists.`
           : rawMessage,
       );
     } finally {
@@ -589,20 +589,6 @@ const App: React.FC = () => {
                 <p className="text-2xl font-bold text-slate-900 uppercase tracking-tight">{userPlan}</p>
                 <div className="flex flex-col gap-2">
                   <p className="text-[11px] text-gray-400">{usage.resetCycleDescription} · {formatResetTime(usage.standardResetDate)}</p>
-                  {isDemoMode && (
-                    <button
-                      onClick={async () => {
-                        await UsageTrackerService.resetUsage();
-                        const u = UsageTrackerService.getDetails(userPlan);
-                        setUsage(u);
-                        setReportsRunCount(u.standardUsed);
-                        window.dispatchEvent(new Event('bizscope_usage_update'));
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-[10px] rounded-lg transition-colors cursor-pointer uppercase tracking-wide self-start"
-                    >
-                      Reset Quota
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
