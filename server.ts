@@ -507,10 +507,10 @@ function getViabilityReportFallback(businessType: string, location: string): any
       decision: "Caution Advised",
       reasoning: "The regional landscape supports a new launch, but careful site mapping and localized marketing are required to secure early transaction volume."
     },
-    methodology: "Data generated via fallback engine leveraging default localized benchmarks.",
+    methodology: "This report uses industry-average benchmarks as a fallback. Real-time competitor and demographic data could not be retrieved for this request.",
     groundingSources: [
-      { title: "National Industry Benchmarks Ledger", uri: "https://www.census.gov" },
-      { title: "Local Business Registry Map", uri: "https://maps.google.com" }
+      { title: "US Census Bureau", uri: "https://www.census.gov" },
+      { title: "Google Maps", uri: "https://maps.google.com" }
     ]
   };
 }
@@ -947,37 +947,45 @@ async function startServer() {
         
         Generate a comprehensive report in JSON format adhering strictly to the schema. Do not output any wrapping markdown. 
         
-        **DATA CONSISTENCY RULE:**
-        - For the Demographic Insights section, you MUST use the specific population and median household income figures found in the "Market Trends & Demographics" search results above. Do not estimate these figures if factual data is present in the search results.
+        **DATA CONSISTENCY RULES:**
+        - For the Demographic Insights section, use the specific population and median household income figures found in the "Market Trends & Demographics" search results above. If factual figures are present, use them. If not, use clearly qualified estimates (e.g., "estimated" or "based on regional averages").
+        - If the Competition Analysis data is missing or shows "No competitor data available", state this clearly in competitionAnalysis.summary and note that competitor details are estimated from category norms for this market area.
+        - If the Market Trends data is missing, acknowledge this in marketTrends.summary and use general industry trends for this business category.
 
-        **Crucial Financial Estimates:**
-        You must estimate specific financial figures based on industry averages for this specific business type. 
-        - Startup Costs: Provide a realistic range (Low - High).
-        - Revenue: Estimate Year 1 and Year 3 revenue.
-        - ROI & Break-even: Provide realistic timelines.
-        
+        **Competitor Descriptions (IMPORTANT):**
+        - Be direct and specific when describing competitors. Use plain factual language.
+        - Do NOT hedge with "may", "might", "could", "appears to", "seems to", or "is reported to" — state what is observable directly.
+        - If a competitor's details are uncertain, say "Based on available information" once, then state the facts directly.
+
+        **Financial Estimates:**
+        Provide realistic industry-average figures for this specific business type and region.
+        - Startup Costs: Provide a realistic range (Low - High) with a brief breakdown of major cost drivers. Ensure the breakdown items are consistent with and sum to an amount within the stated range.
+        - Revenue: Estimate Year 1 and Year 3 revenue based on realistic ramp-up assumptions for this category.
+        - ROI & Break-even: Provide realistic timelines. Avoid overly optimistic projections.
+        - keyStats: Use national industry averages for this business category. These are benchmarks, not guarantees.
+
         **Strategic Intelligence:**
-        - **Risk Assessment**: Identify 3-5 specific risks (Market, Operational, Financial) for this location and business type. Assign severity and mitigation strategies.
-        - **Success Factors**: Identify 3-5 critical factors that will determine success (e.g., location visibility, staff quality, digital marketing).
+        - **Risk Assessment**: Identify 3-5 specific risks (Market, Operational, Financial) for this location and business type. Assign severity and concrete mitigation strategies.
+        - **Success Factors**: Identify 3-5 critical factors that will determine success for this specific business type.
 
         **Scoring Rules (MANDATORY):**
         You must calculate the 'viabilityScore' (0-100) using the following strict formula. Do not deviate.
-        
+
         1. Assign sub-scores (0-100) for these four factors based on your analysis:
            - Market Demand (Higher is better)
            - Competition Intensity (Higher means MORE competition/saturation, which is bad for the score)
            - Financial Feasibility (Higher is better)
            - Risk Level (Higher means MORE risk, which is bad for the score)
-           
+
         2. Compute the final Viability Score:
            Score = (0.30 * Market Demand) + (0.25 * (100 - Competition Intensity)) + (0.25 * Financial Feasibility) + (0.20 * (100 - Risk Level))
-           
+
         3. Classification Guide:
            - 0-39: Low Viability (Not Recommended)
            - 40-69: Moderate Viability (Caution Advised)
            - 70-100: High Viability (Recommended)
-           
-        IMPORTANT: 
+
+        IMPORTANT:
         - Estimate the latitude and longitude for the target location '${location}' and for each competitor based on their address/location description if exact coordinates are not explicitly provided in the source text. This is for a visualization map.
         - Ensure the final recommendation matches the calculated score classification.
       `;
@@ -1009,7 +1017,14 @@ async function startServer() {
       console.log(`[AICost] /api/analyze plan=${normalizedPlan} in=${_analyzeUsage?.promptTokenCount ?? '?'} out=${_analyzeUsage?.candidatesTokenCount ?? '?'} est=$${_analyzeCost.estimatedCostUsd.toFixed(5)}`);
 
       const parsed = cleanAndParseJSON(proResponse.text || "", fallbackObj);
-      parsed.groundingSources = combinedSources.length > 0 ? combinedSources : fallbackObj.groundingSources;
+      // Deduplicate sources by URI to avoid showing the same source twice (#25)
+      const seenUris = new Set<string>();
+      const dedupedSources = combinedSources.filter(s => {
+        if (!s.uri || seenUris.has(s.uri)) return false;
+        seenUris.add(s.uri);
+        return true;
+      });
+      parsed.groundingSources = dedupedSources.length > 0 ? dedupedSources : fallbackObj.groundingSources;
       
       // Ensure target coordinates exist
       if (!parsed.targetCoordinates) {

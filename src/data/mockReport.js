@@ -137,11 +137,11 @@ export const mockReport = {
     decision: "Recommended",
     reasoning: "The data shows high consumer appetite, strong financial viability, and a clear path to high returns (2.5 years ROI), making this an excellent startup option in this specific location despite prime rent costs."
   },
-  methodology: "Data generated via BizScope Demographics Synthesizer, incorporating real-time geographic scraping of the Google Maps API and latest Census economic datasets.",
+  methodology: "This is a sample report using industry-average benchmarks and illustrative data. Live reports are generated using real-time Google Maps competitor data, US Census demographics, and Gemini AI synthesis.",
   groundingSources: [
-    { title: "US Census Bureau - Brooklyn Economic Census", uri: "https://www.census.gov" },
-    { title: "National Coffee Association Trends Report", uri: "https://www.ncausa.org" },
-    { title: "Google Maps Local Business Directory", uri: "https://maps.google.com" }
+    { title: "US Census Bureau", uri: "https://www.census.gov" },
+    { title: "National Coffee Association", uri: "https://www.ncausa.org" },
+    { title: "Google Maps", uri: "https://maps.google.com" }
   ]
 };
 

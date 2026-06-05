@@ -938,7 +938,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                               {/* Additional Key Stats Grid */}
                               {report.financialProjections.keyStats && report.financialProjections.keyStats.length > 0 && (
                                    <div className="md:col-span-2 pt-4 border-t border-gray-100">
-                                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Key Financial Stats</p>
+                                      <div className="flex items-baseline gap-2 mb-2.5">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Key Financial Stats</p>
+                                        <p className="text-[9px] text-gray-400 italic">National industry averages — actual figures vary by location and market</p>
+                                      </div>
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                           {report.financialProjections.keyStats.map((stat, i) => (
                                               <div key={i} className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
@@ -1347,25 +1350,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     <Layers className="w-4 h-4 text-indigo-500" />
                                     <span>Expansion Plan (Next 12 Months)</span>
                                 </p>
-                                <p className="text-xs text-gray-600 mb-4 leading-relaxed">{regionalData.expansionPotential}</p>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs mt-2">
-                                    <div className="p-3.5 bg-white rounded-xl border border-gray-150">
-                                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px] mb-2">1</div>
-                                        <span className="font-black text-gray-900 block mb-1">Months 1-3</span>
-                                        <span className="text-gray-550 leading-relaxed text-[11px]">Deploy geo-targeted maps SEO optimization and claim digital local listings.</span>
-                                    </div>
-                                    <div className="p-3.5 bg-white rounded-xl border border-gray-150">
-                                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px] mb-2">2</div>
-                                        <span className="font-black text-gray-900 block mb-1">Months 4-6</span>
-                                        <span className="text-gray-550 leading-relaxed text-[11px]">Establish strategic cross-referrals with commercial real-estate nodes.</span>
-                                    </div>
-                                    <div className="p-3.5 bg-white rounded-xl border border-gray-150">
-                                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px] mb-2">3</div>
-                                        <span className="font-black text-gray-900 block mb-1">Months 7-12</span>
-                                        <span className="text-gray-550 leading-relaxed text-[11px]">Deploy capital-efficient physical marketing arrays or mobile outposts.</span>
-                                    </div>
-                                </div>
+                                <p className="text-xs text-gray-600 leading-relaxed">{regionalData.expansionPotential}</p>
                             </div>
 
                             {/* 6. Regional Recommendation Highlight */}

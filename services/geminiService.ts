@@ -325,14 +325,14 @@ const COMPETITION_SUMMARY_BY_CATEGORY: Record<CategoryKey, string> = {
 };
 
 const STARTUP_BREAKDOWN_BY_CATEGORY: Record<CategoryKey, string> = {
-  medical:  'Clinic build-out & exam room fit-out ($85k), medical equipment & diagnostic devices ($145k), EHR system & credentialing services ($28k), initial supplies, licensing & working capital ($62k).',
-  food:     'Lease deposit & restaurant build-out ($45k), commercial kitchen equipment & furniture ($65k), initial inventory, permits & POS system ($18k), marketing launch & working capital ($28k).',
-  wellness: 'Studio build-out & specialty flooring ($40k), equipment & fixtures ($45k), booking platform & technology ($12k), marketing launch & working capital ($25k).',
-  services: 'Vehicle purchase & fleet branding ($22k), equipment & specialized tools ($18k), licensing, bonding & insurance ($8k), marketing & working capital ($12k).',
-  retail:   'Storefront build-out & fixtures ($45k), opening inventory purchase ($85k), POS & e-commerce integration ($12k), marketing launch & working capital ($28k).',
-  tech:     'Office setup & workstations ($18k), software licenses & development tooling ($14k), legal & incorporation costs ($8k), initial payroll runway & marketing ($40k).',
-  finance:  'Regulatory filings & licensing ($12k), office setup & compliance software ($18k), professional liability insurance ($8k), marketing & client acquisition runway ($22k).',
-  general:  'Lease deposit & space build-out ($35k), equipment & operational fixtures ($48k), initial inventory & licenses ($18k), marketing launch & working capital ($19k).',
+  medical:  'Representative cost drivers: clinic build-out & exam room fit-out, medical equipment & diagnostic devices, EHR system & credentialing services, initial supplies, licensing & working capital. Actual costs vary significantly by market, space size, and equipment choices.',
+  food:     'Representative cost drivers: lease deposit & restaurant build-out, commercial kitchen equipment & furniture, initial inventory, permits & POS system, marketing launch & working capital. Actual costs vary by location, concept, and build-out scope.',
+  wellness: 'Representative cost drivers: studio build-out & specialty flooring, equipment & fixtures, booking platform & technology, marketing launch & working capital. Actual costs vary by facility size, equipment type, and market.',
+  services: 'Representative cost drivers: vehicle purchase & fleet branding, equipment & specialized tools, licensing, bonding & insurance, marketing & working capital. Actual costs vary by service type, geography, and fleet size.',
+  retail:   'Representative cost drivers: storefront build-out & fixtures, opening inventory purchase, POS & e-commerce integration, marketing launch & working capital. Actual costs vary by product category, location, and store size.',
+  tech:     'Representative cost drivers: office setup & workstations, software licenses & development tooling, legal & incorporation costs, initial payroll runway & marketing. Actual costs vary by team size, tooling stack, and market.',
+  finance:  'Representative cost drivers: regulatory filings & licensing, office setup & compliance software, professional liability insurance, marketing & client acquisition runway. Actual costs vary by service type, jurisdiction, and practice size.',
+  general:  'Representative cost drivers: lease deposit & space build-out, equipment & operational fixtures, initial inventory & licenses, marketing launch & working capital. Actual costs vary by location, business type, and build-out scope.',
 };
 
 function buildReasoning(
@@ -491,13 +491,13 @@ export const generateViabilityReport = async (
 
     let result: ViabilityReport;
     if (appConfig.isDemoMode && !isBetaRoleEnabled(userRole)) {
-        setLoadingMessage("Checking environment cache...");
+        setLoadingMessage("Loading report data...");
         await new Promise(resolve => setTimeout(resolve, 600));
-        setLoadingMessage("Analyzing local competition with Google Maps...");
+        setLoadingMessage("Applying business category model...");
         await new Promise(resolve => setTimeout(resolve, 850));
-        setLoadingMessage("Researching market trends, census data, and financial benchmarks...");
+        setLoadingMessage("Computing financial estimates and risk profile...");
         await new Promise(resolve => setTimeout(resolve, 850));
-        setLoadingMessage("Synthesizing financial models and strategic risk analysis...");
+        setLoadingMessage("Assembling your viability report...");
         await new Promise(resolve => setTimeout(resolve, 700));
 
         const isRegional = location.toLowerCase().includes('county') || 
@@ -633,13 +633,13 @@ export const generateOpportunityReport = async (
     console.log(`[BizScope] opportunities routing: role="${userRole}" isDemoMode=${appConfig.isDemoMode} isBetaRoleEnabled=${isBetaRoleEnabled(userRole)} → ${_useLive ? 'LIVE /api/opportunities' : 'MOCK'}`);
 
     if (appConfig.isDemoMode && !isBetaRoleEnabled(userRole)) {
-        setLoadingMessage(`Initializing local data streams for ${location}...`);
+        setLoadingMessage(`Loading market data for ${location}...`);
         await new Promise(resolve => setTimeout(resolve, 700));
-        setLoadingMessage("Scraping local demographic indices and business directories...");
+        setLoadingMessage("Identifying underserved business categories...");
         await new Promise(resolve => setTimeout(resolve, 800));
-        setLoadingMessage("Analyzing underserved market niches and competitive saturation...");
+        setLoadingMessage("Evaluating competition levels and demand signals...");
         await new Promise(resolve => setTimeout(resolve, 800));
-        setLoadingMessage("Synthesizing best business opportunities and strategic recommendation ledger...");
+        setLoadingMessage("Assembling your opportunity analysis...");
         await new Promise(resolve => setTimeout(resolve, 900));
 
         const customizedOpportunities = deepReplace(mockOpportunities, {
@@ -730,52 +730,52 @@ export const generateMockRegionalData = (businessType: string, location: string)
   if (isZip) {
     const baseZipVal = parseInt(targetZip) || 90210;
     const zips = [
-      { zip: (baseZipVal + 1).toString(), name: 'North District' },
-      { zip: (baseZipVal - 1).toString(), name: 'South Transit Loop' },
-      { zip: (baseZipVal + 4).toString(), name: 'High-Income Suburban Pocket' },
-      { zip: (baseZipVal - 3).toString(), name: 'Commercial Gateway Strip' }
+      { zip: (baseZipVal + 1).toString(), name: 'Adjacent ZIP' },
+      { zip: (baseZipVal - 1).toString(), name: 'Neighboring ZIP' },
+      { zip: (baseZipVal + 4).toString(), name: 'Nearby ZIP' },
+      { zip: (baseZipVal - 3).toString(), name: 'Surrounding ZIP' }
     ];
-    
+
     return {
       isZipMode: true,
       targetLocation: location,
       nearbyRegions: [
         {
           name: `${zips[0].zip} (${zips[0].name})`,
-          demographics: "$138,500 Median Income",
-          competition: "Moderate (4 active)",
+          demographics: "Mid-to-High Income Area",
+          competition: "Moderate (est. 3–5 active)",
           opportunity: "89%",
-          details: `Adjacent high density area. Strong market demand for ${targetBiz} services but high real estate overhead. Optimal secondary expansion spot.`
+          details: `Adjacent residential zone. Solid demand signal for ${targetBiz} but expect higher commercial lease rates. Strong secondary expansion candidate.`
         },
         {
           name: `${zips[1].zip} (${zips[1].name})`,
-          demographics: "$104,200 Median Income",
-          competition: "Low (1 active)",
+          demographics: "Mid-Income Area",
+          competition: "Low (est. 0–2 active)",
           opportunity: "91%",
-          details: `Commuter transit zone with strong foot traffic. Extremely underserved for ${targetBiz} with favorable leasing terms.`
+          details: `Nearby corridor with good foot traffic access. Underserved for ${targetBiz} with generally favorable leasing conditions.`
         },
         {
           name: `${zips[2].zip} (${zips[2].name})`,
-          demographics: "$182,000 Median Income",
-          competition: "High (12 active)",
+          demographics: "Higher-Income Area",
+          competition: "High (est. 8–12 active)",
           opportunity: "74%",
-          details: `Elite residential segment. High-end disposable income but saturated competitive space. Requires ultra-premium positioning.`
+          details: `More affluent residential area. Strong spending power but more competitive market. Differentiated positioning required.`
         },
         {
           name: `${zips[3].zip} (${zips[3].name})`,
-          demographics: "$92,400 Median Income",
-          competition: "None present",
+          demographics: "Moderate-Income Area",
+          competition: "Very Low (est. 0–1 active)",
           opportunity: "85%",
-          details: `Growing retail corridor strip. Currently 100% white-space. Lower average tickets but high volume potential.`
+          details: `Growing commercial corridor. Limited established ${targetBiz} presence. Volume potential with moderate average ticket size.`
         }
       ],
-      countyContext: `The county housing indices show strong economic stability with annual household count projection climbing by 1.8% year-over-year. The county planning committee approved $45M in municipal infrastructure improvements, signaling sustained long-term growth.`,
-      economicRadius: `The 15–25 mile gravitational economic radius accounts for a commuter pool of over 420,000 active individuals. Over 68% of local resident workers report a daily commute within this grid, presenting a powerful opportunity to capture dual-location client touchpoints.`,
-      competitiveSpillover: `Direct competitors in nearby zones are underperforming, with localized search query trends showing high customer leakage and unmet demand. By establishing a superior product offering in '${location}', you can intercept an estimated 20-30% of their existing subscriber base.`,
-      expansionPotential: `Corporate strategic timeline for regional capture: Phase 1 (Months 1-3) focuses on claiming search map placements and high-authority local backlinks. Phase 2 (Months 4-6) establishes cooperative referral networks with multi-unit properties. Phase 3 (Months 7-12) outlines a capital-efficient secondary launch outline.`,
-      regionalRecommendation: `Highly recommended to proceed with local expansion. Focus marketing spend in the immediate adjacent southern ZIP region to capture high-propensity commuters before national chains establish physical footprints.`,
-      specificObservationTitle: "Surrounding-Market Observations",
-      specificObservationText: `Commuter flow maps confirm that the primary traffic corridor connecting the eastern commercial center with the western shipping cluster runs directly through '${location}'. This creates unique opportunities to run geofenced mobile ad campaigns targeting active workers during typical morning and peak evening travel hours.`
+      countyContext: `County-level trends indicate steady economic activity with multi-family residential development supporting a growing consumer base. Local infrastructure investment patterns suggest continued commercial growth potential in the near term.`,
+      economicRadius: `The 15–25 mile economic radius encompasses a substantial commuter and residential population. Many area workers make daily trips within this range, creating opportunities to reach customers across multiple touchpoints.`,
+      competitiveSpillover: `Existing competitors in nearby ZIP codes show gaps in service coverage based on available search and directory data. Establishing a strong presence in ${location} may capture demand that isn't currently being met by local operators.`,
+      expansionPotential: `Recommended expansion approach: Months 1–3 — establish local map presence and claim directory listings. Months 4–6 — build referral relationships with nearby commercial landlords and complementary businesses. Months 7–12 — evaluate whether a secondary location or delivery model makes sense based on actual demand data.`,
+      regionalRecommendation: `Consider a phased approach: establish and validate operations in ${location} first, then evaluate adjacent ZIP codes based on real customer acquisition data before committing to expansion.`,
+      specificObservationTitle: "Surrounding-Market Context",
+      specificObservationText: `${location} sits within a broader commercial corridor that connects residential and commercial zones. Morning and evening commuter patterns may create predictable demand windows worth building your operating hours and marketing around.`
     };
   } else {
     const baseCity = cleanLoc || "Metropolitan";
@@ -812,7 +812,7 @@ export const generateMockRegionalData = (businessType: string, location: string)
           details: `Dense commercial core with established competition. Strong differentiation required. Best suited as secondary expansion rather than primary launch location.`
         }
       ],
-      countyContext: `County-level trends show steady positive growth across personal services categories (+4.6% YoY). Multi-family residential permits have reached a five-year high, supporting a growing consumer base for local businesses.`,
+      countyContext: `County-level trends show steady positive growth across personal services categories. Multi-family residential permit activity indicates a growing consumer base for local businesses in the region.`,
       economicRadius: `Within a 15-25 mile economic radius, ${baseCity} serves as a key commercial anchor for surrounding communities. Residents in adjacent areas regularly travel to the city center for dining, shopping, and specialized services.`,
       competitiveSpillover: `Existing competitors are concentrated in the central business district, leaving outer residential corridors underserved. Expanding into these boundary areas first allows a new entrant to establish presence before larger operators follow.`,
       expansionPotential: `Recommended timeline: Months 1-3 — establish local SEO presence and claim digital directory listings. Months 4-6 — build brand recognition through community events and referral partnerships. Months 7-12 — evaluate secondary location or mobile delivery to serve outlying demand clusters.`,
