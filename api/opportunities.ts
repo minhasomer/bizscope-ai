@@ -381,7 +381,7 @@ ${marketData}
 Generate the output in JSON format adhering to the opportunity schema. Do not output any wrapping markdown.
     `.trim();
 
-    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: 4096 });
+    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: budget.maxOutputTokens });
     const fallback = getOpportunityReportFallback(location);
     const synthesis = await withTimeout(
       ai.models.generateContent({
@@ -391,7 +391,7 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
           responseMimeType: 'application/json',
           responseSchema: opportunitySchema,
           temperature: 0.6,
-          maxOutputTokens: 4096,
+          maxOutputTokens: budget.maxOutputTokens,
         },
       }),
       25000,
@@ -409,7 +409,28 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
       console.warn(`[AICost] OVER_HARD_CAP role=${verifiedRole} plan=${normalizedPlan} cap=$${budget.hardCapUsd} actual=$${cost.estimatedCostUsd.toFixed(5)}`);
     }
 
-    const parsed = cleanAndParseJSON(synthesis.text || '', fallback);
+    const rawText = synthesis.text;
+    const finishReason = (synthesis as any).candidates?.[0]?.finishReason ?? 'NO_CANDIDATES';
+    const candidateCount = (synthesis as any).candidates?.length ?? 0;
+    console.log('[opportunities diag] phase 2 result:', {
+      finishReason,
+      candidateCount,
+      textDefined: rawText !== undefined,
+      textLength: rawText?.length ?? 0,
+      candidatesTokenCount: outputTokens,
+    });
+
+    const parsed = cleanAndParseJSON(rawText || '', fallback);
+
+    if (parsed === fallback) {
+      console.warn('[opportunities] FALLBACK TRIGGERED — synthesis produced no parseable output', {
+        finishReason,
+        candidateCount,
+        textLength: rawText?.length ?? 0,
+        candidatesTokenCount: outputTokens,
+      });
+    }
+
     parsed.groundingSources = sources.length > 0 ? sources : fallback.groundingSources;
     parsed.location = location;
 
