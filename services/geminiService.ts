@@ -1,5 +1,5 @@
 
-import type { ViabilityReport, UserLocation, OpportunityReport, RegionalIntelligenceData } from '../types';
+import type { ViabilityReport, UserLocation, OpportunityReport, RegionalIntelligenceData, BusinessOpportunity } from '../types';
 import { mockReport } from '../src/data/mockReport.js';
 import { ReportCacheService } from './reportCacheService';
 import { mockRegionalReport } from '../src/data/mockRegionalReport.js';
@@ -667,6 +667,39 @@ export const generateOpportunityReport = async (
     }
 
     return await response.json() as OpportunityReport;
+};
+
+export const generateOpportunityDossier = async (
+    opportunity: BusinessOpportunity,
+    location: string,
+    userRole: string = '',
+): Promise<Partial<BusinessOpportunity>> => {
+    // Demo-mode non-beta users should never reach here — the card button is hidden
+    // for users without dossier access. Return empty as a safe fallback.
+    if (appConfig.isDemoMode && !isBetaRoleEnabled(userRole)) {
+        return {};
+    }
+
+    const sessionResult = await supabase?.auth.getSession();
+    const token = sessionResult?.data?.session?.access_token ?? null;
+
+    console.log(`[BizScope] dossier routing: role="${userRole}" biz="${opportunity.businessType}" location="${location}" → LIVE /api/opportunity-dossier`);
+
+    const response = await fetch('/api/opportunity-dossier', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ opportunity, location }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Dossier generation failed with status ${response.status}`);
+    }
+
+    return await response.json() as Partial<BusinessOpportunity>;
 };
 
 export const generateMockRegionalData = (businessType: string, location: string): RegionalIntelligenceData => {

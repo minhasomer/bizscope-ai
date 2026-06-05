@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, MapPin, TrendingUp, DollarSign, Users, ChevronRight, Info,
@@ -7,7 +7,7 @@ import {
   ArrowUpDown, X, Sparkles, ArrowRight, ShieldCheck, BarChart2, Briefcase, Layers
 } from 'lucide-react';
 import type { OpportunityReport, BusinessOpportunity } from '../types';
-import { generateOpportunityReport } from '../services/geminiService';
+import { generateOpportunityReport, generateOpportunityDossier } from '../services/geminiService';
 import { Loader } from './Loader';
 import { SubscriptionPlan } from '../src/utils/planUtils';
 
@@ -42,6 +42,44 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   const [filter, setFilter] = useState<FilterType>('all');
   const [sort, setSort] = useState<SortType>('score');
   const [selectedDossier, setSelectedDossier] = useState<BusinessOpportunity | null>(null);
+  const [dossierLoading, setDossierLoading] = useState<string | null>(null);
+  const dossierCacheRef = useRef<Map<string, BusinessOpportunity>>(new Map());
+
+  const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity) => {
+    const cacheKey = `${opportunity.businessType}|${report?.location ?? ''}`;
+
+    // Cache hit — reuse without re-generating
+    const cached = dossierCacheRef.current.get(cacheKey);
+    if (cached) {
+      console.log(`[Dossier] Cache hit: "${opportunity.businessType}"`);
+      setSelectedDossier(cached);
+      return;
+    }
+
+    // Already has full dossier data from the search response (mock or pre-loaded)
+    if (opportunity.executiveSummary || opportunity.marketDemand || opportunity.opportunityScorecard) {
+      console.log(`[Dossier] Using pre-loaded dossier: "${opportunity.businessType}"`);
+      dossierCacheRef.current.set(cacheKey, opportunity);
+      setSelectedDossier(opportunity);
+      return;
+    }
+
+    // Generate on demand
+    setDossierLoading(opportunity.businessType);
+    try {
+      console.log(`[Dossier] Generating on demand: "${opportunity.businessType}" in "${report?.location ?? ''}"`);
+      const dossierFields = await generateOpportunityDossier(opportunity, report?.location ?? '', userRole);
+      const enriched: BusinessOpportunity = { ...opportunity, ...dossierFields };
+      dossierCacheRef.current.set(cacheKey, enriched);
+      setSelectedDossier(enriched);
+    } catch (err) {
+      console.error('[Dossier] Generation failed:', err);
+      // Open modal with basic card data so the user isn't left with nothing
+      setSelectedDossier(opportunity);
+    } finally {
+      setDossierLoading(null);
+    }
+  }, [report?.location, userRole]);
 
   const visibleLimit = PLAN_LIMITS[currentPlan];
   const showRegionalContext = currentPlan === 'Pro+' || currentPlan === 'Enterprise';
@@ -300,7 +338,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                   currentPlan={currentPlan}
                   onUpgrade={() => onNavigate('pricing')}
                   location={report.location}
-                  onOpenDossier={setSelectedDossier}
+                  onOpenDossier={handleOpenDossier}
+                  isDossierLoading={dossierLoading === opportunity.businessType}
                 />
               ))}
             </div>
@@ -415,7 +454,8 @@ const OpportunityCard: React.FC<{
   onUpgrade: () => void;
   location: string;
   onOpenDossier: (opp: BusinessOpportunity) => void;
-}> = ({ opportunity, rank, isLocked, currentPlan, onUpgrade, onOpenDossier }) => {
+  isDossierLoading?: boolean;
+}> = ({ opportunity, rank, isLocked, currentPlan, onUpgrade, onOpenDossier, isDossierLoading = false }) => {
   const rankConfig = RANK_CONFIGS[rank - 1];
 
   const scoreColor =
@@ -545,12 +585,25 @@ const OpportunityCard: React.FC<{
 
         {/* Full Analysis button */}
         <button
-          onClick={() => onOpenDossier(opportunity)}
-          className="w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 transition-all cursor-pointer py-2.5 rounded-xl bg-indigo-50"
+          onClick={() => { if (!isDossierLoading) onOpenDossier(opportunity); }}
+          disabled={isDossierLoading}
+          className="w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 transition-all py-2.5 rounded-xl bg-indigo-50 disabled:opacity-70 disabled:cursor-wait"
         >
-          <Sparkles className="w-3 h-3" />
-          View Full Analysis
-          <ArrowRight className="w-3 h-3" />
+          {isDossierLoading ? (
+            <>
+              <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Generating Analysis...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3 h-3" />
+              View Full Analysis
+              <ArrowRight className="w-3 h-3" />
+            </>
+          )}
         </button>
       </div>
     </motion.div>

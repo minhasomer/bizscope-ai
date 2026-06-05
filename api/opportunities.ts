@@ -65,90 +65,6 @@ const opportunitySchema = {
           },
           customerSegment: { type: Type.STRING, description: 'Specific customer demographic and psychographic description' },
           bestNearbyArea: { type: Type.STRING, description: 'Best nearby ZIP code or neighborhood to launch in' },
-          // ── Dossier fields ────────────────────────────────────────────────
-          executiveSummary: { type: Type.STRING, description: '3-4 sentence executive summary of this specific opportunity' },
-          marketDemand: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              drivers: { type: Type.ARRAY, items: { type: Type.STRING } },
-              consumerTrends: { type: Type.ARRAY, items: { type: Type.STRING } },
-              targetAudience: { type: Type.STRING },
-              localMarketConditions: { type: Type.STRING },
-            },
-          },
-          demographicFit: {
-            type: Type.OBJECT,
-            properties: {
-              idealCustomer: { type: Type.STRING },
-              incomeConsiderations: { type: Type.STRING },
-              ageGroups: { type: Type.STRING },
-              populationRelevance: { type: Type.STRING },
-            },
-          },
-          competitiveLandscape: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              existingCompetitors: { type: Type.STRING },
-              marketSaturation: { type: Type.STRING, description: 'Low | Moderate | High' },
-              competitiveAdvantages: { type: Type.ARRAY, items: { type: Type.STRING } },
-            },
-          },
-          startupRequirements: {
-            type: Type.OBJECT,
-            properties: {
-              licensing: { type: Type.STRING },
-              staffing: { type: Type.STRING },
-              equipment: { type: Type.STRING },
-              operationalComplexity: { type: Type.STRING, description: 'Low | Moderate | High' },
-            },
-          },
-          startupCostRange: {
-            type: Type.OBJECT,
-            properties: {
-              low: { type: Type.STRING },
-              expected: { type: Type.STRING },
-              high: { type: Type.STRING },
-            },
-          },
-          revenueModel: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              monetizationMethods: { type: Type.ARRAY, items: { type: Type.STRING } },
-              scalabilityPotential: { type: Type.STRING },
-            },
-          },
-          strategicRisks: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                category: { type: Type.STRING, description: 'Market | Regulatory | Competitive | Execution' },
-                risk: { type: Type.STRING },
-                mitigation: { type: Type.STRING },
-              },
-            },
-          },
-          opportunityScorecard: {
-            type: Type.OBJECT,
-            properties: {
-              marketDemand: { type: Type.INTEGER, description: '0-100' },
-              competition: { type: Type.INTEGER, description: '0-100 (higher = less competition = better)' },
-              startupComplexity: { type: Type.INTEGER, description: '0-100 (higher = simpler = better)' },
-              revenuePotential: { type: Type.INTEGER, description: '0-100' },
-              scalability: { type: Type.INTEGER, description: '0-100' },
-              overallScore: { type: Type.INTEGER, description: '0-100 weighted composite' },
-            },
-          },
-          strategicRecommendation: {
-            type: Type.OBJECT,
-            properties: {
-              decision: { type: Type.STRING, description: 'Proceed | Proceed with Caution | High Potential | Limited Opportunity' },
-              rationale: { type: Type.STRING },
-            },
-          },
         },
         required: ['businessType', 'description', 'whyItsGood', 'scores', 'financials'],
       },
@@ -215,179 +131,6 @@ function getOpportunityReportFallback(location: string): any {
     methodology: 'Local market study compilation based on traditional urban center variables.',
     groundingSources: [{ title: 'National Small Business Development Index', uri: 'https://www.sba.gov' }],
   };
-}
-
-// ─── Dossier field names (used for diagnostics + normalization) ───────────────
-
-const DOSSIER_FIELDS = [
-  'executiveSummary', 'marketDemand', 'demographicFit', 'competitiveLandscape',
-  'startupRequirements', 'startupCostRange', 'revenueModel',
-  'strategicRisks', 'opportunityScorecard', 'strategicRecommendation',
-] as const;
-
-// ─── Dossier diagnostics ──────────────────────────────────────────────────────
-// Logs which dossier fields are missing per opportunity, without exposing content.
-
-function logDossierDiagnostics(parsed: any, location: string): void {
-  const opps: any[] = Array.isArray(parsed?.topOpportunities) ? parsed.topOpportunities : [];
-  const total = opps.length;
-  let fullCount = 0;
-  const missingPerOpp: Record<string, string[]> = {};
-
-  for (const opp of opps) {
-    const name = opp?.businessType ?? '(unknown)';
-    const missing = DOSSIER_FIELDS.filter(f => !opp[f]);
-    if (missing.length === 0) {
-      fullCount++;
-    } else {
-      missingPerOpp[name] = missing as unknown as string[];
-    }
-  }
-
-  console.log('[Opportunities] Dossier diagnostic:', {
-    location,
-    opportunityCount: total,
-    fullDossierCount: fullCount,
-    incompleteCount: total - fullCount,
-    missingFieldsPerOpportunity: missingPerOpp,
-  });
-}
-
-// ─── Dossier normalization ────────────────────────────────────────────────────
-// Fills any dossier fields Gemini omitted (structured output + token limits mean
-// optional fields can be absent). Uses available opportunity data to synthesize
-// context-appropriate fallbacks — never returns "not available" to the frontend.
-
-function normalizeDossierFields(opp: any, location: string): any {
-  if (!opp || typeof opp !== 'object') return opp;
-
-  const result = { ...opp };
-  const biz = opp.businessType ?? 'this business';
-  const score: number = opp.scores?.overallPotental ?? 72;
-  const capEx: number = opp.scores?.capEx ?? 5;
-  const labor: number = opp.scores?.laborIntensity ?? 5;
-  const comp: number  = opp.scores?.competitionLevel ?? 5;
-  const saturation = comp <= 3 ? 'Low' : comp <= 6 ? 'Moderate' : 'High';
-  const complexity = capEx <= 3 ? 'Low' : capEx <= 6 ? 'Moderate' : 'High';
-  const staffRange = labor <= 3 ? '1-3 staff members' : labor <= 6 ? '3-8 staff members' : '8+ staff members';
-
-  // 1. executiveSummary
-  if (!result.executiveSummary) {
-    const why = opp.whyItsGood ? ` ${opp.whyItsGood}` : '';
-    const desc = opp.description ? ` ${opp.description}` : '';
-    result.executiveSummary = `${biz} represents a high-potential opportunity in ${location}.${why}${desc}`.trim().slice(0, 500);
-  }
-
-  // 2. marketDemand
-  if (!result.marketDemand) {
-    result.marketDemand = {
-      summary: opp.whyItsGood ?? `There is measurable consumer demand for ${biz} in ${location}.`,
-      drivers: ['Local population growth and demographic shifts', 'Underserved market segment with limited competition', `Rising consumer interest in ${biz} services`],
-      consumerTrends: ['Growing preference for locally owned and operated businesses', 'Increasing digital discovery of local services'],
-      targetAudience: opp.financials?.targetMarket ?? opp.customerSegment ?? `Residents and visitors in ${location}`,
-      localMarketConditions: `${location} presents favorable market conditions for launching ${biz}, with demand exceeding current local supply.`,
-    };
-  }
-
-  // 3. demographicFit
-  if (!result.demographicFit) {
-    result.demographicFit = {
-      idealCustomer: opp.customerSegment ?? opp.financials?.targetMarket ?? `Local residents in ${location} seeking ${biz} services`,
-      incomeConsiderations: `The local income profile supports the pricing model required for a viable ${biz} operation.`,
-      ageGroups: 'Primary: 25-49 years. Secondary: 18-24 and 50+ years.',
-      populationRelevance: `${location} has sufficient population density and demographic alignment to sustain a ${biz}.`,
-    };
-  }
-
-  // 4. competitiveLandscape
-  if (!result.competitiveLandscape) {
-    result.competitiveLandscape = {
-      summary: `Competition for ${biz} in ${location} is ${saturation.toLowerCase()}, offering a clear entry window for a well-positioned operator.`,
-      existingCompetitors: `The competitive set in ${location} includes a limited number of established providers, leaving meaningful market share available.`,
-      marketSaturation: saturation,
-      competitiveAdvantages: [
-        'First-mover or early-mover advantage in an underserved niche',
-        'Locally focused service model that national chains cannot replicate',
-        'Community-driven brand building and word-of-mouth growth',
-        'Flexibility to adapt pricing and offerings to local demand signals',
-      ],
-    };
-  }
-
-  // 5. startupRequirements
-  if (!result.startupRequirements) {
-    result.startupRequirements = {
-      licensing: `Standard business license and applicable state/local permits required for ${biz} in ${location}.`,
-      staffing: staffRange,
-      equipment: `Standard equipment and operational fixtures required to launch and operate ${biz}.`,
-      operationalComplexity: complexity,
-    };
-  }
-
-  // 6. startupCostRange
-  if (!result.startupCostRange) {
-    const base = opp.financials?.estimatedStartupCost ?? '$50,000';
-    result.startupCostRange = { low: base, expected: base, high: base };
-  }
-
-  // 7. revenueModel
-  if (!result.revenueModel) {
-    result.revenueModel = {
-      summary: `${biz} generates revenue through direct service delivery to local customers, with potential for recurring relationships and premium upsells.`,
-      monetizationMethods: [
-        'Direct product or service sales to end consumers',
-        'Recurring customer relationships driving repeat revenue',
-        'Premium service tiers or add-on offerings',
-      ],
-      scalabilityPotential: `With strong local traction, ${biz} can expand through additional service lines, geographic expansion, or franchise/licensing models.`,
-    };
-  }
-
-  // 8. strategicRisks
-  if (!result.strategicRisks || !Array.isArray(result.strategicRisks) || result.strategicRisks.length === 0) {
-    const srcRisks: string[] = Array.isArray(opp.risks) ? opp.risks : [];
-    if (srcRisks.length > 0) {
-      const categories = ['Market', 'Competitive', 'Execution', 'Regulatory'];
-      result.strategicRisks = srcRisks.slice(0, 4).map((r: string, i: number) => ({
-        category: categories[i] ?? 'Execution',
-        risk: r,
-        mitigation: 'Monitor market conditions closely and build strong early customer relationships to create switching costs.',
-      }));
-    } else {
-      result.strategicRisks = [
-        { category: 'Market', risk: 'Demand may fluctuate with broader economic conditions.', mitigation: 'Diversify revenue streams and build a loyal recurring customer base from day one.' },
-        { category: 'Competitive', risk: 'New entrants may attempt to replicate a successful concept.', mitigation: 'Invest in brand differentiation, local community ties, and proprietary service quality to build a durable moat.' },
-        { category: 'Execution', risk: 'Operational complexity can increase faster than management capacity during early growth.', mitigation: 'Document all processes from launch day and hire experienced operational staff before scaling.' },
-      ];
-    }
-  }
-
-  // 9. opportunityScorecard
-  if (!result.opportunityScorecard) {
-    result.opportunityScorecard = {
-      marketDemand:      Math.min(100, Math.round(score + 8)),
-      competition:       Math.min(100, Math.round((10 - comp) * 10)),
-      startupComplexity: Math.min(100, Math.round((10 - capEx) * 10)),
-      revenuePotential:  Math.min(100, Math.round(score - 4)),
-      scalability:       Math.min(100, Math.round(score - 8)),
-      overallScore:      score,
-    };
-  }
-
-  // 10. strategicRecommendation
-  if (!result.strategicRecommendation) {
-    const decision =
-      score >= 80 ? 'Proceed' :
-      score >= 68 ? 'High Potential' :
-      score >= 52 ? 'Proceed with Caution' :
-      'Limited Opportunity';
-    const rationale = score >= 68
-      ? `With an overall potential score of ${score}/100, ${biz} in ${location} presents a compelling opportunity backed by favorable market conditions and a manageable competitive landscape. ${opp.whyItsGood ?? ''} Early entry is recommended to establish market position before the window narrows.`
-      : `${biz} in ${location} shows potential but requires careful planning and precise execution to overcome the challenges identified. ${opp.whyItsGood ?? ''} A phased approach with validated demand before full capital deployment is advised.`;
-    result.strategicRecommendation = { decision, rationale: rationale.trim().slice(0, 600) };
-  }
-
-  return result;
 }
 
 // ─── Supabase admin client (lazy singleton) ───────────────────────────────────
@@ -614,7 +357,7 @@ export default async function handler(
       console.warn('[opportunities] phase 1 (Search) failed:', geminiErrDiag(err));
     }
 
-    // Phase 2: Synthesis with full dossier
+    // Phase 2: Synthesis — compact summaries only (full dossier generated on demand)
     const phase2Prompt = `
 Act as a master strategic consultant. Your goal is to identify the TOP 3-5 business opportunities in '${location}' that are least competitive and have high financial viability.
 
@@ -627,7 +370,6 @@ ${marketData}
 2. For each recommendation, provide specific scoring (1-10) for CapEx, Overhead, Labor Intensity, and Competition.
 3. Calculate an 'overallPotential' (0-100) for each idea.
 4. Provide estimated financial breakdowns based on current economic benchmarks.
-5. For EACH opportunity, populate a complete business intelligence dossier with all sections below.
 
 **Scoring Definitions:**
 - CapEx: 1 (Very cheap to start, <$5k) to 10 (Massive investment, >$500k).
@@ -636,22 +378,10 @@ ${marketData}
 - Competition Level: 1 (No direct local competitors) to 10 (Market saturated).
 - Overall Potential: Weighted combination of the above vs Market Demand.
 
-**Required Dossier Fields Per Opportunity:**
-- executiveSummary: 3-4 sentences summarizing why this opportunity is strong in this location.
-- marketDemand: { summary (1-2 sentences), drivers (3 key demand factors as string array), consumerTrends (2-3 local/national trends as string array), targetAudience (who specifically), localMarketConditions (what makes this location apt) }
-- demographicFit: { idealCustomer (detailed profile), incomeConsiderations (affordability/spending power context), ageGroups (primary and secondary age bands), populationRelevance (local population fit) }
-- competitiveLandscape: { summary (1-2 sentences), existingCompetitors (describe who/what exists), marketSaturation ("Low" | "Moderate" | "High"), competitiveAdvantages (3-4 advantages this entrant would have as string array) }
-- startupRequirements: { licensing (what permits/licenses needed), staffing (headcount and roles), equipment (key purchases), operationalComplexity ("Low" | "Moderate" | "High") }
-- startupCostRange: { low (lean/bootstrapped launch figure), expected (typical launch figure), high (full-featured buildout figure) }
-- revenueModel: { summary (how money is made), monetizationMethods (2-3 revenue streams as string array), scalabilityPotential (how big can this get) }
-- strategicRisks: array of 3-4 items, each: { category ("Market" | "Regulatory" | "Competitive" | "Execution"), risk (specific risk), mitigation (concrete countermeasure) }
-- opportunityScorecard: { marketDemand (0-100), competition (0-100, higher=less competition=better), startupComplexity (0-100, higher=simpler), revenuePotential (0-100), scalability (0-100), overallScore (0-100 weighted composite) }
-- strategicRecommendation: { decision ("Proceed" | "Proceed with Caution" | "High Potential" | "Limited Opportunity"), rationale (2-3 sentences explaining the verdict) }
-
 Generate the output in JSON format adhering to the opportunity schema. Do not output any wrapping markdown.
     `.trim();
 
-    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: 16384 });
+    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: 4096 });
     const fallback = getOpportunityReportFallback(location);
     const synthesis = await withTimeout(
       ai.models.generateContent({
@@ -661,10 +391,10 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
           responseMimeType: 'application/json',
           responseSchema: opportunitySchema,
           temperature: 0.6,
-          maxOutputTokens: 16384,
+          maxOutputTokens: 4096,
         },
       }),
-      40000,
+      25000,
       'opportunities synthesis timed out',
     );
 
@@ -683,17 +413,6 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
     parsed.groundingSources = sources.length > 0 ? sources : fallback.groundingSources;
     parsed.location = location;
 
-    // ── Dossier diagnostics: log which fields Gemini omitted (before normalization) ──
-    logDossierDiagnostics(parsed, location);
-
-    // ── Normalization: fill any missing dossier fields so the modal never shows
-    //    "Full Dossier Not Available" for real Admin/BetaTester results ──────────────
-    if (Array.isArray(parsed.topOpportunities)) {
-      parsed.topOpportunities = parsed.topOpportunities.map(
-        (opp: any) => normalizeDossierFields(opp, location),
-      );
-    }
-
     parsed.generationMeta = {
       model,
       isLiveGenerated: true,
@@ -703,10 +422,7 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
       generatedAt: new Date().toISOString(),
     };
 
-    const fullDossierCount = (parsed.topOpportunities ?? []).filter(
-      (o: any) => DOSSIER_FIELDS.every(f => !!o[f]),
-    ).length;
-    console.log(`[Opportunities] Success — model=${model} opportunityCount=${parsed.topOpportunities?.length ?? 0} fullDossier=${fullDossierCount}/${parsed.topOpportunities?.length ?? 0} groundingSources=${parsed.groundingSources?.length ?? 0}`);
+    console.log(`[Opportunities] Success — model=${model} opportunityCount=${parsed.topOpportunities?.length ?? 0} groundingSources=${parsed.groundingSources?.length ?? 0}`);
 
     try {
       if (supabaseAdmin) {
