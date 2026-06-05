@@ -222,7 +222,91 @@ const opportunitySchema = {
                         description: "2-3 key risks or challenges for this business in this location"
                     },
                     customerSegment: { type: Type.STRING, description: "Specific customer demographic and psychographic description" },
-                    bestNearbyArea: { type: Type.STRING, description: "Best nearby ZIP code or neighborhood to launch in" }
+                    bestNearbyArea: { type: Type.STRING, description: "Best nearby ZIP code or neighborhood to launch in" },
+                    // ── Dossier fields (optional — populated by expanded full-analysis prompt) ──
+                    executiveSummary: { type: Type.STRING, description: "3-4 sentence executive summary of this specific opportunity" },
+                    marketDemand: {
+                        type: Type.OBJECT,
+                        properties: {
+                            summary: { type: Type.STRING },
+                            drivers: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            consumerTrends: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            targetAudience: { type: Type.STRING },
+                            localMarketConditions: { type: Type.STRING }
+                        }
+                    },
+                    demographicFit: {
+                        type: Type.OBJECT,
+                        properties: {
+                            idealCustomer: { type: Type.STRING },
+                            incomeConsiderations: { type: Type.STRING },
+                            ageGroups: { type: Type.STRING },
+                            populationRelevance: { type: Type.STRING }
+                        }
+                    },
+                    competitiveLandscape: {
+                        type: Type.OBJECT,
+                        properties: {
+                            summary: { type: Type.STRING },
+                            existingCompetitors: { type: Type.STRING },
+                            marketSaturation: { type: Type.STRING, description: "Low | Moderate | High" },
+                            competitiveAdvantages: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        }
+                    },
+                    startupRequirements: {
+                        type: Type.OBJECT,
+                        properties: {
+                            licensing: { type: Type.STRING },
+                            staffing: { type: Type.STRING },
+                            equipment: { type: Type.STRING },
+                            operationalComplexity: { type: Type.STRING, description: "Low | Moderate | High" }
+                        }
+                    },
+                    startupCostRange: {
+                        type: Type.OBJECT,
+                        properties: {
+                            low: { type: Type.STRING },
+                            expected: { type: Type.STRING },
+                            high: { type: Type.STRING }
+                        }
+                    },
+                    revenueModel: {
+                        type: Type.OBJECT,
+                        properties: {
+                            summary: { type: Type.STRING },
+                            monetizationMethods: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            scalabilityPotential: { type: Type.STRING }
+                        }
+                    },
+                    strategicRisks: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                category: { type: Type.STRING, description: "Market | Regulatory | Competitive | Execution" },
+                                risk: { type: Type.STRING },
+                                mitigation: { type: Type.STRING }
+                            }
+                        }
+                    },
+                    opportunityScorecard: {
+                        type: Type.OBJECT,
+                        properties: {
+                            marketDemand: { type: Type.INTEGER, description: "0-100" },
+                            competition: { type: Type.INTEGER, description: "0-100 (higher = less competition = better)" },
+                            startupComplexity: { type: Type.INTEGER, description: "0-100 (higher = simpler = better)" },
+                            revenuePotential: { type: Type.INTEGER, description: "0-100" },
+                            scalability: { type: Type.INTEGER, description: "0-100" },
+                            overallScore: { type: Type.INTEGER, description: "0-100 weighted composite" }
+                        }
+                    },
+                    strategicRecommendation: {
+                        type: Type.OBJECT,
+                        properties: {
+                            decision: { type: Type.STRING, description: "Proceed | Proceed with Caution | High Potential | Limited Opportunity" },
+                            rationale: { type: Type.STRING }
+                        }
+                    }
                 },
                 required: ["businessType", "description", "whyItsGood", "scores", "financials"]
             }
@@ -998,7 +1082,7 @@ async function startServer() {
         console.warn("Opportunities search locator failed:", err);
       }
 
-      // Step 2: Formulate ideas and score (Timeout: 25s)
+      // Step 2: Formulate ideas + full dossier per opportunity (Timeout: 40s)
       const finalPrompt = `
         Act as a master strategic consultant. Your goal is to identify the TOP 3-5 business opportunities in '${location}' that are least competitive and have high financial viability.
 
@@ -1011,6 +1095,7 @@ async function startServer() {
         2. For each recommendation, provide specific scoring (1-10) for CapEx, Overhead, Labor Intensity, and Competition.
         3. Calculate an 'overallPotential' (0-100) for each idea.
         4. Provide estimated financial breakdowns based on current economic benchmarks.
+        5. For EACH opportunity, populate a complete business intelligence dossier with all sections below.
 
         **Scoring Definitions:**
         - CapEx: 1 (Very cheap to start, <$5k) to 10 (Massive investment, >$500k).
@@ -1018,6 +1103,18 @@ async function startServer() {
         - Labor Intensity: 1 (Solopreneur/Automated) to 10 (Large staff required).
         - Competition Level: 1 (No direct local competitors) to 10 (Market saturated).
         - Overall Potential: Weighted combination of the above vs Market Demand.
+
+        **Required Dossier Fields Per Opportunity:**
+        - executiveSummary: 3-4 sentences summarizing why this opportunity is strong in this location.
+        - marketDemand: { summary (1-2 sentences), drivers (3 key demand factors as string array), consumerTrends (2-3 local/national trends as string array), targetAudience (who specifically), localMarketConditions (what makes this location apt) }
+        - demographicFit: { idealCustomer (detailed profile), incomeConsiderations (affordability/spending power context), ageGroups (primary and secondary age bands), populationRelevance (local population fit) }
+        - competitiveLandscape: { summary (1-2 sentences), existingCompetitors (describe who/what exists), marketSaturation ("Low" | "Moderate" | "High"), competitiveAdvantages (3-4 advantages this entrant would have as string array) }
+        - startupRequirements: { licensing (what permits/licenses needed), staffing (headcount and roles), equipment (key purchases), operationalComplexity ("Low" | "Moderate" | "High") }
+        - startupCostRange: { low (lean/bootstrapped launch figure), expected (typical launch figure), high (full-featured buildout figure) }
+        - revenueModel: { summary (how money is made), monetizationMethods (2-3 revenue streams as string array), scalabilityPotential (how big can this get) }
+        - strategicRisks: array of 3-4 items, each: { category ("Market" | "Regulatory" | "Competitive" | "Execution"), risk (specific risk), mitigation (concrete countermeasure) }
+        - opportunityScorecard: { marketDemand (0-100), competition (0-100, higher=less competition=better), startupComplexity (0-100, higher=simpler), revenuePotential (0-100), scalability (0-100), overallScore (0-100 weighted composite) }
+        - strategicRecommendation: { decision ("Proceed" | "Proceed with Caution" | "High Potential" | "Limited Opportunity"), rationale (2-3 sentences explaining the verdict) }
 
         Generate the output in JSON format adhering to the opportunity schema. Do not output any wrapping markdown.
       `;
@@ -1032,10 +1129,10 @@ async function startServer() {
             responseMimeType: "application/json",
             responseSchema: opportunitySchema,
             temperature: 0.6,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 8192,
           },
         }),
-        25000,
+        40000,
         "opportunities synthesis timed out"
       );
 

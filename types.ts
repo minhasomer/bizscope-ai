@@ -66,6 +66,74 @@ export interface ScoreBreakdown {
   riskLevel: number;
 }
 
+// ─── Opportunity Dossier section types ────────────────────────────────────────
+// Present on full-analysis responses; absent on compact card-only data.
+
+export interface DossierMarketDemand {
+  summary: string;
+  drivers: string[];
+  consumerTrends: string[];
+  targetAudience: string;
+  localMarketConditions: string;
+}
+
+export interface DossierDemographicFit {
+  idealCustomer: string;
+  incomeConsiderations: string;
+  ageGroups: string;
+  populationRelevance: string;
+}
+
+export interface DossierCompetitiveLandscape {
+  summary: string;
+  existingCompetitors: string;
+  marketSaturation: string; // 'Low' | 'Moderate' | 'High'
+  competitiveAdvantages: string[];
+}
+
+export interface DossierStartupRequirements {
+  licensing: string;
+  staffing: string;
+  equipment: string;
+  operationalComplexity: string; // 'Low' | 'Moderate' | 'High'
+}
+
+export interface DossierStartupCostRange {
+  low: string;
+  expected: string;
+  high: string;
+}
+
+export interface DossierRevenueModel {
+  summary: string;
+  monetizationMethods: string[];
+  scalabilityPotential: string;
+}
+
+export interface DossierStrategicRisk {
+  /** 'Market' | 'Regulatory' | 'Competitive' | 'Execution' */
+  category: string;
+  risk: string;
+  mitigation: string;
+}
+
+export interface DossierScorecard {
+  marketDemand: number;       // 0-100
+  competition: number;        // 0-100 (higher = LESS competition = better)
+  startupComplexity: number;  // 0-100 (higher = simpler = better)
+  revenuePotential: number;   // 0-100
+  scalability: number;        // 0-100
+  overallScore: number;       // 0-100
+}
+
+export interface DossierRecommendation {
+  /** 'Proceed' | 'Proceed with Caution' | 'High Potential' | 'Limited Opportunity' */
+  decision: string;
+  rationale: string;
+}
+
+// ─── Business Opportunity ──────────────────────────────────────────────────────
+
 export interface BusinessOpportunity {
   businessType: string;
   description: string;
@@ -85,6 +153,18 @@ export interface BusinessOpportunity {
   risks?: string[];
   customerSegment?: string;
   bestNearbyArea?: string;
+
+  // ── Dossier fields — populated by the expanded full-analysis prompt ──────────
+  executiveSummary?: string;
+  marketDemand?: DossierMarketDemand;
+  demographicFit?: DossierDemographicFit;
+  competitiveLandscape?: DossierCompetitiveLandscape;
+  startupRequirements?: DossierStartupRequirements;
+  startupCostRange?: DossierStartupCostRange;
+  revenueModel?: DossierRevenueModel;
+  strategicRisks?: DossierStrategicRisk[];
+  opportunityScorecard?: DossierScorecard;
+  strategicRecommendation?: DossierRecommendation;
 }
 
 export interface OpportunityReport {

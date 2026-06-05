@@ -18,6 +18,40 @@ const COLOR_PALETTES = {
   'Executive Navy': { primary: [15, 23, 42] as [number, number, number], light: [241, 245, 249] as [number, number, number] }
 };
 
+/**
+ * Sanitizes text for jsPDF with the built-in Helvetica font (Latin-1 encoding).
+ * jsPDF's default fonts only support characters in the Latin-1 (ISO-8859-1) range.
+ * Unicode typographic characters — curly quotes, em-dashes, ellipsis, emoji —
+ * get encoded as garbage bytes (Ø=Ü¡, &"þ, etc.) when passed directly.
+ *
+ * This function replaces the most common offenders with safe ASCII equivalents
+ * and strips any remaining characters outside the Latin-1 range.
+ */
+function sanitizeForPdf(text: string | undefined | null): string {
+  if (!text) return '';
+  return text
+    // Curly / smart quotes → straight ASCII equivalents
+    .replace(/[“”]/g, '"')   // " "  →  "
+    .replace(/[‘’]/g, "'")  // ' '  →  '
+    // Dashes
+    .replace(/—/g, '--')          // em dash —  →  --
+    .replace(/–/g, '-')           // en dash –  →  -
+    // Ellipsis
+    .replace(/…/g, '...')
+    // Non-breaking / thin spaces
+    .replace(/[   ]/g, ' ')
+    // Common symbols
+    .replace(/•/g, '*')           // bullet •
+    .replace(/‣/g, '>')           // triangular bullet
+    .replace(/→/g, '->')          // right arrow →
+    .replace(/[←-⇿]/g, '->')  // other arrows
+    .replace(/[✓✔]/g, '+')   // check marks ✓✔
+    .replace(/[✗✘]/g, 'x')   // X marks ✗✘
+    .replace(/[♥❤]/g, '<3')  // hearts ♥❤
+    // Emoji and other characters above Latin-1 (U+00FF) — strip entirely
+    .replace(/[^\x00-\xFF]/g, '');
+}
+
 export class PDFService {
   /**
    * Generates and downloads a highly polished advisory PDF dossier.
@@ -53,7 +87,7 @@ export class PDFService {
 
       // Header Text
       if (options.isWhiteLabelMode && plan === 'Enterprise') {
-        doc.text(options.advisoryFirmName.toUpperCase() + " | FEASIBILITY PORTFOLIO", 20, 11);
+        doc.text(sanitizeForPdf(options.advisoryFirmName.toUpperCase()) + " | FEASIBILITY PORTFOLIO", 20, 11);
       } else {
         doc.text("BIZSCOPE | AI-POWERED BUSINESS VIABILITY STUDY", 20, 11);
       }
@@ -72,7 +106,7 @@ export class PDFService {
     // Helper: Safely write wrapped paragraphs and return the updated Y coordinate
     const writeWrappedText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number = 5.5): number => {
       if (!text) return y;
-      const lines: string[] = doc.splitTextToSize(text, maxWidth);
+      const lines: string[] = doc.splitTextToSize(sanitizeForPdf(text), maxWidth);
       for (const line of lines) {
         if (y > 268) {
           doc.addPage();
@@ -129,14 +163,14 @@ export class PDFService {
     doc.text("BUSINESS MODEL TARGET :", 20, 88);
     doc.setFont('Helvetica', 'bold');
     doc.setTextColor(30, 35, 40);
-    doc.text(report.businessType.toUpperCase(), 75, 88);
+    doc.text(sanitizeForPdf(report.businessType.toUpperCase()), 75, 88);
 
     doc.setFont('Helvetica', 'normal');
     doc.setTextColor(100, 110, 120);
     doc.text("GEOGRAPHIC SECTOR LOCATION :", 20, 96);
     doc.setFont('Helvetica', 'bold');
     doc.setTextColor(30, 35, 40);
-    doc.text(report.location.toUpperCase(), 86, 96);
+    doc.text(sanitizeForPdf(report.location.toUpperCase()), 86, 96);
 
     doc.setFont('Helvetica', 'normal');
     doc.setTextColor(100, 110, 120);
@@ -163,7 +197,7 @@ export class PDFService {
 
     doc.setFontSize(11);
     doc.setTextColor(60, 65, 70);
-    doc.text(`Directive Verdict: ${report.recommendation?.decision || "Caution Advised"}`, 30, 156);
+    doc.text(sanitizeForPdf(`Directive Verdict: ${report.recommendation?.decision || "Caution Advised"}`), 30, 156);
 
     // Score breakdown block side elements
     if (report.scoreBreakdown) {
@@ -189,8 +223,8 @@ export class PDFService {
     doc.text(`Dossier Compiled On: ${dateStr}`, 20, 195);
     
     if (options.isWhiteLabelMode && plan === 'Enterprise') {
-      doc.text(`Advisory Syndicate: ${options.advisoryFirmName}`, 20, 201);
-      doc.text(`Prepared Explicitly For: ${options.clientName}`, 20, 207);
+      doc.text(sanitizeForPdf(`Advisory Syndicate: ${options.advisoryFirmName}`), 20, 201);
+      doc.text(sanitizeForPdf(`Prepared Explicitly For: ${options.clientName}`), 20, 207);
     } else {
       doc.text("Advisory Syndicate: BizScope Corporate Analytics Platform", 20, 201);
       doc.text("Prepared Explicitly For: Premium Business Member Account", 20, 207);
@@ -281,9 +315,9 @@ export class PDFService {
           doc.line(20, currentY + 7, 190, currentY + 7);
 
           doc.setFont('Helvetica', 'bold');
-          doc.text(item.metric, 24, currentY + 4);
+          doc.text(sanitizeForPdf(item.metric), 24, currentY + 4);
           doc.setFont('Helvetica', 'normal');
-          doc.text(item.value, 95, currentY + 4);
+          doc.text(sanitizeForPdf(item.value), 95, currentY + 4);
 
           currentY += 8;
           currentY = ensureRemainingY(currentY, 6);
@@ -291,7 +325,7 @@ export class PDFService {
           doc.setFont('Helvetica', 'italic');
           doc.setFontSize(8);
           doc.setTextColor(110, 115, 120);
-          currentY = writeWrappedText(`💡 Insight: ${item.insight}`, 24, currentY, 160, 4);
+          currentY = writeWrappedText(`* Insight: ${item.insight}`, 24, currentY, 160, 4);
           currentY += 2;
           
           doc.setFont('Helvetica', 'normal');
@@ -366,7 +400,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(14);
       doc.setTextColor(20, 25, 30);
-      doc.text(report.financialProjections.startupCostRange, 25, currentY + 16);
+      doc.text(sanitizeForPdf(report.financialProjections.startupCostRange), 25, currentY + 16);
 
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8.5);
@@ -404,9 +438,9 @@ export class PDFService {
         doc.line(20, currentY + 7, 190, currentY + 7);
 
         doc.setFont('Helvetica', 'bold');
-        doc.text(item.label, 24, currentY + 45 / 10);
+        doc.text(sanitizeForPdf(item.label), 24, currentY + 45 / 10);
         doc.setFont('Helvetica', 'normal');
-        doc.text(item.val || "N/A", 95, currentY + 45 / 10);
+        doc.text(sanitizeForPdf(item.val || "N/A"), 95, currentY + 45 / 10);
 
         currentY += 8;
       }
@@ -461,7 +495,7 @@ export class PDFService {
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(153, 27, 27);
-        doc.text(`RISK THREAT: ${r.risk.toUpperCase()} [SEVERITY: ${r.severity}]`, 24, currentY + 6);
+        doc.text(sanitizeForPdf(`RISK THREAT: ${r.risk.toUpperCase()} [SEVERITY: ${r.severity}]`), 24, currentY + 6);
 
         doc.setFont('Helvetica', 'normal');
         doc.setFontSize(8);
@@ -501,16 +535,16 @@ export class PDFService {
           doc.setFont('Helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(30, 35, 40);
-          doc.text(`⚔️ ${comp.name}`, 24, currentY + 4);
+          doc.text(sanitizeForPdf(`> ${comp.name}`), 24, currentY + 4);
 
           doc.setFont('Helvetica', 'normal');
           doc.setFontSize(8);
           doc.setTextColor(100, 105, 110);
-          doc.text(comp.address || "Address coordinates log dynamic", 24, currentY + 8);
+          doc.text(sanitizeForPdf(comp.address || "Address coordinates log dynamic"), 24, currentY + 8);
 
           doc.setFontSize(8.5);
           doc.setTextColor(60, 65, 70);
-          doc.text(comp.details || "Direct catalog competitor focus profile matches.", 24, currentY + 12);
+          doc.text(sanitizeForPdf(comp.details || "Direct catalog competitor focus profile matches."), 24, currentY + 12);
 
           currentY += 16;
         }
@@ -551,7 +585,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(107, 33, 168);
-      doc.text("🔒 PRO+ REGIONAL STUDY PARAMETERS EXCLUDED IN EXPORT", 26, currentY + 8);
+      doc.text("[LOCKED] PRO+ REGIONAL STUDY PARAMETERS EXCLUDED IN EXPORT", 26, currentY + 8);
       
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8.5);
@@ -565,7 +599,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(10.5);
       doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-      doc.text(`Multi-District Opportunity Snapshot for ${report.location}`, 20, currentY);
+      doc.text(sanitizeForPdf(`Multi-District Opportunity Snapshot for ${report.location}`), 20, currentY);
 
       currentY += 6;
       doc.setFont('Helvetica', 'normal');
@@ -599,11 +633,11 @@ export class PDFService {
           doc.line(20, currentY + 7, 190, currentY + 7);
 
           doc.setFont('Helvetica', 'bold');
-          doc.text(reg.name, 24, currentY + 45 / 10);
-          
+          doc.text(sanitizeForPdf(reg.name), 24, currentY + 45 / 10);
+
           doc.setFont('Helvetica', 'normal');
-          doc.text(reg.demographics || reg.growthStatus || "Stable", 75, currentY + 45 / 10);
-          doc.text(reg.competition || reg.saturation || "Moderate", 130, currentY + 45 / 10);
+          doc.text(sanitizeForPdf(reg.demographics || reg.growthStatus || "Stable"), 75, currentY + 45 / 10);
+          doc.text(sanitizeForPdf(reg.competition || reg.saturation || "Moderate"), 130, currentY + 45 / 10);
 
           currentY += 8;
         }
@@ -652,7 +686,7 @@ export class PDFService {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-    doc.text(`VERDICT DECISION: ${report.recommendation?.decision?.toUpperCase() || "CAUTION ADVISED"}`, 25, currentY + 8);
+    doc.text(sanitizeForPdf(`VERDICT DECISION: ${report.recommendation?.decision?.toUpperCase() || "CAUTION ADVISED"}`), 25, currentY + 8);
 
     doc.setFont('Helvetica', 'italic');
     doc.setFontSize(8.5);

@@ -789,6 +789,17 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             </div>
         </div>
 
+        {/* AI disclaimer — shown only for live Gemini-generated reports */}
+        {report.generationMeta?.isLiveGenerated && (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 flex items-center gap-3 print:hidden">
+                <Info className="w-4 h-4 text-blue-500 shrink-0" />
+                <p className="text-xs text-blue-800 leading-relaxed">
+                    <strong>AI-generated business intelligence estimates.</strong>{' '}
+                    Verify critical decisions with independent research.
+                </p>
+            </div>
+        )}
+
         {/* Sticky Report Navigation Block */}
         <ReportSubNav activeSection={activeSection} setActiveSection={setActiveSection} />
 
@@ -997,9 +1008,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 icon={<Map className="w-5 h-5 text-emerald-600" />}
             >
                 <div className="space-y-4">
-                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Competitor Density Analysis</p>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estimated Competitor Distribution</p>
                   <p className="text-sm text-gray-600 leading-relaxed mb-2">
-                    Plotting estimated competitor positions near your target location. Upgrade to Pro to unlock the full map.
+                    AI-estimated competitor positions plotted from report data. This is a schematic coordinate visualization, not a real-time map service.{!canViewFullFinancials(currentPlan) && ' Upgrade to Pro to unlock.'}
                   </p>
                   <LockedSection
                     currentPlan={currentPlan}
@@ -1330,6 +1341,142 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     )}
                 </LockedSection>
             </SectionCard>
+
+            {/* Strategic Opportunities & Recommended Positioning — Enterprise only */}
+            {currentPlan === 'Enterprise' && (
+                <SectionCard
+                    title="Strategic Opportunities & Recommended Positioning"
+                    icon={<Sparkles className="w-5 h-5 text-amber-500" />}
+                    badge={
+                        <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                            Enterprise Intelligence
+                        </span>
+                    }
+                >
+                    <div className="space-y-6">
+                        {/* Positioning summary */}
+                        <div className="bg-amber-50/50 border border-amber-200/60 p-5 rounded-2xl">
+                            <h4 className="font-extrabold text-amber-900 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <ShieldCheck className="w-4 h-4 text-amber-600" />
+                                Positioning Summary
+                            </h4>
+                            <p className="text-sm text-gray-700 leading-relaxed">{report.recommendation.reasoning}</p>
+                            <div className="mt-3 flex items-center gap-3 flex-wrap">
+                                <span className={`text-xs font-black px-3 py-1 rounded-full ${
+                                    report.recommendation.decision === 'Recommended' ? 'bg-emerald-100 text-emerald-800' :
+                                    report.recommendation.decision === 'Caution Advised' ? 'bg-amber-100 text-amber-800' :
+                                    'bg-red-100 text-red-800'
+                                }`}>
+                                    {report.recommendation.decision}
+                                </span>
+                                <span className="text-xs text-gray-500">Viability Score: <strong className="text-gray-800">{report.viabilityScore}%</strong></span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Market Opportunities */}
+                            {report.marketTrends?.trends && report.marketTrends.trends.length > 0 && (
+                                <div>
+                                    <h4 className="font-extrabold text-gray-700 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                                        Key Market Opportunities
+                                    </h4>
+                                    <div className="space-y-2.5">
+                                        {report.marketTrends.trends.slice(0, 3).map((trend, i) => (
+                                            <div key={i} className="flex items-start gap-2.5 bg-emerald-50/50 border border-emerald-100 p-3 rounded-xl">
+                                                <ArrowRight className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <span className="font-extrabold text-gray-900 text-xs block">{trend.trend}</span>
+                                                    <span className="text-xs text-gray-600 mt-0.5 block">{trend.impact}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Critical Success Drivers */}
+                            {report.successFactors?.factors && report.successFactors.factors.length > 0 && (
+                                <div>
+                                    <h4 className="font-extrabold text-gray-700 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                        <Check className="w-4 h-4 text-blue-500" />
+                                        Success Drivers
+                                    </h4>
+                                    <div className="space-y-2.5">
+                                        {report.successFactors.factors.slice(0, 3).map((factor, i) => (
+                                            <div key={i} className="flex items-start gap-2.5 bg-blue-50/50 border border-blue-100 p-3 rounded-xl">
+                                                <ArrowRight className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <span className="font-extrabold text-gray-900 text-xs block">{factor.factor}</span>
+                                                    <span className="text-xs text-gray-600 mt-0.5 block">{factor.description}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Priority Risk Mitigations */}
+                        {report.riskAssessment?.risks && report.riskAssessment.risks.length > 0 && (
+                            <div>
+                                <h4 className="font-extrabold text-gray-700 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                    Priority Risk Mitigations
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                    {report.riskAssessment.risks.slice(0, 4).map((risk, i) => (
+                                        <div key={i} className="flex items-start gap-2.5 bg-red-50/40 border border-red-100 p-3 rounded-xl">
+                                            <ShieldCheck className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                                            <div>
+                                                <span className="font-extrabold text-gray-900 text-xs block">{risk.risk}</span>
+                                                <span className="text-xs text-gray-600 mt-0.5 block">{risk.mitigation}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </SectionCard>
+            )}
+
+            {/* Data Freshness & Report Information */}
+            <SectionCard
+                title="Report Information"
+                icon={<Info className="w-5 h-5 text-gray-400" />}
+            >
+                <div className="space-y-3">
+                    <div className="flex flex-wrap gap-6 text-xs">
+                        {report.generationMeta?.generatedAt ? (
+                            <div>
+                                <span className="font-black uppercase text-gray-400 text-[10px] tracking-wider block mb-0.5">Report Generated</span>
+                                <span className="text-gray-700">{new Date(report.generationMeta.generatedAt).toLocaleString()}</span>
+                            </div>
+                        ) : report.cachedAt ? (
+                            <div>
+                                <span className="font-black uppercase text-gray-400 text-[10px] tracking-wider block mb-0.5">Loaded From Cache</span>
+                                <span className="text-gray-700">{new Date(report.cachedAt).toLocaleString()}</span>
+                            </div>
+                        ) : null}
+                        {report.generationMeta?.model && (
+                            <div>
+                                <span className="font-black uppercase text-gray-400 text-[10px] tracking-wider block mb-0.5">AI Model</span>
+                                <span className="text-gray-700 font-mono">{report.generationMeta.model}</span>
+                            </div>
+                        )}
+                        <div>
+                            <span className="font-black uppercase text-gray-400 text-[10px] tracking-wider block mb-0.5">Data Source</span>
+                            <span className="text-gray-700">{report.generationMeta?.isLiveGenerated ? 'Live Gemini AI' : 'Offline demo data'}</span>
+                        </div>
+                    </div>
+                    <div className="border-t border-gray-100 pt-3">
+                        <p className="text-xs text-gray-400 leading-relaxed italic">
+                            Market conditions may change after report generation. This report contains AI-generated business intelligence estimates and should not substitute professional financial, legal, or market research. Verify critical decisions with independent research.
+                        </p>
+                    </div>
+                </div>
+            </SectionCard>
         </div>
 
         {/* Live-mode cost confirmation for regional intelligence — Admin only */}
@@ -1399,7 +1546,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 <div className="bg-white px-5 pt-6 pb-4 sm:p-6 sm:pb-6 relative max-w-full">
                   <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
                       <h3 className="text-base font-black text-gray-900 uppercase tracking-tight" id="modal-title">
-                          Competitor Geographic Coordinates Mapping
+                          Estimated Competitor Distribution
                       </h3>
                       <button onClick={() => setShowMapModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 rounded-lg hover:bg-gray-100">
                           <X className="h-5 w-5" />
@@ -1409,7 +1556,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   <div className="mt-2 relative">
                       <p className="text-xs text-gray-500 mb-4 font-semibold uppercase flex items-center gap-1">
                           <Navigation className="w-3.5 h-3.5 text-blue-500" />
-                          <span>Mapping <strong className="text-gray-800">{report.competitionAnalysis.competitors.length}</strong> active competitors matched around launch coordinates</span>
+                          <span>Estimated positions for <strong className="text-gray-800">{report.competitionAnalysis.competitors.length}</strong> competitors based on AI-gathered report data</span>
                       </p>
 
                       {canViewFullFinancials(currentPlan) ? (
