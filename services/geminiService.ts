@@ -641,8 +641,9 @@ export const generateOpportunityReport = async (
     }
 
     // Beta-role or live-mode path: call the Express backend which calls Gemini.
-    // The server enforces its own role gate — this is a frontend routing decision.
-    assertLiveService('Gemini /api/opportunities');
+    // assertLiveService is intentionally omitted here. Beta-role users reach
+    // this branch while VITE_DEMO_MODE=true — that is by design. The server
+    // enforces the role gate independently; this is a frontend routing decision.
     setLoadingMessage(`Analyzing market gaps and underserved sectors in ${location}...`);
     await new Promise(resolve => setTimeout(resolve, 300));
     setLoadingMessage("Synthesizing best business opportunities and calculating financial metrics on server...");
