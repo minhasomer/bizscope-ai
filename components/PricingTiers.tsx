@@ -69,7 +69,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
           )}
           <div>
             <p className="text-xs font-black text-gray-900 uppercase tracking-wide">
-              {isDemo ? 'Sandbox Mode Active' : 'Live Billing Mode'}
+              {isDemo ? 'Demo Mode' : 'Billing Active'}
             </p>
             <p className="text-[11px] text-gray-500 mt-0.5">
               {isDemo

@@ -110,7 +110,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
         <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-sm">
           <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
           <div>
-            <p className="font-bold text-emerald-800">Sandbox Mode Active</p>
+            <p className="font-bold text-emerald-800">Demo Mode</p>
             <p className="text-emerald-700 text-xs mt-0.5">
               No real payments are processed. Use the floating plan switcher or the{' '}
               <button onClick={() => onNavigate('pricing')} className="underline font-semibold cursor-pointer">
