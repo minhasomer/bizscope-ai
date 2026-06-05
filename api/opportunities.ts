@@ -381,7 +381,8 @@ ${marketData}
 Generate the output in JSON format adhering to the opportunity schema. Do not output any wrapping markdown.
     `.trim();
 
-    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: budget.maxOutputTokens });
+    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: budget.maxOutputTokens, synthesisTimeoutMs: budget.synthesisTimeoutMs });
+    const phase2StartMs = Date.now();
     const fallback = getOpportunityReportFallback(location);
     const synthesis = await withTimeout(
       ai.models.generateContent({
@@ -394,9 +395,10 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
           maxOutputTokens: budget.maxOutputTokens,
         },
       }),
-      25000,
+      budget.synthesisTimeoutMs,
       'opportunities synthesis timed out',
     );
+    const phase2ElapsedMs = Date.now() - phase2StartMs;
 
     const usage = (synthesis as any).usageMetadata;
     const inputTokens: number | null  = usage?.promptTokenCount      ?? null;
@@ -418,6 +420,7 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
       textDefined: rawText !== undefined,
       textLength: rawText?.length ?? 0,
       candidatesTokenCount: outputTokens,
+      phase2ElapsedMs,
     });
 
     const parsed = cleanAndParseJSON(rawText || '', fallback);

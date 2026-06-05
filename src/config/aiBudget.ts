@@ -87,6 +87,12 @@ export interface ReportBudget {
   maxOutputTokens: number;
   /** Max malformed-JSON retries. Each retry counts toward the same call's budget. */
   maxRetries: number;
+  /**
+   * Phase 2 synthesis timeout in milliseconds.
+   * Higher tiers get more time — gemini-2.5-flash thinking latency scales with
+   * prompt complexity. Enterprise/Admin gets 40 s to handle large grounding payloads.
+   */
+  synthesisTimeoutMs: number;
 }
 
 // ─── Per-plan budget table ────────────────────────────────────────────────────
@@ -96,63 +102,69 @@ export const AI_BUDGET: Record<string, ReportBudget> = {
 
   // ── Explorer standard ─────────────────────────────────────────────────────
   'Explorer:standard': {
-    model:           GEMINI_MODELS.standard,
-    targetCostUsd:   0.005,
-    hardCapUsd:      0.02,
-    maxInputTokens:  8_000,
-    maxOutputTokens: 2048,
-    maxRetries:      1,
+    model:                GEMINI_MODELS.standard,
+    targetCostUsd:        0.005,
+    hardCapUsd:           0.02,
+    maxInputTokens:       8_000,
+    maxOutputTokens:      2048,
+    maxRetries:           1,
+    synthesisTimeoutMs:   25_000,
   },
 
   // ── Pro standard ──────────────────────────────────────────────────────────
   'Pro:standard': {
-    model:           GEMINI_MODELS.standard,
-    targetCostUsd:   0.02,
-    hardCapUsd:      0.05,
-    maxInputTokens:  16_000,
-    maxOutputTokens: 4096,
-    maxRetries:      1,
+    model:                GEMINI_MODELS.standard,
+    targetCostUsd:        0.02,
+    hardCapUsd:           0.05,
+    maxInputTokens:       16_000,
+    maxOutputTokens:      4096,
+    maxRetries:           1,
+    synthesisTimeoutMs:   30_000,
   },
 
   // ── Pro+ standard ─────────────────────────────────────────────────────────
   'Pro+:standard': {
-    model:           GEMINI_MODELS.standard,
-    targetCostUsd:   0.03,
-    hardCapUsd:      0.05,
-    maxInputTokens:  16_000,
-    maxOutputTokens: 4096,
-    maxRetries:      1,
+    model:                GEMINI_MODELS.standard,
+    targetCostUsd:        0.03,
+    hardCapUsd:           0.05,
+    maxInputTokens:       16_000,
+    maxOutputTokens:      4096,
+    maxRetries:           1,
+    synthesisTimeoutMs:   35_000,
   },
 
   // ── Pro+ Regional Intelligence ────────────────────────────────────────────
   'Pro+:regional': {
-    model:           GEMINI_MODELS.regional,
-    targetCostUsd:   0.08,
-    hardCapUsd:      0.15,
-    maxInputTokens:  24_000,
-    maxOutputTokens: 8192,
-    maxRetries:      2,
+    model:                GEMINI_MODELS.regional,
+    targetCostUsd:        0.08,
+    hardCapUsd:           0.15,
+    maxInputTokens:       24_000,
+    maxOutputTokens:      8192,
+    maxRetries:           2,
+    synthesisTimeoutMs:   35_000,
   },
 
   // ── Enterprise standard ───────────────────────────────────────────────────
   // No hard cap — AI cost is billed to the enterprise contract.
   'Enterprise:standard': {
-    model:           GEMINI_MODELS.standard,
-    targetCostUsd:   0.03,
-    hardCapUsd:      null,
-    maxInputTokens:  32_000,
-    maxOutputTokens: 8192,
-    maxRetries:      2,
+    model:                GEMINI_MODELS.standard,
+    targetCostUsd:        0.03,
+    hardCapUsd:           null,
+    maxInputTokens:       32_000,
+    maxOutputTokens:      8192,
+    maxRetries:           2,
+    synthesisTimeoutMs:   40_000,
   },
 
   // ── Enterprise regional ───────────────────────────────────────────────────
   'Enterprise:regional': {
-    model:           GEMINI_MODELS.regional,
-    targetCostUsd:   0.10,
-    hardCapUsd:      null,
-    maxInputTokens:  32_000,
-    maxOutputTokens: 8192,
-    maxRetries:      2,
+    model:                GEMINI_MODELS.regional,
+    targetCostUsd:        0.10,
+    hardCapUsd:           null,
+    maxInputTokens:       32_000,
+    maxOutputTokens:      8192,
+    maxRetries:           2,
+    synthesisTimeoutMs:   40_000,
   },
 };
 
