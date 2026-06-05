@@ -484,7 +484,7 @@ const App: React.FC = () => {
       case 'opportunities':
         return (
           <div className="print:hidden">
-            <OpportunityExplorer currentPlan={userPlan} onNavigate={setCurrentView} />
+            <OpportunityExplorer currentPlan={userPlan} onNavigate={setCurrentView} userRole={currentUser?.role ?? ''} />
           </div>
         );
       case 'dashboard':

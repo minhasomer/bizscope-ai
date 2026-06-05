@@ -613,9 +613,13 @@ export const generateViabilityReport = async (
 
 export const generateOpportunityReport = async (
     location: string,
-    setLoadingMessage: (message: string) => void
+    setLoadingMessage: (message: string) => void,
+    userRole: string = '',
 ): Promise<OpportunityReport> => {
-    if (appConfig.isDemoMode) {
+    const _useLive = !(appConfig.isDemoMode && !isBetaRoleEnabled(userRole));
+    console.log(`[BizScope] opportunities routing: role="${userRole}" isDemoMode=${appConfig.isDemoMode} isBetaRoleEnabled=${isBetaRoleEnabled(userRole)} → ${_useLive ? 'LIVE /api/opportunities' : 'MOCK'}`);
+
+    if (appConfig.isDemoMode && !isBetaRoleEnabled(userRole)) {
         setLoadingMessage(`Initializing local data streams for ${location}...`);
         await new Promise(resolve => setTimeout(resolve, 700));
         setLoadingMessage("Scraping local demographic indices and business directories...");
@@ -636,17 +640,21 @@ export const generateOpportunityReport = async (
         } as OpportunityReport;
     }
 
-    // Guardrail: this branch must never execute in Demo Mode.
-    // Opportunity analysis goes through the Express backend — never directly to Gemini.
+    // Beta-role or live-mode path: call the Express backend which calls Gemini.
+    // The server enforces its own role gate — this is a frontend routing decision.
     assertLiveService('Gemini /api/opportunities');
     setLoadingMessage(`Analyzing market gaps and underserved sectors in ${location}...`);
     await new Promise(resolve => setTimeout(resolve, 300));
     setLoadingMessage("Synthesizing best business opportunities and calculating financial metrics on server...");
 
+    const sessionResult = await supabase?.auth.getSession();
+    const token = sessionResult?.data?.session?.access_token ?? null;
+
     const response = await fetch('/api/opportunities', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ location })
     });

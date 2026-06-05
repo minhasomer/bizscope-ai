@@ -603,8 +603,9 @@ function getServerSidePlan(role: string, subscription_tier: string): string {
 async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   verifiedEmail: string;
   verifiedPlan: string;
+  verifiedRole: string;  // raw role string from Supabase profiles table
 }> {
-  const FALLBACK = { verifiedEmail: 'anonymous@bizscope.ai', verifiedPlan: 'Explorer' };
+  const FALLBACK = { verifiedEmail: 'anonymous@bizscope.ai', verifiedPlan: 'Explorer', verifiedRole: '' };
   if (!supabaseAdmin) return FALLBACK;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
   if (!token) {
@@ -624,11 +625,11 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
       .single();
     if (profileError || !profile) {
       console.warn('[PlanAuth] Profile not found for user:', user.id, '—', profileError?.message ?? 'null profile');
-      return { verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedPlan: 'Explorer' };
+      return { verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedPlan: 'Explorer', verifiedRole: '' };
     }
     const verifiedPlan = getServerSidePlan(profile.role, profile.subscription_tier);
     console.log(`[PlanAuth] Verified uid=${user.id} role=${profile.role} tier=${profile.subscription_tier} → plan=${verifiedPlan}`);
-    return { verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedPlan };
+    return { verifiedEmail: user.email ?? FALLBACK.verifiedEmail, verifiedPlan, verifiedRole: profile.role ?? '' };
   } catch (err: any) {
     console.error('[PlanAuth] verifyAndGetPlan exception:', err.message);
     return FALLBACK;
@@ -1039,11 +1040,38 @@ async function startServer() {
   });
 
   // API 2: /api/opportunities
+  // Beta-role gate: only Admin and BetaTester roles may call real Gemini here.
+  // Explorer and unauthenticated users are served mock data client-side and
+  // must never reach this endpoint with a real Gemini call.
   app.post("/api/opportunities", async (req: Request, res: Response) => {
     const { location } = req.body;
 
+    console.log(`[Opportunities] Request received — location="${location ?? '(none)'}"`);
+
     if (!location || typeof location !== "string" || !location.trim()) {
       return res.status(400).json({ error: "Missing or invalid location parameter.", code: "INVALID_INPUT" });
+    }
+
+    // ── Server-side auth & beta-role gate ──────────────────────────────────
+    const { verifiedEmail, verifiedPlan, verifiedRole } = await verifyAndGetPlan(
+      req.headers["authorization"] as string | undefined
+    );
+
+    const normalizedRole = (verifiedRole ?? '').trim().toLowerCase();
+    const isBetaAuthorized =
+      normalizedRole === 'admin' ||
+      normalizedRole === 'betatester' ||
+      normalizedRole === 'beta_tester' ||
+      normalizedRole === 'beta_vip';
+
+    console.log(`[Opportunities] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} authorized=${isBetaAuthorized}`);
+
+    if (!isBetaAuthorized) {
+      console.warn(`[Opportunities] Rejected — role "${verifiedRole}" is not authorized for real Gemini opportunities`);
+      return res.status(403).json({
+        error: "Market Gap analysis with real AI requires Admin or BetaTester role. Explorer and unauthenticated users receive demo data client-side.",
+        code: "INSUFFICIENT_ROLE",
+      });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -1139,6 +1167,8 @@ async function startServer() {
       const parsed = cleanAndParseJSON(response.text || "", fallbackObj);
       parsed.groundingSources = combinedSources.length > 0 ? combinedSources : fallbackObj.groundingSources;
       parsed.location = location;
+
+      console.log(`[Opportunities] Success — model=${cheaperModel} opportunityCount=${parsed.topOpportunities?.length ?? 0} groundingSources=${parsed.groundingSources?.length ?? 0}`);
 
       res.json(parsed);
     } catch (err) {

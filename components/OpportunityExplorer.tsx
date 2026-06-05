@@ -17,6 +17,7 @@ type SortType = 'score' | 'startup-cost' | 'competition';
 interface OpportunityExplorerProps {
   currentPlan: SubscriptionPlan;
   onNavigate: (page: string) => void;
+  userRole?: string;
 }
 
 const PLAN_LIMITS: Record<SubscriptionPlan, number> = {
@@ -32,7 +33,7 @@ const RANK_CONFIGS = [
   { badge: 'bg-orange-300 text-orange-900 border-orange-200', Icon: Award, label: '#3' },
 ];
 
-export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ currentPlan, onNavigate }) => {
+export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ currentPlan, onNavigate, userRole = '' }) => {
   const [location, setLocation] = useState('');
   const [report, setReport] = useState<OpportunityReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +68,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     setReport(null);
 
     try {
-      const result = await generateOpportunityReport(location, setLoadingMessage);
+      const result = await generateOpportunityReport(location, setLoadingMessage, userRole);
       setReport(result);
     } catch (err) {
       console.error(err);
