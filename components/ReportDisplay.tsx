@@ -178,7 +178,7 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
       <div className="flex justify-between w-full mb-3 select-none">
         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Financial growth projection</span>
         <span className="text-[10px] font-bold text-green-600 flex items-center gap-1">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Projected Compound Arc
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Revenue Growth Projection
         </span>
       </div>
       <div className="relative w-full h-[100px]">
@@ -330,13 +330,31 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
     return () => clearTimeout(timer);
   }, [breakdown]);
 
-  const renderBar = (label: string, currentValue: number, isInverse: boolean, weight: string, icon: React.ReactNode) => {
+  const getScoreBand = (val: number, inverse: boolean): { label: string; color: string } => {
+    if (inverse) {
+      // Lower is better for inverse metrics (competition, risk)
+      if (val <= 25) return { label: 'Very Low', color: 'text-emerald-600' };
+      if (val <= 45) return { label: 'Low', color: 'text-emerald-500' };
+      if (val <= 65) return { label: 'Moderate', color: 'text-amber-600' };
+      if (val <= 80) return { label: 'High', color: 'text-rose-500' };
+      return { label: 'Very High', color: 'text-rose-700' };
+    } else {
+      if (val <= 25) return { label: 'Very Low', color: 'text-rose-600' };
+      if (val <= 45) return { label: 'Low', color: 'text-amber-600' };
+      if (val <= 65) return { label: 'Moderate', color: 'text-blue-600' };
+      if (val <= 80) return { label: 'High', color: 'text-emerald-600' };
+      return { label: 'Very High', color: 'text-emerald-700' };
+    }
+  };
+
+  const renderBar = (label: string, currentValue: number, isInverse: boolean, weight: string, icon: React.ReactNode, description: string) => {
     let colorClass = 'bg-blue-600';
     if (isInverse) {
       colorClass = currentValue > 60 ? 'bg-rose-500' : currentValue > 30 ? 'bg-amber-500' : 'bg-emerald-500';
     } else {
       colorClass = currentValue >= 70 ? 'bg-emerald-500' : currentValue >= 45 ? 'bg-amber-500' : 'bg-rose-500';
     }
+    const band = getScoreBand(currentValue, isInverse);
 
     return (
       <div className="group/bar mb-4 last:mb-0 select-none">
@@ -346,16 +364,20 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
             <span>{label}</span>
             <span className="text-gray-400 font-medium normal-case">({weight})</span>
           </span>
-          <span className="font-mono font-black text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md min-w-[42px] text-center border border-gray-200">
-            {currentValue}/100
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-bold ${band.color}`}>{band.label}</span>
+            <span className="font-mono font-black text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md min-w-[42px] text-center border border-gray-200">
+              {currentValue}/100
+            </span>
+          </div>
         </div>
         <div className="w-full bg-gray-150 rounded-full h-2.5 overflow-hidden border border-gray-200/40">
-          <div 
-            className={`h-full rounded-full ${colorClass} transition-all duration-1000 ease-out`} 
+          <div
+            className={`h-full rounded-full ${colorClass} transition-all duration-1000 ease-out`}
             style={{ width: `${currentValue}%` }}
           ></div>
         </div>
+        <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">{description}</p>
       </div>
     );
   };
@@ -364,13 +386,19 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
     <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs flex-grow">
       <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2 flex items-center justify-between">
         <span>Weighted Score Composition</span>
-        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-105">Verified Logic</span>
+        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">Score Breakdown</span>
       </h4>
       <div className="space-y-4">
-        {renderBar("Market Demand", animatedBreakdowns.marketDemand, false, "30%", <TrendingUp className="w-3.5 h-3.5 text-blue-500" />)}
-        {renderBar("Competition Intensity", animatedBreakdowns.competitionIntensity, true, "25%", <MapPin className="w-3.5 h-3.5 text-emerald-500" />)}
-        {renderBar("Financial Feasibility", animatedBreakdowns.financialFeasibility, false, "25%", <DollarSign className="w-3.5 h-3.5 text-purple-500" />)}
-        {renderBar("Risk Sensitivity", animatedBreakdowns.riskLevel, true, "20%", <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />)}
+        {renderBar("Market Demand", animatedBreakdowns.marketDemand, false, "30%", <TrendingUp className="w-3.5 h-3.5 text-blue-500" />, "Consumer need, search volume, and spending power in your target market area. Higher is better.")}
+        {renderBar("Competition Intensity", animatedBreakdowns.competitionIntensity, true, "25%", <MapPin className="w-3.5 h-3.5 text-emerald-500" />, "Density and strength of existing competitors. Lower scores mean less competition and more opportunity for new entrants.")}
+        {renderBar("Financial Feasibility", animatedBreakdowns.financialFeasibility, false, "25%", <DollarSign className="w-3.5 h-3.5 text-purple-500" />, "Projected profitability relative to startup capital required and ongoing operational costs. Higher is better.")}
+        {renderBar("Risk Sensitivity", animatedBreakdowns.riskLevel, true, "20%", <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />, "Aggregate exposure to market volatility, regulatory change, and execution challenges. Lower scores are more favorable.")}
+      </div>
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        <p className="text-[10px] text-gray-350 leading-relaxed">
+          Score ranges: 0–25 Very Low · 26–50 Low · 51–75 Moderate · 76–90 High · 91–100 Very High.
+          {' '}Competition Intensity and Risk Sensitivity are inverse — lower values are favorable.
+        </p>
       </div>
     </div>
   );
@@ -860,14 +888,22 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                               <div className="space-y-4">
                                   <div className="grid grid-cols-2 gap-4">
                                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Year 1 Compound Revenue</p>
+                                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Year 1 Revenue Projection</p>
                                           <p className="font-black text-lg md:text-xl text-emerald-600 mt-1">{report.financialProjections.revenueYear1}</p>
+                                          <p className="text-[10px] text-gray-400 mt-1">Estimated total gross revenue in the first full year of operation.</p>
                                       </div>
                                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Year 3 Compound Revenue</p>
+                                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Year 3 Revenue Projection</p>
                                           <p className="font-black text-lg md:text-xl text-emerald-700 mt-1">{report.financialProjections.revenueYear3}</p>
+                                          <p className="text-[10px] text-gray-400 mt-1">Projected revenue after establishing market presence and customer base.</p>
                                       </div>
                                   </div>
+                                  {report.financialProjections.summary && (
+                                    <div className="bg-blue-50/50 border border-blue-100 rounded-xl px-4 py-3">
+                                      <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Projection Basis</p>
+                                      <p className="text-xs text-blue-800 leading-relaxed">{report.financialProjections.summary}</p>
+                                    </div>
+                                  )}
                                   
                                   {/* Timeline & Stats */}
                                   <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
@@ -1089,9 +1125,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               </div>
             </SectionCard>
 
-            {/* Niche Business Intelligence - Pro */}
+            {/* Market Interest & Customer Demand - Pro */}
             <SectionCard
-                title="Niche Buyer Sentiment Analysis"
+                title="Market Interest & Customer Demand"
                 id="niche"
                 className="border-l-4 border-l-purple-500"
                 icon={<Sparkles className="w-5 h-5 text-purple-600" />}
@@ -1106,43 +1142,44 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 <LockedSection
                   currentPlan={currentPlan}
                   requiredPlan="Pro"
-                  title="Premium Micro-Market Signals"
-                  teaser="Unlock detailed customer sentiment tracking, local CAC/CPM indices, and neighborhood hotspot data."
+                  title="Market Interest & Customer Demand Signals"
+                  teaser="Unlock customer interest indicators, advertising cost benchmarks, and customer acquisition estimates for your market."
                   onUpgrade={() => onNavigate('pricing')}
                 >
                     <div className="animate-fade-in space-y-6">
                         <div className="bg-purple-50/50 border border-purple-100 text-purple-900 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between text-xs gap-3 print:hidden">
                             <span className="flex items-center gap-1.5 font-semibold">
-                                <Sparkles className="w-4 h-4 text-purple-500 shrink-0 animate-spin" />
-                                <span>Pro Data Module Active</span>
+                                <Check className="w-4 h-4 text-purple-500 shrink-0" />
+                                <span>Pro Market Intelligence Active</span>
                             </span>
                             <span className="text-[10px] text-purple-600 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-full font-bold uppercase tracking-wide">
-                                General industry benchmarks — not specific to your business or location
+                                General industry benchmarks — not location-specific
                             </span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-center">
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Niche Social Sentiment Ratio</p>
-                                <p className="text-4xl font-black text-blue-600">92/100</p>
-                                <p className="text-xs text-emerald-600 font-extrabold mt-2 flex items-center justify-center gap-1">
-                                    &uarr; 14.8% YoY queries
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Market Interest Score</p>
+                                <p className="text-4xl font-black text-blue-600">92<span className="text-xl">/100</span></p>
+                                <p className="text-[10px] font-bold text-blue-500 mt-1">High Interest</p>
+                                <p className="text-xs text-emerald-600 font-extrabold mt-1 flex items-center justify-center gap-1">
+                                    &uarr; 14.8% YoY search growth
                                 </p>
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">General industry average — not derived from your specific business or location.</p>
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Expected consumer interest and willingness to purchase in this category. General industry benchmark.</p>
                             </div>
 
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-center">
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Estimated B2C Ad CPM Index</p>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Advertising Cost Benchmark</p>
                                 <p className="text-4xl font-black text-purple-600">$13.80</p>
-                                <p className="text-xs text-gray-550 mt-2 font-semibold">Cost per 1,000 Impressions</p>
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Illustrative ad market estimate for planning purposes. Actual CPMs vary by platform and targeting.</p>
+                                <p className="text-xs text-gray-550 mt-2 font-semibold">Cost per 1,000 Ad Impressions (CPM)</p>
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">What you might expect to pay to reach 1,000 potential customers online. Actual costs vary by platform and targeting.</p>
                             </div>
 
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-center">
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Projected CAC Benchmark</p>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Customer Acquisition Cost</p>
                                 <p className="text-4xl font-black text-indigo-600">$0.95 <span className="text-xs font-normal text-gray-400">/click</span></p>
-                                <p className="text-xs text-gray-550 mt-2 font-semibold">Cost per Customer Lead Touchpoint</p>
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">General industry average. Organic discovery channels may reduce paid acquisition requirements.</p>
+                                <p className="text-xs text-gray-550 mt-2 font-semibold">Estimated Cost per Interested Lead</p>
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Indicative paid digital acquisition cost per lead. Organic and referral channels typically cost less.</p>
                             </div>
                         </div>
 
@@ -1218,9 +1255,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     ) : regionalData ? (
                         <div className="animate-fade-in space-y-6 whitespace-normal text-left">
                             <div className="bg-indigo-50/50 border border-indigo-100 text-indigo-900 p-4 rounded-2xl text-xs flex items-center gap-2 print:hidden">
-                                <Sparkles className="w-4 h-4 text-indigo-500 shrink-0 animate-spin" />
+                                <Check className="w-4 h-4 text-indigo-500 shrink-0" />
                                 <span>
-                                    <strong>Pro+ Regional Multi-District Study Connected:</strong> Successfully modeled surrounding sectors for <strong>{report.location}</strong>.
+                                    <strong>Pro+ Regional Intelligence Active:</strong> Market context modeled for surrounding sectors near <strong>{report.location}</strong>.
                                 </span>
                             </div>
 

@@ -686,13 +686,24 @@ const DossierSection: React.FC<{ title: string; icon: React.ReactNode; children:
   </div>
 );
 
+const getDossierScoreLevel = (value: number): { label: string; color: string } => {
+  if (value >= 76) return { label: 'High', color: 'text-emerald-600' };
+  if (value >= 51) return { label: 'Moderate', color: 'text-blue-600' };
+  if (value >= 26) return { label: 'Low', color: 'text-amber-600' };
+  return { label: 'Very Low', color: 'text-rose-600' };
+};
+
 const MetricBar: React.FC<{ label: string; value: number; description?: string }> = ({ label, value, description }) => {
   const color = value >= 75 ? 'bg-emerald-500' : value >= 50 ? 'bg-blue-500' : 'bg-amber-500';
+  const level = getDossierScoreLevel(value);
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-between items-baseline">
+      <div className="flex justify-between items-center">
         <span className="text-xs font-semibold text-slate-600">{label}</span>
-        <span className="text-xs font-black text-slate-900">{value}/100</span>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] font-bold ${level.color}`}>{level.label}</span>
+          <span className="text-xs font-black text-slate-900">{value}/100</span>
+        </div>
       </div>
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
         <motion.div
@@ -1044,23 +1055,43 @@ const OpportunityDossierModal: React.FC<{
               {opportunity.opportunityScorecard && (
                 <DossierSection title="Opportunity Scorecard" icon={<Layers className="w-4 h-4" />}>
                   <div className="space-y-4">
-                    <MetricBar label="Market Demand" value={opportunity.opportunityScorecard.marketDemand} />
+                    <MetricBar
+                      label="Market Demand"
+                      value={opportunity.opportunityScorecard.marketDemand}
+                      description="Consumer need and spending potential for this business category in this location."
+                    />
                     <MetricBar
                       label="Competition Advantage"
                       value={opportunity.opportunityScorecard.competition}
-                      description="Higher = less competition = better positioning"
+                      description="How open the market is to a new entrant. Higher = less existing competition = better opportunity."
                     />
                     <MetricBar
                       label="Startup Simplicity"
                       value={opportunity.opportunityScorecard.startupComplexity}
-                      description="Higher = simpler to launch and operate"
+                      description="How straightforward this business is to launch. Higher = lower complexity, faster time to first revenue."
                     />
-                    <MetricBar label="Revenue Potential" value={opportunity.opportunityScorecard.revenuePotential} />
-                    <MetricBar label="Scalability" value={opportunity.opportunityScorecard.scalability} />
+                    <MetricBar
+                      label="Revenue Potential"
+                      value={opportunity.opportunityScorecard.revenuePotential}
+                      description="Expected earning capacity based on market size, pricing power, and customer volume."
+                    />
+                    <MetricBar
+                      label="Scalability"
+                      value={opportunity.opportunityScorecard.scalability}
+                      description="Ability to grow revenue without proportional increases in cost or operational complexity."
+                    />
                     <div className="pt-3 border-t border-slate-100">
-                      <MetricBar label="Overall Score" value={opportunity.opportunityScorecard.overallScore} />
+                      <MetricBar
+                        label="Overall Score"
+                        value={opportunity.opportunityScorecard.overallScore}
+                        description="Weighted composite of all five dimensions above. 76–100: Strong opportunity. 51–75: Moderate. Below 50: Proceed with caution."
+                      />
                     </div>
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-4 pt-3 border-t border-slate-100">
+                    Score ranges: 0–25 Very Low · 26–50 Low · 51–75 Moderate · 76–100 High.
+                    Competition Advantage scores are directional — a score of 80 means the market is 80% open, not 80% saturated.
+                  </p>
                 </DossierSection>
               )}
 
@@ -1081,6 +1112,66 @@ const OpportunityDossierModal: React.FC<{
                 </div>
               )}
             </>
+          )}
+
+          {/* 90-Day Launch Roadmap — derived from startup requirements + strategic recommendation */}
+          {hasDossier && opportunity.startupRequirements && opportunity.strategicRecommendation && (
+            <DossierSection title="90-Day Launch Roadmap" icon={<Target className="w-4 h-4" />}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-black flex items-center justify-center text-[10px] mb-2">1</div>
+                  <p className="text-xs font-black text-indigo-900 mb-1.5">Days 1–30: Foundation</p>
+                  <ul className="space-y-1.5 text-[10px] text-indigo-800 leading-relaxed">
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Secure business licenses and permits</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Finalize location selection and lease terms</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Source equipment and initial supplies</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Begin hiring process ({opportunity.startupRequirements.staffing})</li>
+                  </ul>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[10px] mb-2">2</div>
+                  <p className="text-xs font-black text-blue-900 mb-1.5">Days 31–60: Build</p>
+                  <ul className="space-y-1.5 text-[10px] text-blue-800 leading-relaxed">
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Complete fit-out and operational setup</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Train team on service delivery standards</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Launch local digital presence and Google listing</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Run soft-open with early customer feedback</li>
+                  </ul>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-black flex items-center justify-center text-[10px] mb-2">3</div>
+                  <p className="text-xs font-black text-emerald-900 mb-1.5">Days 61–90: Launch</p>
+                  <ul className="space-y-1.5 text-[10px] text-emerald-800 leading-relaxed">
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Official grand opening with promotional push</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Activate referral and loyalty programs</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Track KPIs: revenue, CAC, customer retention</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Review and adjust based on early performance</li>
+                  </ul>
+                </div>
+              </div>
+            </DossierSection>
+          )}
+
+          {/* Data Sources & Confidence */}
+          {hasDossier && (
+            <DossierSection title="Data Sources & Confidence" icon={<Info className="w-4 h-4" />}>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Analysis Source</p>
+                    <p className="text-xs text-slate-700">AI-generated market intelligence using real-time search grounding and economic modeling</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Confidence Level</p>
+                    <p className="text-xs text-slate-700">Moderate — directional estimates based on available market signals. Not a substitute for primary market research.</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Recommended Next Step</p>
+                    <p className="text-xs text-slate-700">Validate assumptions with local market visits, competitor interviews, and a financial advisor before committing capital.</p>
+                  </div>
+                </div>
+              </div>
+            </DossierSection>
           )}
 
           {/* Disclaimer */}

@@ -18,10 +18,10 @@ export const Loader: React.FC<LoaderProps> = ({ message }) => {
       </div>
 
       <h3 className="text-sm font-black text-gray-900 tracking-tight mb-1.5 uppercase">
-        Compiling Market Intelligence
+        Analyzing Market Conditions
       </h3>
       <p className="text-xs text-gray-400 font-medium text-center max-w-xs leading-relaxed min-h-[32px] animate-pulse">
-        {message || 'Accessing real-time economic data...'}
+        {message || 'Evaluating demand, competition & revenue potential...'}
       </p>
 
       {/* Skeleton preview */}

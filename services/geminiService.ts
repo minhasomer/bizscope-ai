@@ -771,41 +771,41 @@ export const generateMockRegionalData = (businessType: string, location: string)
       targetLocation: location,
       nearbyRegions: [
         {
-          name: `${baseCity} North`,
+          name: `${baseCity} — Primary Growth Zone`,
           demographics: "Expanding (High Growth)",
           competition: "Low (2 competitors)",
           opportunity: "92%",
-          details: `Major residential expansion area. Lots of young families and moving households. Rapidly climbing demand for ${targetBiz}.`
+          details: `High-growth residential expansion area with rapidly climbing demand for ${targetBiz}. Young family demographic and strong organic foot traffic.`
         },
         {
-          name: `${baseCity} Heights`,
+          name: `${baseCity} — High-Income District`,
           demographics: "Stable (High-Income Profile)",
           competition: "Moderate (5 competitors)",
           opportunity: "87%",
-          details: `Premium sub-market characterized by corporate executive residents. Ample disposable budget but high lease price index.`
+          details: `Premium sub-market with elevated household income. Strong spending power but higher commercial lease costs require efficient unit economics.`
         },
         {
-          name: `${baseCity} Valley`,
-          demographics: "Emerging (Tech-Corridor Profile)",
+          name: `${baseCity} — Emerging Commercial Corridor`,
+          demographics: "Emerging (Commercial Growth)",
           competition: "Under-saturated (0 competitors)",
           opportunity: "94%",
-          details: `Tech-corridor hub with massive new retail parks. Ideal playground for a modern ${targetBiz} to claim early regional dominance.`
+          details: `New commercial development zone with no established ${targetBiz} presence. First-mover advantage available before competition enters.`
         },
         {
-          name: `${baseCity} South`,
+          name: `${baseCity} — Central Business District`,
           demographics: "Mature (Moderate Growth)",
           competition: "High (9 competitors)",
           opportunity: "68%",
-          details: `Dense commercial center. High competitor saturation and intense price wars. Better treated as a branding anchor rather than early focus.`
+          details: `Dense commercial core with established competition. Strong differentiation required. Best suited as secondary expansion rather than primary launch location.`
         }
       ],
-      countyContext: `High-level county trends show steady positive growth across personal services index categories (+4.6% YoY metrics). Multi-family residential permits have reached a five-year peak, ensuring a steady stream of incoming consumers seeking reliable local options.`,
-      economicRadius: `A detailed 15–25 mile economic study proves that '${baseCity}' acts as the definitive commercial anchor for surrounding suburbs. Suburban consumers regularly travel into the city center for dining, shopping, and specialized services.`,
-      competitiveSpillover: `Competitor leakage maps highlight that existing outlets in ${baseCity} are concentrating solely on the city center, leaving outer residential corridors heavily neglected. Planners should focus distribution or branding capture along these boundary spillover lines.`,
-      expansionPotential: `Strategic multi-unit timeline: Months 1-3 target local SEO and organic search dominance. Months 4-6 establish brand presence in North and Valley suburbs using co-sponsored local events. Months 7-12 implement satellite locations or on-demand logistics to serve the entire metro area.`,
-      regionalRecommendation: `A dual-phase metropolitan deployment is strongly recommended. Anchor the primary brand flag inside the central zone, then rapidly capture the highly lucrative 'North' and 'Valley' expansion corridors through digital marketing.`,
-      specificObservationTitle: "Growth Corridors Identified",
-      specificObservationText: `The municipality is extending the northern rapid transit highway extension, which is projected to increase visitor counts to '${baseCity}' by 18,000 daily commuters. This specific corridor is the single highest high-growth route in the state.`
+      countyContext: `County-level trends show steady positive growth across personal services categories (+4.6% YoY). Multi-family residential permits have reached a five-year high, supporting a growing consumer base for local businesses.`,
+      economicRadius: `Within a 15-25 mile economic radius, ${baseCity} serves as a key commercial anchor for surrounding communities. Residents in adjacent areas regularly travel to the city center for dining, shopping, and specialized services.`,
+      competitiveSpillover: `Existing competitors are concentrated in the central business district, leaving outer residential corridors underserved. Expanding into these boundary areas first allows a new entrant to establish presence before larger operators follow.`,
+      expansionPotential: `Recommended timeline: Months 1-3 — establish local SEO presence and claim digital directory listings. Months 4-6 — build brand recognition through community events and referral partnerships. Months 7-12 — evaluate secondary location or mobile delivery to serve outlying demand clusters.`,
+      regionalRecommendation: `A phased market entry is recommended. Anchor the business in the primary growth zone first to build a loyal customer base, then assess expansion into the emerging commercial corridor once cash flow is stable.`,
+      specificObservationTitle: "Market Context",
+      specificObservationText: `${baseCity} shows above-average consumer spending in the service sector and a growing demographic profile well-suited for ${targetBiz}. Infrastructure investment in the region is expected to support continued population and commercial growth over the next 3-5 years.`
     };
   }
 };

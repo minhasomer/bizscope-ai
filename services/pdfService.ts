@@ -189,25 +189,35 @@ export class PDFService {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-    doc.text("CORE MARKET FEASIBILITY RATING", 30, 128);
+    doc.text("VIABILITY SCORE", 30, 128);
 
     doc.setFontSize(36);
     doc.setTextColor(20, 25, 30);
-    doc.text(`${report.viabilityScore}%`, 30, 146);
+    doc.text(`${report.viabilityScore}/100`, 30, 146);
+
+    // Score band label
+    const scoreBandLabel =
+      report.viabilityScore >= 76 ? 'HIGH VIABILITY' :
+      report.viabilityScore >= 51 ? 'MODERATE VIABILITY' :
+      report.viabilityScore >= 26 ? 'LOW VIABILITY' :
+      'VERY LOW VIABILITY';
+    doc.setFontSize(9);
+    doc.setTextColor(80, 90, 100);
+    doc.text(scoreBandLabel, 30, 152);
 
     doc.setFontSize(11);
     doc.setTextColor(60, 65, 70);
-    doc.text(sanitizeForPdf(`Directive Verdict: ${report.recommendation?.decision || "Caution Advised"}`), 30, 156);
+    doc.text(sanitizeForPdf(`Verdict: ${report.recommendation?.decision || "Caution Advised"}`), 30, 160);
 
-    // Score breakdown block side elements
+    // Score breakdown block side elements with plain-English context
     if (report.scoreBreakdown) {
       doc.setFont('Helvetica', 'normal');
-      doc.setFontSize(9);
+      doc.setFontSize(8.5);
       doc.setTextColor(80, 90, 100);
-      doc.text(`Market Demand Score: ${report.scoreBreakdown.marketDemand}/100`, 95, 128);
-      doc.text(`Financial Feasibility Index: ${report.scoreBreakdown.financialFeasibility}/100`, 95, 134);
-      doc.text(`Competition Intensity Margin: ${report.scoreBreakdown.competitionIntensity}/100`, 95, 140);
-      doc.text(`Risk Assessment Mitigation Score: ${report.scoreBreakdown.riskLevel}/100`, 95, 146);
+      doc.text(`Market Demand:          ${report.scoreBreakdown.marketDemand}/100  (consumer need & spending power)`, 95, 128);
+      doc.text(`Financial Feasibility:  ${report.scoreBreakdown.financialFeasibility}/100  (profitability vs. startup cost)`, 95, 135);
+      doc.text(`Competition Intensity:  ${report.scoreBreakdown.competitionIntensity}/100  (lower = less competition)`, 95, 142);
+      doc.text(`Risk Sensitivity:       ${report.scoreBreakdown.riskLevel}/100  (lower = less risk)`, 95, 149);
     }
 
     // Corporate meta info block bottom
@@ -220,20 +230,23 @@ export class PDFService {
     doc.setTextColor(110, 115, 120);
 
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    doc.text(`Dossier Compiled On: ${dateStr}`, 20, 195);
-    
+    doc.text(`Report Generated: ${dateStr}`, 20, 195);
+
+    const dataSource = (report as any).generationMeta?.isLiveGenerated ? 'Live AI analysis (Gemini)' : 'Demo data snapshot';
+    doc.text(`Data Source: ${dataSource}`, 20, 201);
+    doc.text(`Confidence Level: Moderate -- AI-modeled estimates, not primary market research`, 20, 207);
+
     if (options.isWhiteLabelMode && plan === 'Enterprise') {
-      doc.text(sanitizeForPdf(`Advisory Syndicate: ${options.advisoryFirmName}`), 20, 201);
-      doc.text(sanitizeForPdf(`Prepared Explicitly For: ${options.clientName}`), 20, 207);
+      doc.text(sanitizeForPdf(`Prepared By: ${options.advisoryFirmName}`), 20, 213);
+      doc.text(sanitizeForPdf(`Prepared For: ${options.clientName}`), 20, 219);
     } else {
-      doc.text("Advisory Syndicate: BizScope Corporate Analytics Platform", 20, 201);
-      doc.text("Prepared Explicitly For: Premium Business Member Account", 20, 207);
+      doc.text("Prepared By: BizScope AI Business Intelligence Platform", 20, 213);
     }
 
     // Standard cover disclaimer text
     doc.setFontSize(7.5);
-    doc.text("DISCLAIMER: This assessment parameters report uses real economic models, regional data, and statistical trends.", 20, 260);
-    doc.text("Final viability outcomes require personal financial underwriting, professional legal consultation, and general due diligence.", 20, 264);
+    doc.text("DISCLAIMER: AI-generated business intelligence estimates. Not a substitute for professional financial, legal, or market research.", 20, 258);
+    doc.text("All revenue projections, cost estimates, and market assessments are indicative only. Validate critical decisions with independent research.", 20, 262);
 
     // Add first page watermark footer
     addPageDecoration(1);
