@@ -133,25 +133,46 @@ export const LockedSection: React.FC<LockedSectionProps> = ({
   );
 };
 
+// Parse the first currency value from a string that may contain ranges,
+// suffixes (k/M/B), trailing text, or "+" qualifiers.
+// Examples: "$2,500,000 - $3,500,000" → 2500000
+//           "$1.5M"                   → 1500000
+//           "$120k - $200k"           → 120000
+//           "$300,000+ annually"      → 300000
+// Returns 0 if no recognisable value is found.
+function parseCurrencyStr(s: string): number {
+  const m = s.match(/\$\s*([\d,]+(?:\.\d+)?)\s*([kKmMbB]?)/);
+  if (!m) return 0;
+  const num = parseFloat(m[1].replace(/,/g, ''));
+  if (isNaN(num)) return 0;
+  switch (m[2].toLowerCase()) {
+    case 'k': return num * 1_000;
+    case 'm': return num * 1_000_000;
+    case 'b': return num * 1_000_000_000;
+    default:  return num;
+  }
+}
+
 // Format a raw dollar integer with the appropriate magnitude suffix (k / M / B)
 function formatRevLabel(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000)         return `$${Math.round(n / 1_000)}k`;
   return `$${n.toLocaleString()}`;
 }
 
 // Year-over-Year Revenue accumulator curve
 const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3 }) => {
-  const val1 = parseInt(year1.replace(/[^0-9]/g, '')) || 340000;
-  const val3 = parseInt(year3.replace(/[^0-9]/g, '')) || 495000;
+  const val1 = parseCurrencyStr(year1) || 340000;
+  const val3 = parseCurrencyStr(year3) || 495000;
   const val0 = 0;
   const val2 = Math.round((val1 + val3) / 2 * 1.05);
+  const showYear2Label = val1 > 0 && val3 > 0;
 
   const points = [
     { year: 'Launch', value: val0, label: '$0' },
     { year: 'Year 1', value: val1, label: year1 },
-    { year: 'Year 2', value: val2, label: formatRevLabel(val2) },
+    { year: 'Year 2', value: val2, label: showYear2Label ? formatRevLabel(val2) : '' },
     { year: 'Year 3', value: val3, label: year3 }
   ];
 
