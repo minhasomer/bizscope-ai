@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { searchBusinessTypes, businessSuggestionsList, BusinessSuggestion } from '../src/data/businessSuggestionsData';
 import { filterLocationSuggestions, defaultLocationSuggestions } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
+import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
 
 interface HeroProps {
   onSubmit: (businessType: string, location: string) => void;
@@ -18,6 +19,7 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, hasResults, currentPlan }) => {
   const [businessType, setBusinessType] = useState('');
   const [location, setLocation] = useState('');
+  const [blockedError, setBlockedError] = useState<string | null>(null);
   const [showBusinessSuggestions, setShowBusinessSuggestions] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
 
@@ -98,7 +100,13 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setBlockedError(null);
     if (businessType && location) {
+      const check = checkBlockedCategory(businessType);
+      if (check.matched) {
+        setBlockedError(blockedCategoryMessage(check.category));
+        return;
+      }
       const displayLocation = await resolveLocationDisplay(location);
       onSubmit(businessType, displayLocation);
     }
@@ -372,6 +380,14 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                         </div>
                     </div>
                 </form>
+
+                {/* Blocked category error */}
+                {blockedError && (
+                  <div className="max-w-2xl mx-auto mt-3 px-4 py-3 bg-red-950/60 border border-red-500/40 rounded-xl text-xs text-red-300 leading-relaxed flex items-start gap-2.5">
+                    <span className="text-red-400 text-sm shrink-0 mt-0.5">⚠️</span>
+                    <span>{blockedError}</span>
+                  </div>
+                )}
 
                 {/* Use-case trust chips */}
                 <div className="flex flex-wrap justify-center gap-2 mb-5">

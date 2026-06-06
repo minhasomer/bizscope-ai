@@ -7,6 +7,7 @@ import {
   estimateCost,
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
+import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 
 export const maxDuration = 60;
 
@@ -487,6 +488,16 @@ export default async function handler(
   }
   if (!location?.trim()) {
     return json(res, 400, { error: 'Missing or invalid location.', code: 'INVALID_INPUT' });
+  }
+
+  // ── Blocked category guard ────────────────────────────────────────────────
+  const blockedCheck = checkBlockedCategory(businessType);
+  if (blockedCheck.matched) {
+    return json(res, 422, {
+      error: blockedCategoryMessage(blockedCheck.category),
+      code: 'BLOCKED_CATEGORY',
+      category: blockedCheck.category,
+    });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;

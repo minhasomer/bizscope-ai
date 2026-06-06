@@ -7,6 +7,7 @@ import {
   estimateCost,
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
+import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 
 export const maxDuration = 60;
 
@@ -387,6 +388,8 @@ ${marketData}
 - estimatedCompetitionIntensity: Local competitive saturation. 0 = no competition. 100 = fully saturated. Scale proportionally to actual competitor density and market share concentration.
 - estimatedFinancialFeasibility: Probability of achieving positive unit economics within 18 months given local costs, pricing power, and revenue potential. Consider startup cost relative to expected revenue. 80+ = highly feasible. Below 50 = financially challenging.
 - estimatedRiskLevel: Combined execution and market risk. Factor in operational complexity, regulatory requirements, demand volatility, and dependency on external conditions. 0 = very low risk. 80+ = high risk.
+
+**Content restrictions:** Do NOT recommend any businesses involving firearms/weapons, tobacco, vaping/e-cigarettes, alcohol retail, cannabis/marijuana dispensaries, adult entertainment, or gambling. Only recommend legal, mainstream business categories.
 
 Generate the output in JSON format adhering to the opportunity schema. Do not output any wrapping markdown.
     `.trim();

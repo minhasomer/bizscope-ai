@@ -253,6 +253,7 @@ export class AuthService {
     password: string,
     fullName: string,
     defaultPlan: string = 'Explorer',
+    tosAcceptedAt?: string,
   ): Promise<UserProfile> {
     if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
     if (password.length < 6) throw new Error('Password must be at least 6 characters long.');
@@ -272,6 +273,20 @@ export class AuthService {
       if (error) throw new Error(error.message);
       const user = data.user;
       if (!user) throw new Error('Signup succeeded but no user was returned. Please check confirmation email.');
+
+      // Store ToS acceptance timestamp in the profiles table if available.
+      // This is best-effort — a missing profiles row (race condition on trigger) is
+      // non-fatal; the timestamp is also stored in user metadata as a fallback.
+      if (tosAcceptedAt) {
+        try {
+          await supabase!.from('profiles').update({ tos_accepted_at: tosAcceptedAt }).eq('id', user.id);
+        } catch {
+          // Non-fatal — timestamp also captured in auth metadata below
+          console.warn('[Auth] Could not store tos_accepted_at in profiles table.');
+        }
+        // Also store in user metadata as a secondary record
+        await supabase!.auth.updateUser({ data: { tos_accepted_at: tosAcceptedAt } }).catch(() => null);
+      }
 
       if (isDemoMode) {
         localStorage.setItem(`bizscope_user_plan_${email}`, defaultPlan);
