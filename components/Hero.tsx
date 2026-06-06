@@ -255,13 +255,13 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                                 badgeBg = "bg-emerald-55 text-emerald-700 bg-emerald-50/70 border-emerald-100/50";
                                                 badgeLabel = "Common Brand";
                                             }
-                                            
+
                                             return (
-                                                <div 
-                                                    key={i} 
+                                                <div
+                                                    key={i}
                                                     className={`px-4 py-2.5 cursor-pointer border-l-4 transition-all duration-150 flex items-center justify-between ${
-                                                        isSelected 
-                                                          ? 'bg-blue-50/70 border-blue-500 pl-3 font-semibold text-blue-900' 
+                                                        isSelected
+                                                          ? 'bg-blue-50/70 border-blue-500 pl-3 font-semibold text-blue-900'
                                                           : 'border-transparent pl-4 hover:bg-blue-50/30 hover:pl-3 hover:border-blue-400 text-gray-800'
                                                     }`}
                                                     onMouseDown={(e) => {
@@ -291,7 +291,22 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                             );
                                         })
                                     ) : (
-                                        <div className="px-4 py-4 text-gray-400 italic text-xs text-center">No matches found for "{businessType}"</div>
+                                        <div
+                                            className="px-4 py-3.5 cursor-pointer flex items-center gap-3 hover:bg-indigo-50 transition-colors"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                setShowBusinessSuggestions(false);
+                                                if (businessType.trim() && location.trim()) onSubmit(businessType.trim(), location.trim());
+                                            }}
+                                            onTouchStart={(e) => {
+                                                e.preventDefault();
+                                                setShowBusinessSuggestions(false);
+                                                if (businessType.trim() && location.trim()) onSubmit(businessType.trim(), location.trim());
+                                            }}
+                                        >
+                                            <span className="text-indigo-500 text-base">↵</span>
+                                            <span className="text-sm text-gray-700">Press <strong>Enter</strong> to analyze <span className="text-indigo-600 font-semibold">"{businessType}"</span></span>
+                                        </div>
                                     )}
                                   </div>
                                 )}
@@ -313,24 +328,35 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                     autoComplete="off"
                                     required
                                 />
-                                {showLocationSuggestions && locationDropdownItems.length > 0 && (
+                                {showLocationSuggestions && (locationDropdownItems.length > 0 || location.trim().length > 0) && (
                                   <div className="absolute z-50 w-full bg-white rounded-lg shadow-xl mt-1 max-h-60 overflow-y-auto text-left border border-gray-100">
-                                    {locationDropdownItems.map((s, i) => {
-                                      const isActive = i === activeLocationIndex;
-                                      return (
-                                        <div
-                                            key={i}
-                                            className={`px-4 py-3 cursor-pointer text-gray-800 border-b border-gray-50 last:border-0 transition-colors ${
-                                              isActive ? 'bg-blue-50 font-semibold text-blue-900' : 'hover:bg-blue-50'
-                                            }`}
-                                            onMouseDown={(e) => { e.preventDefault(); handleLocationSelect(s); }}
-                                            onTouchStart={(e) => { e.preventDefault(); handleLocationSelect(s); }}
-                                            onMouseEnter={() => setActiveLocationIndex(i)}
-                                        >
-                                            {s}
-                                        </div>
-                                      );
-                                    })}
+                                    {locationDropdownItems.length > 0 ? (
+                                      locationDropdownItems.map((s, i) => {
+                                        const isActive = i === activeLocationIndex;
+                                        return (
+                                          <div
+                                              key={i}
+                                              className={`px-4 py-3 cursor-pointer text-gray-800 border-b border-gray-50 last:border-0 transition-colors ${
+                                                isActive ? 'bg-blue-50 font-semibold text-blue-900' : 'hover:bg-blue-50'
+                                              }`}
+                                              onMouseDown={(e) => { e.preventDefault(); handleLocationSelect(s); }}
+                                              onTouchStart={(e) => { e.preventDefault(); handleLocationSelect(s); }}
+                                              onMouseEnter={() => setActiveLocationIndex(i)}
+                                          >
+                                              {s}
+                                          </div>
+                                        );
+                                      })
+                                    ) : (
+                                      <div
+                                          className="px-4 py-3.5 cursor-pointer flex items-center gap-3 hover:bg-indigo-50 transition-colors"
+                                          onMouseDown={(e) => { e.preventDefault(); handleLocationSelect(location.trim()); }}
+                                          onTouchStart={(e) => { e.preventDefault(); handleLocationSelect(location.trim()); }}
+                                      >
+                                          <span className="text-indigo-500 text-base">📍</span>
+                                          <span className="text-sm text-gray-700">Use <span className="text-indigo-600 font-semibold">"{location}"</span> as location</span>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                             </div>
