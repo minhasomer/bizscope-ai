@@ -158,8 +158,8 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
 
   return (
     <div className="flex flex-col h-full">
-      {/* Map panel */}
-      <div className="relative" style={{ flex: '1 1 60%', minHeight: 0 }}>
+      {/* Map panel — hidden in print; competitor list below takes over */}
+      <div className="relative print:hidden" style={{ flex: '1 1 60%', minHeight: 0 }}>
         <div ref={containerRef} className="w-full h-full" />
         {/* Legend */}
         <div className="absolute bottom-8 left-2 z-[1000] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 text-[10px] text-gray-500 flex items-center gap-3 shadow-sm pointer-events-none">
@@ -180,7 +180,7 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
 
       {/* Competitor list panel */}
       {competitorsWithCoords.length > 0 && (
-        <div className="border-t border-gray-100 bg-white overflow-y-auto" style={{ flex: '0 0 40%' }}>
+        <div className="border-t border-gray-100 bg-white overflow-y-auto competitor-print-list" style={{ flex: '0 0 40%' }}>
           <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
             Competitors · click to focus
           </div>
@@ -189,7 +189,7 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
               <li
                 key={idx}
                 onClick={() => handleListItemClick(idx)}
-                className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${activeIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50'}`}
+                className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors border-b border-gray-50 last:border-0 avoid-break ${activeIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50'}`}
               >
                 <span className="mt-0.5 w-5 h-5 flex-shrink-0 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                   {idx + 1}

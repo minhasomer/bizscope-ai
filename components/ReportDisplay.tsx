@@ -320,7 +320,7 @@ const SectionCard: React.FC<{
   badge?: React.ReactNode;
   id?: string;
 }> = ({ title, children, icon, className = "", badge, id }) => (
-  <div id={id} className={`bg-white rounded-3xl p-6 md:p-8 border border-gray-150 shadow-xs relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:border-blue-200/50 hover:shadow-xs ${className}`}>
+  <div id={id} className={`bg-white rounded-3xl p-6 md:p-8 border border-gray-150 shadow-xs relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:border-blue-200/50 hover:shadow-xs avoid-break ${className}`}>
     <div>
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -709,7 +709,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
       setShowUpgradeGateModal('pdf');
       return;
     }
-    setShowExportModal(true);
+    window.print();
   };
 
   const getRecommendationStyle = (decision: string) => {
@@ -842,8 +842,8 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   onClick={handleExportPDF}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-xl transition-colors font-extrabold text-xs cursor-pointer"
                 >
-                    <span>{canExportPdf(currentPlan) ? '📄' : '🔒'}</span> 
-                    <span>Download PDF</span>
+                    <span>{canExportPdf(currentPlan) ? '📄' : '🔒'}</span>
+                    <span>Export PDF</span>
                 </button>
                 {saveSuccess && (
                   <span className="inline-flex items-center text-xs text-green-600 font-bold bg-green-50 border border-green-200 px-3 py-1 rounded-md animate-pulse">

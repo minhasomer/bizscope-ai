@@ -1,0 +1,33 @@
+/* ─── Print styles ─────────────────────────────────────────────────────────── */
+
+@page {
+  margin: 1.5cm;
+}
+
+@media print {
+  /* Hide Leaflet interactive map — CompetitorMap renders a text list instead */
+  .leaflet-container,
+  .leaflet-control-container {
+    display: none !important;
+  }
+
+  /* Un-constrain the competitor list panel so all rows print */
+  .competitor-print-list {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    flex: none !important;
+  }
+
+  /* Suppress animation classes that cause blank boxes in print */
+  .animate-ping,
+  .animate-spin,
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  /* Avoid mid-card page breaks */
+  .avoid-break {
+    break-inside: avoid;
+  }
+}
