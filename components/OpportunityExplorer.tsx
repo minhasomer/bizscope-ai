@@ -26,6 +26,11 @@ interface OpportunityTier {
   badgeText: string;
 }
 
+// Prefer estimatedViabilityScore (formula-derived) over deprecated overallPotental
+function resolveViabilityScore(scores: { estimatedViabilityScore?: number; overallPotental: number }): number {
+  return scores.estimatedViabilityScore ?? scores.overallPotental;
+}
+
 function getOpportunityTier(score: number): OpportunityTier {
   if (score >= 90) return { label: 'Top Opportunity',      emoji: '🥇', badgeBg: 'bg-yellow-50',  badgeBorder: 'border-yellow-200', badgeText: 'text-yellow-800' };
   if (score >= 80) return { label: 'High Potential',       emoji: '🥈', badgeBg: 'bg-slate-50',   badgeBorder: 'border-slate-300',  badgeText: 'text-slate-700'  };
@@ -130,7 +135,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     if (!report || currentPlan !== 'Explorer') return null;
     return new Set(
       [...report.topOpportunities]
-        .sort((a, b) => b.scores.overallPotental - a.scores.overallPotental)
+        .sort((a, b) => resolveViabilityScore(b.scores) - resolveViabilityScore(a.scores))
         .slice(0, visibleLimit)
         .map(o => o.businessType),
     );
@@ -169,7 +174,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     else if (filter === 'low-competition') opps = opps.filter(o => o.scores.competitionLevel <= 4);
     else if (filter === 'low-overhead') opps = opps.filter(o => o.scores.overhead <= 4);
 
-    if (sort === 'score') opps.sort((a, b) => b.scores.overallPotental - a.scores.overallPotental);
+    if (sort === 'score') opps.sort((a, b) => resolveViabilityScore(b.scores) - resolveViabilityScore(a.scores));
     else if (sort === 'startup-cost') opps.sort((a, b) => a.scores.capEx - b.scores.capEx);
     else if (sort === 'competition') opps.sort((a, b) => a.scores.competitionLevel - b.scores.competitionLevel);
 
@@ -541,7 +546,7 @@ const OpportunityCard: React.FC<{
   isDossierLoading?: boolean;
 }> = ({ opportunity, rank, isLocked, currentPlan, onUpgrade, onOpenDossier, isDossierLoading = false }) => {
   const rankConfig = RANK_CONFIGS[rank - 1];
-  const tier = getOpportunityTier(opportunity.scores.overallPotental);
+  const tier = getOpportunityTier(resolveViabilityScore(opportunity.scores));
 
   if (isLocked) {
     return (
@@ -794,14 +799,14 @@ const OpportunityDossierModal: React.FC<{
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  const tier = getOpportunityTier(opportunity.scores.overallPotental);
+  const tier = getOpportunityTier(resolveViabilityScore(opportunity.scores));
 
   // Derive "why it surfaced" bullets from scores + whyItsGood
   const whySurfaced: string[] = [];
   if (opportunity.scores.competitionLevel <= 4) whySurfaced.push('Limited direct competition');
   if (opportunity.scores.capEx <= 4) whySurfaced.push('Low startup capital requirements');
   if (opportunity.scores.overhead <= 4) whySurfaced.push('Low operating overhead');
-  if (opportunity.scores.overallPotental >= 80) whySurfaced.push('Strong unmet demand signal');
+  if (resolveViabilityScore(opportunity.scores) >= 80) whySurfaced.push('Strong unmet demand signal');
   if (whySurfaced.length === 0 && opportunity.whyItsGood) whySurfaced.push(opportunity.whyItsGood.split('.')[0]);
 
   const hasDossier = !!(
