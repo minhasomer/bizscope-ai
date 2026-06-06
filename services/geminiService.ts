@@ -584,6 +584,7 @@ export const generateViabilityReport = async (
 
         const locWarning = getLocationWarning(location);
         if (locWarning) (customized as any).locationWarning = locWarning;
+        (customized as any).coordinatesAreReal = false;
 
         result = customized as ViabilityReport;
     } else {

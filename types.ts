@@ -179,6 +179,7 @@ export interface ViabilityReport {
   businessType: string;
   location: string;
   targetCoordinates?: { latitude: number; longitude: number };
+  coordinatesAreReal?: boolean;
 
   viabilityScore: number;
   scoreBreakdown?: ScoreBreakdown;

@@ -307,6 +307,10 @@ const App: React.FC = () => {
     setError(null);
     setReport(null);
     setCurrentView('home');
+    // Scroll to results immediately so the loading indicator is visible
+    setTimeout(() => {
+      document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
 
     try {
       if (forceRegenerate) {

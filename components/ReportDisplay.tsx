@@ -1077,15 +1077,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
             {/* Competition Map Area Embed with Locked Option */}
             <SectionCard
-                title="Competitor location & market analysis"
+                title="Competitor Map & Market Coverage"
                 id="competition"
                 className="border-l-4 border-l-emerald-500 shadow-sm"
                 icon={<Map className="w-5 h-5 text-emerald-600" />}
             >
                 <div className="space-y-4">
-                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estimated Competitor Distribution</p>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Competitor Distribution</p>
                   <p className="text-sm text-gray-600 leading-relaxed mb-2">
-                    AI-estimated competitor positions plotted from report data. This is a schematic coordinate visualization, not a real-time map service.{!canViewFullFinancials(currentPlan) && ' Upgrade to Pro to unlock.'}
+                    Map points are based on available location data from the analysis pipeline.{!canViewFullFinancials(currentPlan) && ' Upgrade to Pro to unlock.'}
                   </p>
                   <LockedSection
                     currentPlan={currentPlan}
@@ -1095,9 +1095,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     onUpgrade={() => onNavigate('pricing')}
                   >
                       <div className="rounded-3xl overflow-hidden border border-gray-150 h-[380px] w-full relative z-10 shadow-xs animate-fade-in">
-                          <CompetitorMap 
-                              competitors={report.competitionAnalysis.competitors} 
+                          <CompetitorMap
+                              competitors={report.competitionAnalysis.competitors}
                               targetCoordinates={report.targetCoordinates}
+                              coordinatesAreReal={report.coordinatesAreReal}
                           />
                       </div>
                   </LockedSection>
@@ -1608,14 +1609,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   <div className="mt-2 relative">
                       <p className="text-xs text-gray-500 mb-4 font-semibold uppercase flex items-center gap-1">
                           <Navigation className="w-3.5 h-3.5 text-blue-500" />
-                          <span>Estimated positions for <strong className="text-gray-800">{report.competitionAnalysis.competitors.length}</strong> competitors based on AI-gathered report data</span>
+                          <span>Map points for <strong className="text-gray-800">{report.competitionAnalysis.competitors.length}</strong> competitors based on available location data from the analysis pipeline</span>
                       </p>
 
                       {canViewFullFinancials(currentPlan) ? (
                           <div className="rounded-2xl overflow-hidden border border-gray-150 h-[450px]">
-                              <CompetitorMap 
-                                  competitors={report.competitionAnalysis.competitors} 
+                              <CompetitorMap
+                                  competitors={report.competitionAnalysis.competitors}
                                   targetCoordinates={report.targetCoordinates}
+                                  coordinatesAreReal={report.coordinatesAreReal}
                               />
                           </div>
                       ) : (

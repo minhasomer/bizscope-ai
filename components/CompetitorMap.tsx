@@ -1,106 +1,151 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Competition } from '../types';
 
 interface CompetitorMapProps {
   competitors: Competition[];
   targetCoordinates?: { latitude: number; longitude: number };
+  coordinatesAreReal?: boolean;
 }
 
-export const CompetitorMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinates }) => {
-  // If we don't have coordinates, we can't render the map effectively.
-  // We'll show a fallback message or just the list.
-  const hasCoords = competitors.some(c => c.latitude && c.longitude) && targetCoordinates;
+const CompetitorTable: React.FC<{ competitors: Competition[] }> = ({ competitors }) => (
+  <div className="space-y-3">
+    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+      Geographic coordinates were not available for this report. Competitor locations are listed below.
+    </p>
+    {competitors.length === 0 ? (
+      <p className="text-sm text-gray-500 text-center py-8">No competitor data found for this location.</p>
+    ) : (
+      <ul className="space-y-3">
+        {competitors.map((comp, i) => (
+          <li key={i} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+            <div className="font-semibold text-sm text-gray-900">{comp.name}</div>
+            {comp.address && <div className="text-xs text-gray-500 mt-0.5">{comp.address}</div>}
+            {comp.details && <div className="text-xs text-gray-600 mt-1.5 leading-relaxed">{comp.details}</div>}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
 
-  if (!hasCoords) {
-    return (
-      <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 flex-col p-4 text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9.553 4.553A1 1 0 009 7" />
-        </svg>
-        <p>Exact map coordinates unavailable for this location.</p>
-        <p className="text-sm mt-1">Check the competitor list for addresses.</p>
-      </div>
-    );
-  }
+const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinates, coordinatesAreReal }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
 
-  // Basic normalization for plotting
-  // 1. Find min/max lat/long to set bounds
-  const points = [
-    { lat: targetCoordinates!.latitude, lng: targetCoordinates!.longitude, type: 'target', name: 'Your Location' },
-    ...competitors.filter(c => c.latitude && c.longitude).map(c => ({ lat: c.latitude!, lng: c.longitude!, type: 'competitor', name: c.name }))
-  ];
+  const competitorsWithCoords = competitors.filter(c => c.latitude != null && c.longitude != null);
 
-  const lats = points.map(p => p.lat);
-  const lngs = points.map(p => p.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
 
-  // Add padding
-  const paddingLat = (maxLat - minLat) * 0.2 || 0.01;
-  const paddingLng = (maxLng - minLng) * 0.2 || 0.01;
+    const points: [number, number][] = [];
+    if (coordinatesAreReal && targetCoordinates) {
+      points.push([targetCoordinates.latitude, targetCoordinates.longitude]);
+    }
+    competitorsWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
 
-  const boundMinLat = minLat - paddingLat;
-  const boundMaxLat = maxLat + paddingLat;
-  const boundMinLng = minLng - paddingLng;
-  const boundMaxLng = maxLng + paddingLng;
+    let center: [number, number] = [39.5, -98.35];
+    let zoom = 4;
+    if (points.length > 0) {
+      center = [
+        points.reduce((s, p) => s + p[0], 0) / points.length,
+        points.reduce((s, p) => s + p[1], 0) / points.length,
+      ];
+      zoom = 12;
+    } else if (targetCoordinates) {
+      center = [targetCoordinates.latitude, targetCoordinates.longitude];
+      zoom = 13;
+    }
 
-  const latRange = boundMaxLat - boundMinLat;
-  const lngRange = boundMaxLng - boundMinLng;
+    const map = L.map(containerRef.current, {
+      center,
+      zoom,
+      scrollWheelZoom: false,
+      zoomControl: true,
+    });
 
-  const getX = (lng: number) => ((lng - boundMinLng) / lngRange) * 100;
-  const getY = (lat: number) => 100 - ((lat - boundMinLat) / latRange) * 100; // Invert Y for SVG
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18,
+    }).addTo(map);
+
+    if (coordinatesAreReal && targetCoordinates) {
+      const icon = L.divIcon({
+        className: '',
+        html: '<div style="width:18px;height:18px;border-radius:50%;background:#3B82F6;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      });
+      L.marker([targetCoordinates.latitude, targetCoordinates.longitude], { icon })
+        .addTo(map)
+        .bindPopup('<strong style="font-size:12px">📍 Your Location</strong>');
+    }
+
+    competitorsWithCoords.forEach(comp => {
+      const icon = L.divIcon({
+        className: '',
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#EF4444;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+      const popupHtml = [
+        `<strong style="font-size:12px;display:block;margin-bottom:3px">${comp.name}</strong>`,
+        comp.address ? `<span style="font-size:11px;color:#6B7280;display:block">${comp.address}</span>` : '',
+        comp.details ? `<span style="font-size:11px;color:#374151;display:block;margin-top:4px;max-width:200px">${comp.details}</span>` : '',
+      ].filter(Boolean).join('');
+      L.marker([comp.latitude!, comp.longitude!], { icon })
+        .addTo(map)
+        .bindPopup(popupHtml);
+    });
+
+    if (points.length > 1) {
+      map.fitBounds(points, { padding: [30, 30] });
+    }
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="relative w-full h-80 bg-slate-50 rounded-lg overflow-hidden border border-gray-200">
-      {/* Grid background */}
-      <div className="absolute inset-0 grid grid-cols-4 grid-rows-4">
-        {[...Array(16)].map((_, i) => (
-          <div key={i} className="border-gray-100 border-[0.5px]"></div>
-        ))}
-      </div>
-      
-      <svg className="w-full h-full absolute inset-0" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {points.map((p, i) => (
-          <g key={i}>
-            {p.type === 'target' ? (
-              // Target marker (You are here)
-              <circle cx={getX(p.lng)} cy={getY(p.lat)} r="3" fill="#3B82F6" stroke="white" strokeWidth="0.5">
-                <animate attributeName="r" values="3;4;3" dur="2s" repeatCount="indefinite" />
-              </circle>
-            ) : (
-              // Competitor marker
-              <circle cx={getX(p.lng)} cy={getY(p.lat)} r="2" fill="#EF4444" stroke="white" strokeWidth="0.5" />
-            )}
-          </g>
-        ))}
-      </svg>
-      
-      {/* Tooltips/Labels overlaid */}
-      {points.map((p, i) => (
-        <div
-          key={i}
-          className="absolute transform -translate-x-1/2 -translate-y-full pb-2 pointer-events-none"
-          style={{ left: `${getX(p.lng)}%`, top: `${getY(p.lat)}%` }}
-        >
-          {p.type === 'target' ? (
-             <div className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded shadow whitespace-nowrap z-10">Your Location</div>
-          ) : (
-             <div className="bg-white text-gray-800 text-[10px] px-1.5 py-0.5 rounded shadow border border-gray-200 whitespace-nowrap opacity-90 max-w-[100px] truncate">
-               {p.name}
-             </div>
-          )}
-        </div>
-      ))}
-
-      <div className="absolute bottom-2 right-2 bg-white/80 p-2 rounded text-xs text-gray-500 backdrop-blur-sm">
-        <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-600 block"></span> You
-            <span className="w-2 h-2 rounded-full bg-red-500 block ml-2"></span> Competitor
-        </div>
+    <div className="relative w-full h-full">
+      <div ref={containerRef} className="w-full h-full" />
+      <div className="absolute bottom-8 left-2 z-[1000] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 text-[10px] text-gray-500 flex items-center gap-3 shadow-sm pointer-events-none">
+        {coordinatesAreReal && (
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
+            Your Location
+          </span>
+        )}
+        {competitorsWithCoords.length > 0 && (
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+            Competitor
+          </span>
+        )}
       </div>
     </div>
+  );
+};
+
+export const CompetitorMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinates, coordinatesAreReal }) => {
+  const hasMapData = competitors.some(c => c.latitude != null && c.longitude != null);
+
+  if (!hasMapData && !targetCoordinates) {
+    return <CompetitorTable competitors={competitors} />;
+  }
+
+  return (
+    <LeafletMap
+      competitors={competitors}
+      targetCoordinates={targetCoordinates}
+      coordinatesAreReal={coordinatesAreReal}
+    />
   );
 };
