@@ -228,6 +228,9 @@ export interface ViabilityReport {
   loadedFromCache?: boolean;
   cachedAt?: string;
 
+  // Set when location confidence is low (demo mode heuristic)
+  locationWarning?: string;
+
   // Generation metadata — present on live Gemini reports, absent on mock
   generationMeta?: {
     model: string;

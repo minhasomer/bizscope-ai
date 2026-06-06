@@ -726,6 +726,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth">
+        {/* Location confidence warning */}
+        {report.locationWarning && (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 text-amber-800 text-sm">
+            <span className="text-lg leading-none mt-0.5">⚠️</span>
+            <span><strong>Unverified location:</strong> {report.locationWarning}</span>
+          </div>
+        )}
         {/* Header and Score Card */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-150 p-6 md:p-8 relative overflow-hidden">
             {/* Soft decorative visual gradient */}

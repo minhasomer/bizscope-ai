@@ -365,8 +365,10 @@ function applyBusinessVariation(report: any, businessType: string, location: str
   const cat = getCategory(businessType);
   const r = CATEGORY_RANGES[cat];
 
-  const startLow  = lerp(r.startupLow[0],  r.startupLow[1],  t0);
-  const startHigh = lerp(r.startupHigh[0], r.startupHigh[1], t1);
+  const startLowRaw  = lerp(r.startupLow[0],  r.startupLow[1],  t0);
+  const startHighRaw = lerp(r.startupHigh[0], r.startupHigh[1], t1);
+  const startLow  = Math.min(startLowRaw, startHighRaw);
+  const startHigh = Math.max(startLowRaw, startHighRaw);
   const rev1      = lerp(r.rev1[0], r.rev1[1], t2);
   const rev3Mult  = r.rev3Mult[0] + (r.rev3Mult[1] - r.rev3Mult[0]) * t3;
   const rev3      = Math.round(rev1 * rev3Mult / 1000) * 1000;
@@ -408,8 +410,12 @@ function applyBusinessVariation(report: any, businessType: string, location: str
     report.financialProjections.startupCostBreakdown  = STARTUP_BREAKDOWN_BY_CATEGORY[cat];
   }
 
-  // 3. Recommendation reasoning (uses actual computed values)
+  // 3. Recommendation — decision must match score, then update reasoning
   if (report.recommendation) {
+    report.recommendation.decision =
+      score >= 76 ? 'Recommended' :
+      score >= 51 ? 'Caution Advised' :
+                    'Not Recommended';
     report.recommendation.reasoning = buildReasoning(
       score, roiTimeStr, `${margin}%`, cat, report.scoreBreakdown,
     );
@@ -576,6 +582,9 @@ export const generateViabilityReport = async (
             });
         }
 
+        const locWarning = getLocationWarning(location);
+        if (locWarning) (customized as any).locationWarning = locWarning;
+
         result = customized as ViabilityReport;
     } else {
         // assertLiveService is intentionally omitted here. Beta-role users reach
@@ -625,6 +634,22 @@ export const generateViabilityReport = async (
     await ReportCacheService.set(businessType, location, 'standard', planTier, result);
     return result;
 };
+
+// ─── Location confidence heuristic ──────────────────────────────────────────
+// In demo mode there is no real geocoding. Flag locations that don't look like
+// a recognizable US city/region so the UI can show a non-blocking warning.
+function getLocationWarning(location: string): string | null {
+  const loc = location.trim();
+  // Zip code only is fine
+  if (/^\d{5}(-\d{4})?$/.test(loc)) return null;
+  // "City, ST" or "City, State" pattern
+  if (/[a-z\s]+,\s*[a-z]{2,}/i.test(loc)) return null;
+  // Contains a geographic qualifier word
+  if (/\b(county|region|district|city|town|village|borough|state|province|zip)\b/i.test(loc)) return null;
+  // Looks like a known US city (alphabetic + spaces, 3+ chars)
+  if (/^[a-z\s]{3,}$/i.test(loc)) return null;
+  return `Location "${loc}" could not be verified. Market data is illustrative — local conditions may differ significantly.`;
+}
 
 // ─── Location → mock set classifier ─────────────────────────────────────────
 // Routes demo-mode users to the city-archetype mock that best fits their city.
