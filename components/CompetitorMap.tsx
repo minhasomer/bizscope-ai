@@ -52,28 +52,10 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const points: [number, number][] = [];
-    if (coordinatesAreReal && targetCoordinates) {
-      points.push([targetCoordinates.latitude, targetCoordinates.longitude]);
-    }
-    competitorsWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
-
-    let center: [number, number] = [39.5, -98.35];
-    let zoom = 4;
-    if (points.length > 0) {
-      center = [
-        points.reduce((s, p) => s + p[0], 0) / points.length,
-        points.reduce((s, p) => s + p[1], 0) / points.length,
-      ];
-      zoom = 12;
-    } else if (targetCoordinates) {
-      center = [targetCoordinates.latitude, targetCoordinates.longitude];
-      zoom = 13;
-    }
-
+    // Initialize at a neutral US view — fitBounds/setView below takes over
     const map = L.map(containerRef.current, {
-      center,
-      zoom,
+      center: [39.5, -98.35],
+      zoom: 4,
       scrollWheelZoom: false,
       zoomControl: true,
     });
@@ -133,11 +115,36 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
       return marker;
     });
 
-    if (points.length > 1) {
-      map.fitBounds(points, { padding: [30, 30] });
+    // Collect all points for bounds calculation
+    const points: [number, number][] = [];
+    if (coordinatesAreReal && targetCoordinates) {
+      points.push([targetCoordinates.latitude, targetCoordinates.longitude]);
     }
+    competitorsWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
 
     mapRef.current = map;
+
+    // Defer fitBounds to after the browser has laid out the flex container.
+    // Without this, Leaflet reads a zero/wrong container height and places markers off-screen.
+    requestAnimationFrame(() => {
+      if (!mapRef.current) return;
+      map.invalidateSize();
+
+      // Collect all points for bounds calculation
+      const points: [number, number][] = [];
+      if (coordinatesAreReal && targetCoordinates) {
+        points.push([targetCoordinates.latitude, targetCoordinates.longitude]);
+      }
+      competitorsWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
+
+      if (points.length >= 2) {
+        map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 15 });
+      } else if (points.length === 1) {
+        map.setView(points[0], 14);
+      } else if (targetCoordinates) {
+        map.setView([targetCoordinates.latitude, targetCoordinates.longitude], 13);
+      }
+    });
 
     return () => {
       map.remove();
