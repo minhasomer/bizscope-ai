@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, MapPin, TrendingUp, DollarSign, Users, ChevronRight, Info,
@@ -10,6 +10,8 @@ import type { OpportunityReport, BusinessOpportunity } from '../types';
 import { generateOpportunityReport, generateOpportunityDossier } from '../services/geminiService';
 import { Loader } from './Loader';
 import { SubscriptionPlan } from '../src/utils/planUtils';
+import { filterLocationSuggestions } from '../src/data/locationSuggestionsData';
+import { resolveLocationDisplay } from '../src/utils/locationUtils';
 
 type FilterType = 'all' | 'low-capital' | 'low-competition' | 'low-overhead';
 type SortType = 'score' | 'startup-cost' | 'competition';
@@ -35,6 +37,10 @@ const RANK_CONFIGS = [
 
 export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ currentPlan, onNavigate, userRole = '' }) => {
   const [location, setLocation] = useState('');
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [activeLocationIndex, setActiveLocationIndex] = useState(-1);
+  const locationRef = useRef<HTMLDivElement>(null);
+
   const [report, setReport] = useState<OpportunityReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -44,6 +50,19 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   const [selectedDossier, setSelectedDossier] = useState<BusinessOpportunity | null>(null);
   const [dossierLoading, setDossierLoading] = useState<string | null>(null);
   const dossierCacheRef = useRef<Map<string, BusinessOpportunity>>(new Map());
+
+  // Close location dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
+        setShowLocationSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const locationDropdownItems = filterLocationSuggestions(location);
 
   const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity) => {
     const cacheKey = `${opportunity.businessType}|${report?.location ?? ''}`;
@@ -101,12 +120,16 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     e.preventDefault();
     if (!location.trim()) return;
 
+    setShowLocationSuggestions(false);
     setIsLoading(true);
     setError(null);
     setReport(null);
 
     try {
-      const result = await generateOpportunityReport(location, setLoadingMessage, userRole);
+      const displayLocation = await resolveLocationDisplay(location.trim());
+      // Keep input in sync so the user sees the resolved name
+      if (displayLocation !== location.trim()) setLocation(displayLocation);
+      const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole);
       setReport(result);
     } catch (err) {
       console.error(err);
@@ -188,29 +211,69 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
 
       {/* Search form */}
       <div className="max-w-2xl mx-auto mb-8">
-        <form onSubmit={handleSearch} className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-            <MapPin className="w-5 h-5" />
-          </div>
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g., Gurnee, IL · Austin, TX · Denver, CO"
-            className="block w-full pl-12 pr-32 py-4 bg-white border-2 border-slate-100 rounded-2xl shadow-lg focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 outline-none transition-all text-base placeholder:text-slate-400"
-          />
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="absolute right-3 top-3 bottom-3 px-7 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm"
-          >
-            {isLoading ? 'Scanning...' : (
-              <>
-                <Search className="w-4 h-4" />
-                <span className="hidden sm:inline">Explore</span>
-              </>
+        <form onSubmit={handleSearch}>
+          <div className="relative group" ref={locationRef}>
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors z-10">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => { setLocation(e.target.value); setActiveLocationIndex(-1); setShowLocationSuggestions(true); }}
+              onFocus={() => setShowLocationSuggestions(true)}
+              onKeyDown={(e) => {
+                if (!showLocationSuggestions) return;
+                if (e.key === 'ArrowDown') { e.preventDefault(); setActiveLocationIndex(p => (p + 1) % Math.max(locationDropdownItems.length, 1)); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveLocationIndex(p => (p - 1 + Math.max(locationDropdownItems.length, 1)) % Math.max(locationDropdownItems.length, 1)); }
+                else if (e.key === 'Enter' && activeLocationIndex >= 0 && activeLocationIndex < locationDropdownItems.length) {
+                  e.preventDefault(); setLocation(locationDropdownItems[activeLocationIndex]); setShowLocationSuggestions(false);
+                } else if (e.key === 'Escape') setShowLocationSuggestions(false);
+              }}
+              placeholder="e.g., Gurnee, IL · Austin, TX · 75001"
+              className="block w-full pl-12 pr-32 py-4 bg-white border-2 border-slate-100 rounded-2xl shadow-lg focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 outline-none transition-all text-base placeholder:text-slate-400"
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="absolute right-3 top-3 bottom-3 px-7 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm"
+            >
+              {isLoading ? 'Scanning...' : (
+                <>
+                  <Search className="w-4 h-4" />
+                  <span className="hidden sm:inline">Explore</span>
+                </>
+              )}
+            </button>
+
+            {/* Location autocomplete dropdown */}
+            {showLocationSuggestions && (locationDropdownItems.length > 0 || location.trim().length > 0) && (
+              <div className="absolute z-50 w-full bg-white rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto text-left border border-gray-100">
+                {locationDropdownItems.length > 0 ? (
+                  locationDropdownItems.map((s, i) => (
+                    <div
+                      key={i}
+                      className={`px-4 py-3 cursor-pointer text-gray-800 border-b border-gray-50 last:border-0 transition-colors text-sm ${
+                        i === activeLocationIndex ? 'bg-indigo-50 font-semibold text-indigo-900' : 'hover:bg-indigo-50'
+                      }`}
+                      onMouseDown={(e) => { e.preventDefault(); setLocation(s); setShowLocationSuggestions(false); }}
+                      onMouseEnter={() => setActiveLocationIndex(i)}
+                    >
+                      {s}
+                    </div>
+                  ))
+                ) : (
+                  <div
+                    className="px-4 py-3.5 cursor-pointer flex items-center gap-3 hover:bg-indigo-50 transition-colors"
+                    onMouseDown={(e) => { e.preventDefault(); setShowLocationSuggestions(false); }}
+                  >
+                    <MapPin className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                    <span className="text-sm text-gray-700">Use <span className="text-indigo-600 font-semibold">"{location}"</span> as location</span>
+                  </div>
+                )}
+              </div>
             )}
-          </button>
+          </div>
         </form>
 
         {/* Example location chips — shown in initial state only */}
