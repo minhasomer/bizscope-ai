@@ -764,7 +764,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     <ScoreCircle score={report.viabilityScore} />
                 </div>
                 
-                <div className="flex-grow flex flex-col md:flex-row gap-6 w-full">
+                <div className="flex-grow flex flex-col md:flex-row gap-6 w-full md:items-start">
                     <div className="flex-1 text-center md:text-left">
                         {report.loadedFromCache && (
                             <div className="mb-2.5 inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-full shadow-xs">
