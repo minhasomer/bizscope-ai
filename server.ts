@@ -1109,7 +1109,12 @@ async function startServer() {
 
       // Step 1: Landscape with search grounding (Timeout: 20s)
       try {
-        const searchPrompt = `Research the business landscape in '${location}'. Identify industry gaps, growing consumer segments, and businesses that are currently underserved. Look for high-growth sectors and local economic drivers.`;
+        const searchPrompt = `Research the business landscape and local economy of '${location}'. Find specific, factual information about:
+1. Dominant industries, major employers, and key economic drivers in this area
+2. Demographic profile — income levels, age distribution, lifestyle characteristics, and any notable population growth or migration trends
+3. Consumer spending categories that are underserved, growing fastest, or where local supply clearly lags demand
+4. What makes this specific location unique — climate, cultural identity, major development projects, dominant employment sectors
+5. Any notable gaps in the local business market, recent economic news, or demographic shifts creating new opportunities`;
         const searchResponse = await withTimeout(
           ai.models.generateContent({
             model: cheaperModel,
@@ -1139,6 +1144,14 @@ async function startServer() {
         3. Calculate an 'overallPotential' (0-100) for each idea.
         4. Provide estimated financial breakdowns based on current economic benchmarks.
         5. For EACH opportunity, populate a complete business intelligence dossier with all sections below.
+
+        **SPECIFICITY REQUIREMENTS — follow exactly, or the output is not useful:**
+        - businessType: Must be a specific, descriptive business concept — name the niche, format, and customer served. GOOD examples: "Korean-Style Fried Chicken Counter", "Senior In-Home Occupational Therapy", "Mobile Spray Tan Studio". BAD examples: "Restaurant", "Health Services", "Beauty Studio". The name must make clear what is being sold and to whom.
+        - whyItsGood: Must reference specific, verifiable characteristics of '${location}' — local industries, dominant employers, demographic groups, geographic features, or cultural factors that make this opportunity strong HERE. Do NOT write generic statements like "growing demand for this service" that could apply to any US city.
+        - bestNearbyArea: Must name a specific real neighborhood, district, street corridor, or ZIP code within or near '${location}' — not a generic description like "high-traffic area."
+        - description: Must describe the specific business concept clearly — not a generic category.
+        - SECTOR DIVERSITY: Recommend opportunities across clearly different business sectors. Do not recommend two food concepts, two fitness concepts, or two businesses serving the same customer. Include a range of capital requirements (some low-capital service businesses, some requiring moderate investment).
+        - LOCATION DNA: Every recommendation must reflect something genuinely unique about '${location}' — its industries, culture, climate, demographic profile, or growth dynamics. A person who knows '${location}' well should immediately recognize why these specific businesses were identified for THIS location and not somewhere else.
 
         **Scoring Definitions:**
         - CapEx: 1 (Very cheap to start, <$5k) to 10 (Massive investment, >$500k).

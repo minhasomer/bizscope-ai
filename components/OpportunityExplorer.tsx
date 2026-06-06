@@ -122,9 +122,9 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
 
     let opps = [...report.topOpportunities];
 
-    if (filter === 'low-capital') opps = opps.filter(o => o.scores.capEx <= 3);
-    else if (filter === 'low-competition') opps = opps.filter(o => o.scores.competitionLevel <= 3);
-    else if (filter === 'low-overhead') opps = opps.filter(o => o.scores.overhead <= 3);
+    if (filter === 'low-capital') opps = opps.filter(o => o.scores.capEx <= 4);
+    else if (filter === 'low-competition') opps = opps.filter(o => o.scores.competitionLevel <= 4);
+    else if (filter === 'low-overhead') opps = opps.filter(o => o.scores.overhead <= 4);
 
     if (sort === 'score') opps.sort((a, b) => b.scores.overallPotental - a.scores.overallPotental);
     else if (sort === 'startup-cost') opps.sort((a, b) => a.scores.capEx - b.scores.capEx);
@@ -459,9 +459,9 @@ const OpportunityCard: React.FC<{
   const rankConfig = RANK_CONFIGS[rank - 1];
 
   const scoreColor =
-    opportunity.scores.overallPotental >= 85
+    opportunity.scores.overallPotental >= 75
       ? '#22c55e'
-      : opportunity.scores.overallPotental >= 70
+      : opportunity.scores.overallPotental >= 50
         ? '#3b82f6'
         : '#f59e0b';
 
@@ -562,9 +562,9 @@ const OpportunityCard: React.FC<{
 
         {/* Score bars */}
         <div className="space-y-2.5 mb-5">
-          <ScoreBar label="Competition" score={opportunity.scores.competitionLevel} inverse />
-          <ScoreBar label="Startup Capital" score={opportunity.scores.capEx} />
-          <ScoreBar label="Monthly Overhead" score={opportunity.scores.overhead} />
+          <ScoreBar label="Competition" score={opportunity.scores.competitionLevel} inverse hint="Lower score = less competition (better for you)" />
+          <ScoreBar label="Startup Capital" score={opportunity.scores.capEx} hint="Lower score = less money needed to launch" />
+          <ScoreBar label="Monthly Overhead" score={opportunity.scores.overhead} hint="Lower score = lower ongoing monthly costs" />
         </div>
 
         {/* Financial quick-stats */}
@@ -612,20 +612,21 @@ const OpportunityCard: React.FC<{
 
 // ─── Score Bar ───────────────────────────────────────────────────────────────
 
-const ScoreBar: React.FC<{ label: string; score: number; inverse?: boolean }> = ({
+const ScoreBar: React.FC<{ label: string; score: number; inverse?: boolean; hint?: string }> = ({
   label,
   score,
   inverse = false,
+  hint,
 }) => {
   const percentage = (score / 10) * 100;
 
   let color = 'bg-blue-500';
   if (inverse) {
-    if (score <= 3) color = 'bg-green-500';
+    if (score <= 4) color = 'bg-green-500';
     else if (score <= 7) color = 'bg-yellow-500';
     else color = 'bg-red-500';
   } else {
-    if (score <= 3) color = 'bg-green-500';
+    if (score <= 4) color = 'bg-green-500';
     else if (score <= 7) color = 'bg-blue-500';
     else color = 'bg-orange-500';
   }
@@ -644,6 +645,7 @@ const ScoreBar: React.FC<{ label: string; score: number; inverse?: boolean }> = 
           className={`h-full ${color} rounded-full`}
         />
       </div>
+      {hint && <p className="text-[9px] text-gray-400 leading-none mt-0.5">{hint}</p>}
     </div>
   );
 };
@@ -732,8 +734,8 @@ const OpportunityDossierModal: React.FC<{
   }, [onClose]);
 
   const scoreColor =
-    opportunity.scores.overallPotental >= 85 ? '#22c55e'
-    : opportunity.scores.overallPotental >= 70 ? '#3b82f6'
+    opportunity.scores.overallPotental >= 75 ? '#22c55e'
+    : opportunity.scores.overallPotental >= 50 ? '#3b82f6'
     : '#f59e0b';
   const circumference = 2 * Math.PI * 18;
 
@@ -1063,7 +1065,7 @@ const OpportunityDossierModal: React.FC<{
                     <MetricBar
                       label="Competition Advantage"
                       value={opportunity.opportunityScorecard.competition}
-                      description="How open the market is to a new entrant. Higher = less existing competition = better opportunity."
+                      description="How open the market is to a new entrant. Higher score = less competition = better for you."
                     />
                     <MetricBar
                       label="Startup Simplicity"
@@ -1144,7 +1146,7 @@ const OpportunityDossierModal: React.FC<{
                   <ul className="space-y-1.5 text-[10px] text-emerald-800 leading-relaxed">
                     <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Official grand opening with promotional push</li>
                     <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Activate referral and loyalty programs</li>
-                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Track KPIs: revenue, CAC, customer retention</li>
+                    <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Track key metrics: revenue, customer acquisition cost, and retention rate</li>
                     <li className="flex gap-1.5"><span className="flex-shrink-0 font-bold">·</span> Review and adjust based on early performance</li>
                   </ul>
                 </div>

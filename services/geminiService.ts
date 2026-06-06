@@ -4,6 +4,8 @@ import { mockReport } from '../src/data/mockReport.js';
 import { ReportCacheService } from './reportCacheService';
 import { mockRegionalReport } from '../src/data/mockRegionalReport.js';
 import { mockOpportunities } from '../src/data/mockOpportunities.js';
+import { mockOpportunitiesSunBelt } from '../src/data/mockOpportunitiesSunBelt.js';
+import { mockOpportunitiesMidwest } from '../src/data/mockOpportunitiesMidwest.js';
 import { appConfig, isBetaRoleEnabled } from '../src/config/appConfig';
 import { assertLiveService } from '../src/lib/guardrails';
 import { supabase } from './supabaseClient';
@@ -624,6 +626,18 @@ export const generateViabilityReport = async (
     return result;
 };
 
+// ─── Location → mock set classifier ─────────────────────────────────────────
+// Routes demo-mode users to the city-archetype mock that best fits their city.
+// Sun Belt: fast-growth Sunbelt metros (Austin, Nashville, Miami, Denver, etc.)
+// Midwest:  suburban Midwest markets (Lake County IL, Columbus, Indianapolis, etc.)
+// Urban:    default Brooklyn-based mock for dense coastal/urban cities
+function getLocationMockSet(location: string): 'sunbelt' | 'midwest' | 'urban' {
+  const loc = location.toLowerCase();
+  if (/austin|nashville|miami|phoenix|charlotte|dallas|houston|atlanta|tampa|orlando|san antonio|fort worth|denver|boulder|salt lake|tucson|albuquerque/.test(loc)) return 'sunbelt';
+  if (/lake county|gurnee|waukegan|naperville|schaumburg|joliet|aurora|elgin|evanston|columbus|cleveland|cincinnati|indianapolis|detroit|minneapolis|kansas city|omaha|des moines|st\. louis|saint louis|milwaukee|madison/.test(loc)) return 'midwest';
+  return 'urban';
+}
+
 export const generateOpportunityReport = async (
     location: string,
     setLoadingMessage: (message: string) => void,
@@ -642,10 +656,14 @@ export const generateOpportunityReport = async (
         setLoadingMessage("Assembling your opportunity analysis...");
         await new Promise(resolve => setTimeout(resolve, 900));
 
-        const customizedOpportunities = deepReplace(mockOpportunities, {
-            "Brooklyn, NY": location,
-            "Brooklyn": location
-        });
+        const mockSet = getLocationMockSet(location);
+        const baseMock = mockSet === 'sunbelt' ? mockOpportunitiesSunBelt
+                       : mockSet === 'midwest' ? mockOpportunitiesMidwest
+                       : mockOpportunities;
+        const replaceFrom = mockSet === 'sunbelt' ? { "Austin, TX": location, "Austin": location }
+                          : mockSet === 'midwest' ? { "Lake County, IL": location, "Lake County": location }
+                          : { "Brooklyn, NY": location, "Brooklyn": location };
+        const customizedOpportunities = deepReplace(baseMock, replaceFrom);
 
         return {
             ...customizedOpportunities,
