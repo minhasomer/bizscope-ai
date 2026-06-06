@@ -16,6 +16,24 @@ import { resolveLocationDisplay } from '../src/utils/locationUtils';
 type FilterType = 'all' | 'low-capital' | 'low-competition' | 'low-overhead';
 type SortType = 'score' | 'startup-cost' | 'competition';
 
+// ─── Opportunity tier mapping ────────────────────────────────────────────────
+
+interface OpportunityTier {
+  label: string;
+  emoji: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+}
+
+function getOpportunityTier(score: number): OpportunityTier {
+  if (score >= 90) return { label: 'Top Opportunity',      emoji: '🥇', badgeBg: 'bg-yellow-50',  badgeBorder: 'border-yellow-200', badgeText: 'text-yellow-800' };
+  if (score >= 80) return { label: 'High Potential',       emoji: '🥈', badgeBg: 'bg-slate-50',   badgeBorder: 'border-slate-300',  badgeText: 'text-slate-700'  };
+  if (score >= 70) return { label: 'Promising',            emoji: '🥉', badgeBg: 'bg-orange-50',  badgeBorder: 'border-orange-200', badgeText: 'text-orange-800' };
+  if (score >= 60) return { label: 'Emerging Opportunity', emoji: '⭐', badgeBg: 'bg-blue-50',    badgeBorder: 'border-blue-200',   badgeText: 'text-blue-800'   };
+  return              { label: 'Niche Opportunity',        emoji: '📍', badgeBg: 'bg-gray-50',    badgeBorder: 'border-gray-200',   badgeText: 'text-gray-700'   };
+}
+
 interface OpportunityExplorerProps {
   currentPlan: SubscriptionPlan;
   onNavigate: (page: string) => void;
@@ -48,6 +66,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   const [filter, setFilter] = useState<FilterType>('all');
   const [sort, setSort] = useState<SortType>('score');
   const [selectedDossier, setSelectedDossier] = useState<BusinessOpportunity | null>(null);
+  const [selectedDossierRank, setSelectedDossierRank] = useState<number>(1);
   const [dossierLoading, setDossierLoading] = useState<string | null>(null);
   const dossierCacheRef = useRef<Map<string, BusinessOpportunity>>(new Map());
 
@@ -64,7 +83,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
 
   const locationDropdownItems = filterLocationSuggestions(location);
 
-  const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity) => {
+  const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity, rank: number) => {
+    setSelectedDossierRank(rank);
     const cacheKey = `${opportunity.businessType}|${report?.location ?? ''}`;
 
     // Cache hit — reuse without re-generating
@@ -367,7 +387,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                   onChange={(e) => setSort(e.target.value as SortType)}
                   className="text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer"
                 >
-                  <option value="score">Highest Score</option>
+                  <option value="score">Highest Potential</option>
                   <option value="startup-cost">Lowest Capital</option>
                   <option value="competition">Least Competition</option>
                 </select>
@@ -401,7 +421,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                   currentPlan={currentPlan}
                   onUpgrade={() => onNavigate('pricing')}
                   location={report.location}
-                  onOpenDossier={handleOpenDossier}
+                  onOpenDossier={(opp) => handleOpenDossier(opp, idx + 1)}
                   isDossierLoading={dossierLoading === opportunity.businessType}
                 />
               ))}
@@ -498,6 +518,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             opportunity={selectedDossier}
             location={report?.location ?? ''}
             currentPlan={currentPlan}
+            rank={selectedDossierRank}
             onClose={() => setSelectedDossier(null)}
             onUpgrade={() => { setSelectedDossier(null); onNavigate('pricing'); }}
           />
@@ -520,15 +541,7 @@ const OpportunityCard: React.FC<{
   isDossierLoading?: boolean;
 }> = ({ opportunity, rank, isLocked, currentPlan, onUpgrade, onOpenDossier, isDossierLoading = false }) => {
   const rankConfig = RANK_CONFIGS[rank - 1];
-
-  const scoreColor =
-    opportunity.scores.overallPotental >= 75
-      ? '#22c55e'
-      : opportunity.scores.overallPotental >= 50
-        ? '#3b82f6'
-        : '#f59e0b';
-
-  const circumference = 2 * Math.PI * 15; // r=15
+  const tier = getOpportunityTier(opportunity.scores.overallPotental);
 
   if (isLocked) {
     return (
@@ -582,8 +595,8 @@ const OpportunityCard: React.FC<{
       className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col"
     >
       <div className="p-6 flex-grow flex flex-col">
-        {/* Rank badge + score ring */}
-        <div className="flex justify-between items-center mb-5">
+        {/* Rank badge + tier badge */}
+        <div className="flex items-center justify-between mb-5 gap-2">
           {rankConfig ? (
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black border ${rankConfig.badge}`}>
               <rankConfig.Icon className="w-3.5 h-3.5" />
@@ -594,26 +607,10 @@ const OpportunityCard: React.FC<{
               #{rank}
             </span>
           )}
-
-          {/* SVG score circle */}
-          <div className="relative flex items-center justify-center w-14 h-14">
-            <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15" fill="none" stroke="#f3f4f6" strokeWidth="3" />
-              <circle
-                cx="18" cy="18" r="15"
-                fill="none"
-                stroke={scoreColor}
-                strokeWidth="3"
-                strokeDasharray={`${(opportunity.scores.overallPotental / 100) * circumference} ${circumference}`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute text-center">
-              <span className="text-[13px] font-black text-gray-900 leading-none">
-                {opportunity.scores.overallPotental}
-              </span>
-            </div>
-          </div>
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${tier.badgeBg} ${tier.badgeBorder} ${tier.badgeText}`}>
+            <span>{tier.emoji}</span>
+            <span>{tier.label}</span>
+          </span>
         </div>
 
         <h3 className="text-base font-black text-gray-900 mb-2 leading-tight">
@@ -787,20 +784,25 @@ const OpportunityDossierModal: React.FC<{
   opportunity: BusinessOpportunity;
   location: string;
   currentPlan: SubscriptionPlan;
+  rank: number;
   onClose: () => void;
   onUpgrade: () => void;
-}> = ({ opportunity, location, currentPlan, onClose, onUpgrade }) => {
+}> = ({ opportunity, location, currentPlan, rank, onClose, onUpgrade }) => {
   React.useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  const scoreColor =
-    opportunity.scores.overallPotental >= 75 ? '#22c55e'
-    : opportunity.scores.overallPotental >= 50 ? '#3b82f6'
-    : '#f59e0b';
-  const circumference = 2 * Math.PI * 18;
+  const tier = getOpportunityTier(opportunity.scores.overallPotental);
+
+  // Derive "why it surfaced" bullets from scores + whyItsGood
+  const whySurfaced: string[] = [];
+  if (opportunity.scores.competitionLevel <= 4) whySurfaced.push('Limited direct competition');
+  if (opportunity.scores.capEx <= 4) whySurfaced.push('Low startup capital requirements');
+  if (opportunity.scores.overhead <= 4) whySurfaced.push('Low operating overhead');
+  if (opportunity.scores.overallPotental >= 80) whySurfaced.push('Strong unmet demand signal');
+  if (whySurfaced.length === 0 && opportunity.whyItsGood) whySurfaced.push(opportunity.whyItsGood.split('.')[0]);
 
   const hasDossier = !!(
     opportunity.executiveSummary ||
@@ -829,28 +831,20 @@ const OpportunityDossierModal: React.FC<{
       >
         {/* Modal header */}
         <div className="bg-white border-b border-slate-100 px-6 py-5 flex items-center gap-4 sticky top-0 z-10">
-          {/* Score circle */}
-          <div className="relative flex-shrink-0 w-16 h-16">
-            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 44 44">
-              <circle cx="22" cy="22" r="18" fill="none" stroke="#f1f5f9" strokeWidth="3.5" />
-              <circle
-                cx="22" cy="22" r="18"
-                fill="none"
-                stroke={scoreColor}
-                strokeWidth="3.5"
-                strokeDasharray={`${(opportunity.scores.overallPotental / 100) * circumference} ${circumference}`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[15px] font-black text-slate-900">{opportunity.scores.overallPotental}</span>
-            </div>
+          {/* Tier badge block */}
+          <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center border ${tier.badgeBg} ${tier.badgeBorder}`}>
+            <span className="text-2xl leading-none">{tier.emoji}</span>
+            <span className={`text-[8px] font-black uppercase tracking-wide mt-0.5 ${tier.badgeText} text-center leading-tight px-1`}>
+              {tier.label.split(' ')[0]}
+            </span>
           </div>
 
           <div className="flex-grow min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
-              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Full Business Analysis</span>
+            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${tier.badgeBg} ${tier.badgeBorder} ${tier.badgeText}`}>
+                {tier.emoji} {tier.label}
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">Rank #{rank}</span>
             </div>
             <h2 className="text-base font-black text-slate-900 leading-tight">{opportunity.businessType}</h2>
             <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
@@ -869,6 +863,58 @@ const OpportunityDossierModal: React.FC<{
 
         {/* Modal body */}
         <div className="p-5 space-y-5">
+
+          {/* Opportunity Discovery Summary */}
+          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Opportunity Discovery Summary</span>
+            </div>
+            <p className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-2">Discovered via Market Gaps</p>
+            <div className="flex items-center gap-3 mb-3 flex-wrap">
+              <span className="text-xs text-indigo-700 font-semibold">Rank <strong>#{rank}</strong></span>
+              <span className="text-indigo-200">·</span>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${tier.badgeBg} ${tier.badgeBorder} ${tier.badgeText}`}>
+                {tier.emoji} {tier.label}
+              </span>
+            </div>
+            {whySurfaced.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mb-1.5">Why it surfaced</p>
+                <ul className="space-y-1">
+                  {whySurfaced.map((reason, i) => (
+                    <li key={i} className="flex items-center gap-2 text-xs text-indigo-800">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      {reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* What Happens Next */}
+          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Info className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">What Happens Next</span>
+            </div>
+            <p className="text-xs text-amber-900 leading-relaxed mb-3">
+              Market Gaps identifies attractive market opportunities based on gap size, competition level, and demand signals.
+            </p>
+            <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider mb-2">The full analysis below additionally considers:</p>
+            <ul className="space-y-1 mb-3">
+              {['Startup investment requirements', 'Operating complexity', 'Competitive intensity', 'Financial feasibility', 'Business execution risk'].map((factor) => (
+                <li key={factor} className="flex items-center gap-2 text-xs text-amber-800">
+                  <span className="w-1 h-1 rounded-full bg-amber-400 flex-shrink-0" />
+                  {factor}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              This determines whether the opportunity is likely to succeed in practice — not just whether a market gap exists. The Opportunity Scorecard below reflects all these factors.
+            </p>
+          </div>
 
           {/* Executive Summary */}
           {opportunity.executiveSummary && (
