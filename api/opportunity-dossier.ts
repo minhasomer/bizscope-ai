@@ -7,6 +7,7 @@ import {
   estimateCost,
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
+import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 
 export const maxDuration = 60;
 
@@ -408,6 +409,16 @@ export default async function handler(
   }
 
   const biz: string = opportunity.businessType ?? 'this business';
+
+  // ── Blocked category guard ────────────────────────────────────────────────
+  const blockedCheck = checkBlockedCategory(biz);
+  if (blockedCheck.matched) {
+    return json(res, 422, {
+      error: blockedCategoryMessage(blockedCheck.category),
+      code: 'BLOCKED_CATEGORY',
+      category: blockedCheck.category,
+    });
+  }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

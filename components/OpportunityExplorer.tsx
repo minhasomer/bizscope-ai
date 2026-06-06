@@ -12,6 +12,7 @@ import { Loader } from './Loader';
 import { SubscriptionPlan } from '../src/utils/planUtils';
 import { filterLocationSuggestions } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
+import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
 
 type FilterType = 'all' | 'low-capital' | 'low-competition' | 'low-overhead';
 type SortType = 'score' | 'startup-cost' | 'competition';
@@ -90,6 +91,14 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
 
   const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity, rank: number) => {
     setSelectedDossierRank(rank);
+
+    // Blocked category guard
+    const blockedCheck = checkBlockedCategory(opportunity.businessType);
+    if (blockedCheck.matched) {
+      setError(blockedCategoryMessage(blockedCheck.category));
+      return;
+    }
+
     const cacheKey = `${opportunity.businessType}|${report?.location ?? ''}`;
 
     // Cache hit — reuse without re-generating

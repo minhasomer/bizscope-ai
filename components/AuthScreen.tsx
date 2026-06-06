@@ -18,16 +18,18 @@ interface AuthScreenProps {
   onAuthSuccess: (user: UserProfile) => void;
   onClose?: () => void;
   initialMode?: 'login' | 'signup';
+  onNavigate?: (page: string) => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, initialMode = 'login' }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, initialMode = 'login', onNavigate }) => {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(initialMode);
-  
+
   // Input fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   // States
   const [loading, setLoading] = useState(false);
@@ -67,7 +69,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
         if (!fullName.trim()) {
           throw new Error('Please input your full legal or business name.');
         }
-        const user = await AuthService.signUp(email, password, fullName.trim());
+        if (!tosAccepted) {
+          throw new Error('You must accept the Terms of Service and Privacy Policy to create an account.');
+        }
+        const user = await AuthService.signUp(email, password, fullName.trim(), 'Explorer', new Date().toISOString());
         setSuccessMessage('Account provisioned successfully! Signing in...');
         setTimeout(() => {
           onAuthSuccess(user);
@@ -275,10 +280,51 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           </div>
         )}
 
+        {/* ToS acceptance checkbox — signup only */}
+        {mode === 'signup' && (
+          <div className="flex items-start gap-2.5 py-1">
+            <input
+              id="tos-checkbox"
+              type="checkbox"
+              checked={tosAccepted}
+              onChange={(e) => setTosAccepted(e.target.checked)}
+              disabled={loading}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+            />
+            <label htmlFor="tos-checkbox" className="text-[11px] text-gray-500 leading-relaxed cursor-pointer select-none">
+              I agree to the{' '}
+              {onNavigate ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('terms')}
+                  className="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+                >
+                  Terms of Service
+                </button>
+              ) : (
+                <span className="text-blue-600 font-semibold">Terms of Service</span>
+              )}{' '}
+              and{' '}
+              {onNavigate ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('privacy')}
+                  className="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+                >
+                  Privacy Policy
+                </button>
+              ) : (
+                <span className="text-blue-600 font-semibold">Privacy Policy</span>
+              )}
+              . I understand that BizScope reports are estimates for research purposes only and do not constitute financial or legal advice.
+            </label>
+          </div>
+        )}
+
         <button
           id="auth-submit-btn"
           type="submit"
-          disabled={loading}
+          disabled={loading || (mode === 'signup' && !tosAccepted)}
           className="w-full inline-flex items-center justify-center gap-1 px-5 py-3.5 rounded-xl text-xs font-black uppercase text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md disabled:opacity-55 disabled:cursor-wait tracking-wider cursor-pointer mt-2"
         >
           {loading ? (
