@@ -268,7 +268,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
               Browse and compare your saved business reports ({localReports.length} total)
             </p>
             <p className="text-[10px] text-gray-400/70 mt-0.5">
-              Stored on this device
+              Synced across devices when signed in
             </p>
           </div>
 
