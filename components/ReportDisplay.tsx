@@ -1304,13 +1304,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             {/* 1. Nearby ZIP Opportunity Analysis / Surrounding Suburbs Analysis */}
                             <div>
                                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
-                                    {regionalData.isZipMode ? "Nearby ZIP Codes" : "Nearby Suburbs"}
+                                    {regionalData.isZipMode ? "Nearby ZIP Codes" : "Market Zone Analysis"}
                                 </p>
                                 <div className="overflow-x-auto rounded-2xl border border-gray-150 bg-gray-50/30">
                                     <table className="w-full min-w-[480px] text-left border-collapse text-xs">
                                         <thead>
                                             <tr className="bg-gray-100 border-b border-gray-150 font-black text-gray-400 uppercase tracking-wider">
-                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Area" : "Suburb"}</th>
+                                                <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Area" : "Market Zone"}</th>
                                                 <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Income Level" : "Growth Status"}</th>
                                                 <th className="py-3.5 px-4 text-[10px]">{regionalData.isZipMode ? "Active Competitors" : "Competition"}</th>
                                                 <th className="py-3.5 px-4 text-right text-[10px]">Potential Opportunity</th>

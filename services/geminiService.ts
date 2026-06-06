@@ -828,32 +828,32 @@ export const generateMockRegionalData = (businessType: string, location: string)
       targetLocation: location,
       nearbyRegions: [
         {
-          name: `${baseCity} — Primary Growth Zone`,
+          name: "Outer Residential Corridor",
           demographics: "Expanding (High Growth)",
           competition: "Low (2 competitors)",
           opportunity: "92%",
-          details: `High-growth residential expansion area with rapidly climbing demand for ${targetBiz}. Young family demographic and strong organic foot traffic.`
+          details: `High-growth residential expansion area surrounding ${baseCity} with rapidly climbing demand for ${targetBiz}. Young family demographic and strong organic foot traffic.`
         },
         {
-          name: `${baseCity} — High-Income District`,
+          name: "High-Income Suburban Belt",
           demographics: "Stable (High-Income Profile)",
           competition: "Moderate (5 competitors)",
           opportunity: "87%",
-          details: `Premium sub-market with elevated household income. Strong spending power but higher commercial lease costs require efficient unit economics.`
+          details: `Premium sub-market adjacent to ${baseCity} with elevated household income. Strong spending power but higher commercial lease costs require efficient unit economics.`
         },
         {
-          name: `${baseCity} — Emerging Commercial Corridor`,
+          name: "Emerging Commercial Zone",
           demographics: "Emerging (Commercial Growth)",
           competition: "Under-saturated (0 competitors)",
           opportunity: "94%",
-          details: `New commercial development zone with no established ${targetBiz} presence. First-mover advantage available before competition enters.`
+          details: `New commercial development area near ${baseCity} with no established ${targetBiz} presence. First-mover advantage available before competition enters.`
         },
         {
-          name: `${baseCity} — Central Business District`,
+          name: "Urban Core District",
           demographics: "Mature (Moderate Growth)",
           competition: "High (9 competitors)",
           opportunity: "68%",
-          details: `Dense commercial core with established competition. Strong differentiation required. Best suited as secondary expansion rather than primary launch location.`
+          details: `Dense commercial core of ${baseCity} with established competition. Strong differentiation required. Best suited as secondary expansion rather than primary launch location.`
         }
       ],
       countyContext: `County-level trends show steady positive growth across personal services categories. Multi-family residential permit activity indicates a growing consumer base for local businesses in the region.`,
