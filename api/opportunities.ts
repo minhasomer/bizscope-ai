@@ -45,9 +45,13 @@ const opportunitySchema = {
               overhead: { type: Type.INTEGER, description: '1-10 (1 is low monthly expenses, 10 is very high)' },
               laborIntensity: { type: Type.INTEGER, description: '1-10 (1 is easy to manage alone/automated, 10 is heavy staffing needed)' },
               competitionLevel: { type: Type.INTEGER, description: '1-10 (1 is virtually no direct competition, 10 is saturated)' },
-              overallPotental: { type: Type.INTEGER, description: '0-100 score of total success probability' },
+              overallPotental: { type: Type.INTEGER, description: 'Deprecated — set equal to estimatedMarketDemand' },
+              estimatedMarketDemand: { type: Type.INTEGER, description: '0-100: strength of consumer demand for this category in this specific location (100 = very high unmet demand)' },
+              estimatedCompetitionIntensity: { type: Type.INTEGER, description: '0-100: local competitive saturation (100 = fully saturated market, 0 = no competition)' },
+              estimatedFinancialFeasibility: { type: Type.INTEGER, description: '0-100: realistic probability of achieving positive unit economics within 18 months given local costs and revenue potential (100 = highly feasible)' },
+              estimatedRiskLevel: { type: Type.INTEGER, description: '0-100: overall execution and market risk combining operational complexity, regulatory burden, and demand volatility (100 = very high risk)' },
             },
-            required: ['capEx', 'overhead', 'laborIntensity', 'competitionLevel', 'overallPotental'],
+            required: ['capEx', 'overhead', 'laborIntensity', 'competitionLevel', 'overallPotental', 'estimatedMarketDemand', 'estimatedCompetitionIntensity', 'estimatedFinancialFeasibility', 'estimatedRiskLevel'],
           },
           financials: {
             type: Type.OBJECT,
@@ -117,14 +121,14 @@ function getOpportunityReportFallback(location: string): any {
         businessType: 'Specialty Wellness Hub',
         description: 'Bespoke health, boutique physical care, or tailored wellness center.',
         whyItsGood: 'High disposable incomes and rising prioritization of mental and physical fitness.',
-        scores: { capEx: 6, overhead: 5, laborIntensity: 4, competitionLevel: 3, overallPotental: 88 },
+        scores: { capEx: 6, overhead: 5, laborIntensity: 4, competitionLevel: 3, overallPotental: 80, estimatedMarketDemand: 80, estimatedCompetitionIntensity: 30, estimatedFinancialFeasibility: 68, estimatedRiskLevel: 38 },
         financials: { estimatedStartupCost: '$60,000', targetMarket: 'Active health-minded families', potentialRevenue: '$150,000/Yr' },
       },
       {
         businessType: 'Local Quick-Service Bakery',
         description: 'Premium coffee, organic pastry kitchen, and neighborhood pantry store.',
         whyItsGood: 'Heavy foot traffic pockets lacking independent high-quality food counters.',
-        scores: { capEx: 5, overhead: 7, laborIntensity: 5, competitionLevel: 4, overallPotental: 83 },
+        scores: { capEx: 5, overhead: 7, laborIntensity: 5, competitionLevel: 4, overallPotental: 72, estimatedMarketDemand: 72, estimatedCompetitionIntensity: 55, estimatedFinancialFeasibility: 55, estimatedRiskLevel: 52 },
         financials: { estimatedStartupCost: '$85,000', targetMarket: 'Commuters and work-from-home residents', potentialRevenue: '$210,000/Yr' },
       },
     ],
@@ -368,15 +372,21 @@ ${marketData}
 **Your Task:**
 1. Analyze the local data to find market "white space" — businesses that people need but aren't well-served yet.
 2. For each recommendation, provide specific scoring (1-10) for CapEx, Overhead, Labor Intensity, and Competition.
-3. Calculate an 'overallPotential' (0-100) for each idea.
-4. Provide estimated financial breakdowns based on current economic benchmarks.
+3. Estimate the four viability sub-scores (0-100) for each idea (see definitions below).
+4. Set overallPotental equal to estimatedMarketDemand.
+5. Provide estimated financial breakdowns based on current economic benchmarks.
 
-**Scoring Definitions:**
+**Operational Scoring (1-10):**
 - CapEx: 1 (Very cheap to start, <$5k) to 10 (Massive investment, >$500k).
 - Overhead: 1 (Home-based/Digital) to 10 (High rent, utility, and maintenance).
 - Labor Intensity: 1 (Solopreneur/Automated) to 10 (Large staff required).
 - Competition Level: 1 (No direct local competitors) to 10 (Market saturated).
-- Overall Potential: Weighted combination of the above vs Market Demand.
+
+**Viability Sub-Scores (0-100) — use the same evaluation dimensions as a full business viability report:**
+- estimatedMarketDemand: Consumer demand strength for this specific category in this location. 80+ = strong unmet demand with clear evidence. 60-79 = moderate demand. Below 60 = niche or uncertain.
+- estimatedCompetitionIntensity: Local competitive saturation. 0 = no competition. 100 = fully saturated. Scale proportionally to actual competitor density and market share concentration.
+- estimatedFinancialFeasibility: Probability of achieving positive unit economics within 18 months given local costs, pricing power, and revenue potential. Consider startup cost relative to expected revenue. 80+ = highly feasible. Below 50 = financially challenging.
+- estimatedRiskLevel: Combined execution and market risk. Factor in operational complexity, regulatory requirements, demand volatility, and dependency on external conditions. 0 = very low risk. 80+ = high risk.
 
 Generate the output in JSON format adhering to the opportunity schema. Do not output any wrapping markdown.
     `.trim();

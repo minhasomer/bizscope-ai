@@ -18,7 +18,11 @@ export const mockOpportunitiesSunBelt = {
         overhead: 2,
         laborIntensity: 3,
         competitionLevel: 2,
-        overallPotental: 91
+        overallPotental: 82,
+        estimatedMarketDemand: 82,
+        estimatedCompetitionIntensity: 22,
+        estimatedFinancialFeasibility: 84,
+        estimatedRiskLevel: 28,
       },
       financials: {
         estimatedStartupCost: "$28,000",
@@ -129,7 +133,11 @@ export const mockOpportunitiesSunBelt = {
         overhead: 5,
         laborIntensity: 5,
         competitionLevel: 3,
-        overallPotental: 84
+        overallPotental: 75,
+        estimatedMarketDemand: 75,
+        estimatedCompetitionIntensity: 45,
+        estimatedFinancialFeasibility: 62,
+        estimatedRiskLevel: 50,
       },
       financials: {
         estimatedStartupCost: "$55,000",
@@ -240,7 +248,11 @@ export const mockOpportunitiesSunBelt = {
         overhead: 6,
         laborIntensity: 6,
         competitionLevel: 4,
-        overallPotental: 79
+        overallPotental: 72,
+        estimatedMarketDemand: 72,
+        estimatedCompetitionIntensity: 48,
+        estimatedFinancialFeasibility: 55,
+        estimatedRiskLevel: 52,
       },
       financials: {
         estimatedStartupCost: "$85,000",
@@ -351,7 +363,11 @@ export const mockOpportunitiesSunBelt = {
         overhead: 2,
         laborIntensity: 3,
         competitionLevel: 2,
-        overallPotental: 90
+        overallPotental: 78,
+        estimatedMarketDemand: 78,
+        estimatedCompetitionIntensity: 25,
+        estimatedFinancialFeasibility: 82,
+        estimatedRiskLevel: 30,
       },
       financials: {
         estimatedStartupCost: "$18,000",
@@ -462,7 +478,11 @@ export const mockOpportunitiesSunBelt = {
         overhead: 4,
         laborIntensity: 4,
         competitionLevel: 3,
-        overallPotental: 83
+        overallPotental: 76,
+        estimatedMarketDemand: 76,
+        estimatedCompetitionIntensity: 38,
+        estimatedFinancialFeasibility: 68,
+        estimatedRiskLevel: 40,
       },
       financials: {
         estimatedStartupCost: "$48,000",

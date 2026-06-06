@@ -143,7 +143,13 @@ export interface BusinessOpportunity {
     overhead: number; // 1-10
     laborIntensity: number; // 1-10
     competitionLevel: number; // 1-10 (1 is low competition)
-    overallPotental: number; // 0-100
+    overallPotental: number; // 0-100 — deprecated, kept for fallback
+    // Estimated viability sub-scores (0-100, same dimensions as Viability Report)
+    estimatedMarketDemand?: number;
+    estimatedCompetitionIntensity?: number; // higher = more competitive
+    estimatedFinancialFeasibility?: number;
+    estimatedRiskLevel?: number;            // higher = more risk
+    estimatedViabilityScore?: number;       // formula-derived, same as Viability Report
   };
   financials: {
     estimatedStartupCost: string;
