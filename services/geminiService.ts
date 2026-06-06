@@ -17,6 +17,33 @@ import { supabase } from './supabaseClient';
  */
 export const isDemoModeActive = (): boolean => appConfig.isDemoMode;
 
+// Compute estimatedViabilityScore using the same formula as Viability Reports:
+// (0.30 × MD) + (0.25 × (100 - CI)) + (0.25 × FF) + (0.20 × (100 - RL))
+function computeEstimatedViabilityScore(scores: {
+    estimatedMarketDemand?: number;
+    estimatedCompetitionIntensity?: number;
+    estimatedFinancialFeasibility?: number;
+    estimatedRiskLevel?: number;
+}): number | undefined {
+    const { estimatedMarketDemand: md, estimatedCompetitionIntensity: ci,
+            estimatedFinancialFeasibility: ff, estimatedRiskLevel: rl } = scores;
+    if (md == null || ci == null || ff == null || rl == null) return undefined;
+    return Math.round((0.30 * md) + (0.25 * (100 - ci)) + (0.25 * ff) + (0.20 * (100 - rl)));
+}
+
+function applyEstimatedViabilityScores(report: OpportunityReport): OpportunityReport {
+    return {
+        ...report,
+        topOpportunities: report.topOpportunities.map(opp => ({
+            ...opp,
+            scores: {
+                ...opp.scores,
+                estimatedViabilityScore: computeEstimatedViabilityScore(opp.scores),
+            },
+        })),
+    };
+}
+
 // Recursive helper for deep values replacement to make mock data look dynamic and premium/customized
 function deepReplace(obj: any, replacements: { [key: string]: string }): any {
     if (typeof obj === 'string') {
@@ -691,10 +718,10 @@ export const generateOpportunityReport = async (
                           : { "Brooklyn, NY": location, "Brooklyn": location };
         const customizedOpportunities = deepReplace(baseMock, replaceFrom);
 
-        return {
+        return applyEstimatedViabilityScores({
             ...customizedOpportunities,
             location: location
-        } as OpportunityReport;
+        } as OpportunityReport);
     }
 
     // Beta-role or live-mode path: call the Express backend which calls Gemini.
@@ -723,7 +750,7 @@ export const generateOpportunityReport = async (
         throw new Error(message);
     }
 
-    return await response.json() as OpportunityReport;
+    return applyEstimatedViabilityScores(await response.json() as OpportunityReport);
 };
 
 export const generateOpportunityDossier = async (

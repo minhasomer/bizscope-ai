@@ -18,7 +18,11 @@ export const mockOpportunitiesMidwest = {
         overhead: 6,
         laborIntensity: 5,
         competitionLevel: 3,
-        overallPotental: 85
+        overallPotental: 88,
+        estimatedMarketDemand: 88,
+        estimatedCompetitionIntensity: 25,
+        estimatedFinancialFeasibility: 60,
+        estimatedRiskLevel: 48,
       },
       financials: {
         estimatedStartupCost: "$165,000",
@@ -129,7 +133,11 @@ export const mockOpportunitiesMidwest = {
         overhead: 6,
         laborIntensity: 5,
         competitionLevel: 3,
-        overallPotental: 80
+        overallPotental: 80,
+        estimatedMarketDemand: 80,
+        estimatedCompetitionIntensity: 28,
+        estimatedFinancialFeasibility: 52,
+        estimatedRiskLevel: 55,
       },
       financials: {
         estimatedStartupCost: "$140,000",
@@ -240,7 +248,11 @@ export const mockOpportunitiesMidwest = {
         overhead: 3,
         laborIntensity: 5,
         competitionLevel: 3,
-        overallPotental: 86
+        overallPotental: 78,
+        estimatedMarketDemand: 78,
+        estimatedCompetitionIntensity: 30,
+        estimatedFinancialFeasibility: 80,
+        estimatedRiskLevel: 32,
       },
       financials: {
         estimatedStartupCost: "$28,000",
@@ -351,7 +363,11 @@ export const mockOpportunitiesMidwest = {
         overhead: 4,
         laborIntensity: 5,
         competitionLevel: 3,
-        overallPotental: 83
+        overallPotental: 76,
+        estimatedMarketDemand: 76,
+        estimatedCompetitionIntensity: 32,
+        estimatedFinancialFeasibility: 70,
+        estimatedRiskLevel: 42,
       },
       financials: {
         estimatedStartupCost: "$38,000",
@@ -462,7 +478,11 @@ export const mockOpportunitiesMidwest = {
         overhead: 2,
         laborIntensity: 3,
         competitionLevel: 2,
-        overallPotental: 88
+        overallPotental: 74,
+        estimatedMarketDemand: 74,
+        estimatedCompetitionIntensity: 18,
+        estimatedFinancialFeasibility: 86,
+        estimatedRiskLevel: 24,
       },
       financials: {
         estimatedStartupCost: "$22,000",

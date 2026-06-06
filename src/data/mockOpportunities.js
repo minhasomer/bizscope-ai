@@ -11,7 +11,11 @@ export const mockOpportunities = {
         overhead: 2,
         laborIntensity: 4,
         competitionLevel: 2,
-        overallPotental: 92
+        overallPotental: 82,
+        estimatedMarketDemand: 82,
+        estimatedCompetitionIntensity: 25,
+        estimatedFinancialFeasibility: 80,
+        estimatedRiskLevel: 28,
       },
       financials: {
         estimatedStartupCost: "$35,000",
@@ -122,7 +126,11 @@ export const mockOpportunities = {
         overhead: 5,
         laborIntensity: 3,
         competitionLevel: 3,
-        overallPotental: 84
+        overallPotental: 74,
+        estimatedMarketDemand: 74,
+        estimatedCompetitionIntensity: 35,
+        estimatedFinancialFeasibility: 58,
+        estimatedRiskLevel: 48,
       },
       financials: {
         estimatedStartupCost: "$55,000",
@@ -233,7 +241,11 @@ export const mockOpportunities = {
         overhead: 2,
         laborIntensity: 2,
         competitionLevel: 3,
-        overallPotental: 89
+        overallPotental: 76,
+        estimatedMarketDemand: 76,
+        estimatedCompetitionIntensity: 32,
+        estimatedFinancialFeasibility: 78,
+        estimatedRiskLevel: 30,
       },
       financials: {
         estimatedStartupCost: "$15,000",
@@ -344,7 +356,11 @@ export const mockOpportunities = {
         overhead: 3,
         laborIntensity: 3,
         competitionLevel: 2,
-        overallPotental: 87
+        overallPotental: 72,
+        estimatedMarketDemand: 72,
+        estimatedCompetitionIntensity: 28,
+        estimatedFinancialFeasibility: 74,
+        estimatedRiskLevel: 40,
       },
       financials: {
         estimatedStartupCost: "$12,000",
@@ -455,7 +471,11 @@ export const mockOpportunities = {
         overhead: 4,
         laborIntensity: 5,
         competitionLevel: 4,
-        overallPotental: 82
+        overallPotental: 76,
+        estimatedMarketDemand: 76,
+        estimatedCompetitionIntensity: 50,
+        estimatedFinancialFeasibility: 62,
+        estimatedRiskLevel: 45,
       },
       financials: {
         estimatedStartupCost: "$42,000",
