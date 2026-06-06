@@ -96,6 +96,8 @@ const App: React.FC = () => {
           setBaseUserPlan(user.plan as SubscriptionPlan);
           localStorage.setItem('bizscope_user_email', user.email);
         } else {
+          setReport(null);
+          setError(null);
           setBaseUserPlan('Explorer');
           setPreviewRole(null);
           setCurrentView('home');
@@ -243,6 +245,8 @@ const App: React.FC = () => {
   const handleSignOut = async () => {
     await AuthService.signOut();
     setCurrentUser(null);
+    setReport(null);
+    setError(null);
     setCurrentView('home');
     setBaseUserPlan('Explorer');
     setPreviewRole(null);
