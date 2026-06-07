@@ -720,6 +720,8 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
         return { bg: 'bg-amber-50 text-amber-800 border-amber-200', label: '⚠️ MODERATE VIABILITY CAUTION' };
       case 'Not Recommended':
         return { bg: 'bg-rose-50 text-rose-800 border-rose-200', label: '❌ LOW VIABILITY WARNING' };
+      case 'Verification Required':
+        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', label: '🔍 FRANCHISE VERIFICATION REQUIRED' };
       default:
         return { bg: 'bg-gray-50 text-gray-800 border-gray-200', label: 'STUDY ANALYSIS COMPLETE' };
     }
@@ -1502,6 +1504,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <span className={`text-xs font-black px-3 py-1 rounded-full ${
                                     report.recommendation.decision === 'Recommended' ? 'bg-emerald-100 text-emerald-800' :
                                     report.recommendation.decision === 'Caution Advised' ? 'bg-amber-100 text-amber-800' :
+                                    report.recommendation.decision === 'Verification Required' ? 'bg-orange-100 text-orange-800' :
                                     'bg-red-100 text-red-800'
                                 }`}>
                                     {report.recommendation.decision}

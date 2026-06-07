@@ -9,9 +9,10 @@ interface ReportSummaryCardProps {
 }
 
 const decisionStyle = (d: string) => {
-  if (d === 'Recommended')     return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (d === 'Caution Advised') return 'bg-amber-50  text-amber-700  border-amber-200';
-  return                              'bg-red-50    text-red-700    border-red-200';
+  if (d === 'Recommended')          return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (d === 'Caution Advised')      return 'bg-amber-50  text-amber-700  border-amber-200';
+  if (d === 'Verification Required') return 'bg-orange-50 text-orange-700 border-orange-200';
+  return                                    'bg-red-50    text-red-700    border-red-200';
 };
 
 const ringColor  = (s: number) => s >= 70 ? 'stroke-emerald-500' : s >= 50 ? 'stroke-amber-500' : 'stroke-red-400';
@@ -26,6 +27,7 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
     executiveSummary: summary,
     financialProjections: fp,
     franchiseTerritoryCheck: ftc,
+    franchiseScoreAdjustment: fsa,
   } = report;
 
   const C      = 2 * Math.PI * 28;
@@ -107,6 +109,18 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
             </div>
           ))}
         </div>
+
+        {/* Score adjustment transparency row — only shown for franchise reports */}
+        {fsa && (
+          <div className="px-6 py-3 bg-orange-50/60 border-b border-orange-100 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+            <span className="font-bold text-orange-700 uppercase tracking-wide">Score Adjustment</span>
+            <span className="text-gray-500">Base score: <strong className="text-gray-800">{fsa.originalScore}</strong></span>
+            <span className="text-orange-600 font-bold">Franchise risk: {fsa.adjustment}</span>
+            <span className="text-gray-500">Final: <strong className="text-gray-900">{fsa.finalScore}</strong></span>
+            <span className="text-gray-400 hidden sm:inline">→</span>
+            <span className="font-semibold text-orange-800">{recommendation.decision}</span>
+          </div>
+        )}
 
         {/* Action row */}
         <div className="px-6 py-4 flex flex-wrap items-center gap-3">

@@ -673,15 +673,69 @@ export const generateViabilityReport = async (
     if (franchiseDetection.isFranchise && franchiseDetection.brandName) {
         const competitors = result.competitionAnalysis?.competitors ?? [];
         const sameBrandIndices = findSameBrandCompetitors(franchiseDetection.brandName, competitors);
+        const sameBrandFound = sameBrandIndices.length > 0;
+
         result = {
             ...result,
             franchiseTerritoryCheck: {
                 brandName: franchiseDetection.brandName,
                 sameBrandIndices,
                 sameBrandCount: sameBrandIndices.length,
-                existingPresenceDetected: true, // always true — see note above
-                sameBrandFoundInSearch: sameBrandIndices.length > 0,
+                existingPresenceDetected: true,
+                sameBrandFoundInSearch: sameBrandFound,
             },
+        };
+
+        // Apply franchise score adjustment.
+        // Same-brand found nearby: -15 points, cap at "Caution Advised".
+        // Territory unknown (all franchises): -8 points, cap at "Verification Required".
+        // These adjustments stack — same-brand case nets -15 total and the
+        // stricter decision cap ("Caution Advised") takes precedence.
+        const brand = franchiseDetection.brandName;
+        const originalScore = result.viabilityScore;
+        const adjustment = sameBrandFound ? -15 : -8;
+        const finalScore = Math.max(0, Math.round(originalScore + adjustment));
+
+        const adjustmentReason = sameBrandFound
+            ? `Score reduced by ${Math.abs(adjustment)} points: existing ${brand} locations detected near this market. Territory saturation is a material risk.`
+            : `Score reduced by ${Math.abs(adjustment)} points: ${brand} is a franchise brand. Territory availability cannot be confirmed without direct franchisor disclosure.`;
+
+        // Decision cap logic
+        const rawDecision: string =
+            finalScore >= 76 ? 'Recommended' :
+            finalScore >= 51 ? 'Caution Advised' :
+            'Not Recommended';
+
+        const cappedDecision: 'Recommended' | 'Caution Advised' | 'Not Recommended' | 'Verification Required' =
+            sameBrandFound
+                ? (rawDecision === 'Recommended' ? 'Caution Advised' : rawDecision as any)
+                : (rawDecision === 'Recommended' ? 'Verification Required' : rawDecision as any);
+
+        // Franchise-aware reasoning
+        const franchiseReasoning = sameBrandFound
+            ? `This market shows viable demand for ${brand}, but existing same-brand locations have been identified nearby. Franchise territory agreements may already restrict or prohibit a new unit at this location — this is a contractual risk the viability score cannot fully reflect. Confirm territory availability with ${brand}'s franchise development team before proceeding.`
+            : `Market conditions for ${brand} in this area are favorable, but franchise territory availability has not been confirmed. ${brand} assigns protected territories and pending agreements may already restrict this location. This analysis reflects general market viability only — franchisor approval is a required prerequisite, not an assumption.`;
+
+        // Prepend a franchise context sentence to the executive summary
+        const franchiseSummaryPrefix = sameBrandFound
+            ? `⚠️ Franchise territory conflict risk: existing ${brand} presence detected near this location — territory may already be claimed. `
+            : `⚠️ Franchise verification required: this analysis reflects market conditions only. ${brand} territory availability must be confirmed directly with the franchisor before any investment decision. `;
+
+        result = {
+            ...result,
+            viabilityScore: finalScore,
+            franchiseScoreAdjustment: {
+                originalScore,
+                adjustment,
+                finalScore,
+                reason: adjustmentReason,
+            },
+            recommendation: {
+                ...result.recommendation,
+                decision: cappedDecision,
+                reasoning: franchiseReasoning,
+            },
+            executiveSummary: franchiseSummaryPrefix + result.executiveSummary,
         };
     }
 

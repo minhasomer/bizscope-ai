@@ -238,7 +238,7 @@ export interface ViabilityReport {
   };
 
   recommendation: {
-    decision: 'Recommended' | 'Caution Advised' | 'Not Recommended';
+    decision: 'Recommended' | 'Caution Advised' | 'Not Recommended' | 'Verification Required';
     reasoning: string;
   };
   
@@ -255,6 +255,14 @@ export interface ViabilityReport {
 
   // Franchise territory check — populated client-side after report generation
   franchiseTerritoryCheck?: FranchiseTerritoryCheck;
+
+  // Score adjustment applied when franchise territory risk is detected
+  franchiseScoreAdjustment?: {
+    originalScore: number;
+    adjustment: number;      // always negative
+    finalScore: number;
+    reason: string;
+  };
 
   // Set when location confidence is low (demo mode heuristic)
   locationWarning?: string;
