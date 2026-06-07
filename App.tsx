@@ -55,7 +55,12 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<string>('home');
+  const [currentView, setCurrentView] = useState<string>(() => {
+    // Allow direct deep-linking via ?view=terms|privacy|pricing etc.
+    // Used by AuthScreen's ToS/Privacy links which open in a new tab.
+    const param = new URLSearchParams(window.location.search).get('view');
+    return param || 'home';
+  });
   const { location: userLocation } = useGeolocation();
 
   // User Authentication States

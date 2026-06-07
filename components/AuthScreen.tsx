@@ -293,29 +293,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
             />
             <label htmlFor="tos-checkbox" className="text-[11px] text-gray-500 leading-relaxed cursor-pointer select-none">
               I agree to the{' '}
-              {onNavigate ? (
-                <button
-                  type="button"
-                  onClick={() => onNavigate('terms')}
-                  className="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
-                >
-                  Terms of Service
-                </button>
-              ) : (
-                <span className="text-blue-600 font-semibold">Terms of Service</span>
-              )}{' '}
-              and{' '}
-              {onNavigate ? (
-                <button
-                  type="button"
-                  onClick={() => onNavigate('privacy')}
-                  className="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
-                >
-                  Privacy Policy
-                </button>
-              ) : (
-                <span className="text-blue-600 font-semibold">Privacy Policy</span>
-              )}
+              <button
+                type="button"
+                onClick={() => window.open(`${window.location.origin}?view=terms`, '_blank')}
+                className="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+              >
+                Terms of Service
+              </button>
+              {' '}and{' '}
+              <button
+                type="button"
+                onClick={() => window.open(`${window.location.origin}?view=privacy`, '_blank')}
+                className="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+              >
+                Privacy Policy
+              </button>
               . I understand that BizScope reports are estimates for research purposes only and do not constitute financial or legal advice.
             </label>
           </div>
