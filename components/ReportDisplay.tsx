@@ -709,6 +709,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
       setShowUpgradeGateModal('pdf');
       return;
     }
+    // Reset stale state so every modal open starts clean
+    setIsExportLoading(false);
+    setExportSuccess(null);
+    setExportError(null);
     setShowExportModal(true);
   };
 
@@ -2010,10 +2014,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                       const rd = canViewRegionalIntelligence(currentPlan) ? regionalData : undefined;
                       await PDFService.generateReportPDF(report, currentPlan, options, rd);
                       setExportSuccess("PDF Dossier Exported Successfully!");
-                      setTimeout(() => {
-                        setShowExportModal(false);
-                        setExportSuccess(null);
-                      }, 2000);
                     } catch (e: any) {
                       console.error(e);
                       setExportError(e?.message || "PDF generation engine experienced exceptions. Retry analysis.");
