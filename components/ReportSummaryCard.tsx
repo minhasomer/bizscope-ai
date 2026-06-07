@@ -25,6 +25,7 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
     recommendation,
     executiveSummary: summary,
     financialProjections: fp,
+    franchiseTerritoryCheck: ftc,
   } = report;
 
   const C      = 2 * Math.PI * 28;
@@ -74,6 +75,23 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
             </span>
           </div>
         </div>
+
+        {/* Franchise territory warning — shown before executive summary */}
+        {ftc && (
+          <div className={`px-6 py-3 flex items-start gap-2.5 border-b ${ftc.sameBrandFoundInSearch ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+            <span className="text-base shrink-0 mt-0.5">{ftc.sameBrandFoundInSearch ? '🚫' : '⚠️'}</span>
+            <div className="min-w-0">
+              <p className={`text-xs font-bold ${ftc.sameBrandFoundInSearch ? 'text-red-800' : 'text-amber-800'}`}>
+                {ftc.sameBrandFoundInSearch
+                  ? `Same-brand ${ftc.brandName} presence detected nearby — territory may be unavailable.`
+                  : `Franchise territory check required — verify availability directly with ${ftc.brandName}.`}
+              </p>
+              <p className={`text-[11px] mt-0.5 ${ftc.sameBrandFoundInSearch ? 'text-red-600' : 'text-amber-600'}`}>
+                See the full analysis for required steps before any investment decision.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Executive summary — one paragraph, truncated */}
         <div className="px-6 py-4 border-b border-gray-100">
