@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Shield, Zap, Sparkles, Building2, FlaskConical, ShieldAlert,
   ChevronDown, ChevronUp, RotateCcw, Eye, Settings2,
-  CheckCircle2, AlertCircle,
+  CheckCircle2, AlertCircle, UserPlus, UserMinus, Users,
 } from 'lucide-react';
 import { SubscriptionPlan, previewRoleToEffectivePlan } from '../src/utils/planUtils';
 import { UserProfile } from '../services/authService';
 import { AuthService } from '../services/authService';
 import { appConfig, isDemoMode } from '../src/config/appConfig';
+import { supabase } from '../services/supabaseClient';
 import { PRICING_CARDS } from '../src/config/plans';
 
 /** Looks up the shortDescription for a plan-based role from the central plan config. */
@@ -145,6 +146,72 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
 }) => {
   const [minimized, setMinimized] = useState(true);
   const [envExpanded, setEnvExpanded] = useState(false);
+
+  // Beta access state — only used when isAdminSession
+  const [betaEmail, setBetaEmail] = useState('');
+  const [betaStatus, setBetaStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
+  const [betaLoading, setBetaLoading] = useState(false);
+  const [betaTesters, setBetaTesters] = useState<{ email: string }[]>([]);
+  const [betaListExpanded, setBetaListExpanded] = useState(false);
+  const betaStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load beta tester list when panel is opened by an admin
+  useEffect(() => {
+    if (minimized || !currentUser || currentUser.role !== 'Admin') return;
+    supabase?.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      if (!token) return;
+      fetch('/api/admin/beta-access', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.json())
+        .then(d => { if (d.betaTesters) setBetaTesters(d.betaTesters); })
+        .catch(() => {});
+    });
+  }, [minimized, currentUser]);
+
+  async function handleBetaAction(action: 'grant' | 'revoke') {
+    const email = betaEmail.trim().toLowerCase();
+    if (!email) {
+      setBetaStatus({ type: 'error', msg: 'Enter an email address.' });
+      return;
+    }
+    const sessionResult = await supabase?.auth.getSession();
+    const token = sessionResult?.data.session?.access_token;
+    if (!token) {
+      setBetaStatus({ type: 'error', msg: 'No session token — sign in again.' });
+      return;
+    }
+    setBetaLoading(true);
+    setBetaStatus(null);
+    try {
+      const res = await fetch('/api/admin/beta-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBetaStatus({ type: 'error', msg: data.error ?? `Error ${res.status}` });
+      } else if (data.noChange) {
+        setBetaStatus({ type: 'info', msg: data.message ?? `Already ${action === 'grant' ? 'BetaTester' : 'Explorer'}.` });
+      } else {
+        setBetaStatus({ type: 'success', msg: `${action === 'grant' ? 'Granted' : 'Revoked'}: ${data.email}` });
+        setBetaEmail('');
+        // Refresh list (token is already resolved from above)
+        fetch('/api/admin/beta-access', { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(d => { if (d.betaTesters) setBetaTesters(d.betaTesters); })
+          .catch(() => {});
+      }
+    } catch {
+      setBetaStatus({ type: 'error', msg: 'Network error — try again.' });
+    } finally {
+      setBetaLoading(false);
+      if (betaStatusTimer.current) clearTimeout(betaStatusTimer.current);
+      betaStatusTimer.current = setTimeout(() => setBetaStatus(null), 6000);
+    }
+  }
 
   if (!isVisible) return null;
 
@@ -310,6 +377,93 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* Beta Access — Admin only */}
+        {isAdminSession && (
+          <div className="border-b border-gray-100">
+            {/* Section header / toggle */}
+            <button
+              onClick={() => setBetaListExpanded(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Users className="w-3 h-3 text-gray-400" />
+                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Beta Access</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {betaTesters.length > 0 && (
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 border border-emerald-200 text-emerald-700">
+                    {betaTesters.length}
+                  </span>
+                )}
+                {betaListExpanded ? <ChevronUp className="w-3 h-3 text-gray-400" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
+              </div>
+            </button>
+
+            {betaListExpanded && (
+              <div className="px-4 pb-3 space-y-2.5">
+                {/* Email input */}
+                <input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={betaEmail}
+                  onChange={e => setBetaEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleBetaAction('grant')}
+                  disabled={betaLoading}
+                  className="w-full text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white placeholder-gray-300 disabled:opacity-50"
+                />
+                {/* Buttons */}
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => handleBetaAction('grant')}
+                    disabled={betaLoading}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wide rounded-lg transition-colors cursor-pointer"
+                  >
+                    <UserPlus className="w-3 h-3" /> Grant
+                  </button>
+                  <button
+                    onClick={() => handleBetaAction('revoke')}
+                    disabled={betaLoading}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-700 text-[10px] font-black uppercase tracking-wide rounded-lg transition-colors cursor-pointer"
+                  >
+                    <UserMinus className="w-3 h-3" /> Revoke
+                  </button>
+                </div>
+                {/* Status message */}
+                {betaStatus && (
+                  <p className={`text-[10px] leading-snug px-2 py-1 rounded-lg ${
+                    betaStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                    betaStatus.type === 'error'   ? 'bg-red-50 text-red-600 border border-red-200' :
+                                                    'bg-blue-50 text-blue-600 border border-blue-200'
+                  }`}>
+                    {betaStatus.msg}
+                  </p>
+                )}
+                {/* Current beta testers list */}
+                {betaTesters.length > 0 && (
+                  <div className="space-y-1 pt-1">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Current Beta Testers</p>
+                    {betaTesters.map(bt => (
+                      <div key={bt.email} className="flex items-center justify-between text-[10px] text-gray-500 bg-gray-50 rounded-lg px-2 py-1">
+                        <span className="truncate">{bt.email}</span>
+                        <button
+                          onClick={() => { setBetaEmail(bt.email); }}
+                          className="text-gray-300 hover:text-gray-500 ml-1 shrink-0 cursor-pointer transition-colors text-[9px]"
+                          title="Copy to input"
+                        >
+                          ↑
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {betaTesters.length === 0 && (
+                  <p className="text-[10px] text-gray-300 text-center py-1">No beta testers yet.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Preview role selector */}
         <div className="p-3 space-y-1">
