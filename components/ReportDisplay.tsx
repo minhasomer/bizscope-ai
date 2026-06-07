@@ -359,14 +359,14 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
     return () => clearTimeout(timer);
   }, [breakdown]);
 
-  const getScoreBand = (val: number, inverse: boolean): { label: string; color: string } => {
+  const getScoreBand = (val: number, inverse: boolean, suffix?: string): { label: string; color: string } => {
     if (inverse) {
-      // Lower is better for inverse metrics (competition, risk)
-      if (val <= 25) return { label: 'Very Low', color: 'text-emerald-600' };
-      if (val <= 45) return { label: 'Low', color: 'text-emerald-500' };
-      if (val <= 65) return { label: 'Moderate', color: 'text-amber-600' };
-      if (val <= 80) return { label: 'High', color: 'text-rose-500' };
-      return { label: 'Very High', color: 'text-rose-700' };
+      const s = suffix ?? '';
+      if (val <= 25) return { label: `Very Low${s}`, color: 'text-emerald-600' };
+      if (val <= 45) return { label: `Low${s}`, color: 'text-emerald-500' };
+      if (val <= 65) return { label: `Moderate${s}`, color: 'text-amber-600' };
+      if (val <= 80) return { label: `High${s}`, color: 'text-rose-500' };
+      return { label: `Very High${s}`, color: 'text-rose-700' };
     } else {
       if (val <= 25) return { label: 'Very Low', color: 'text-rose-600' };
       if (val <= 45) return { label: 'Low', color: 'text-amber-600' };
@@ -376,14 +376,14 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
     }
   };
 
-  const renderBar = (label: string, currentValue: number, isInverse: boolean, weight: string, icon: React.ReactNode, description: string) => {
+  const renderBar = (label: string, currentValue: number, isInverse: boolean, weight: string, icon: React.ReactNode, description: string, labelSuffix?: string) => {
     let colorClass = 'bg-blue-600';
     if (isInverse) {
       colorClass = currentValue > 60 ? 'bg-rose-500' : currentValue > 30 ? 'bg-amber-500' : 'bg-emerald-500';
     } else {
       colorClass = currentValue >= 70 ? 'bg-emerald-500' : currentValue >= 45 ? 'bg-amber-500' : 'bg-rose-500';
     }
-    const band = getScoreBand(currentValue, isInverse);
+    const band = getScoreBand(currentValue, isInverse, labelSuffix);
 
     return (
       <div className="group/bar mb-4 last:mb-0 select-none">
@@ -395,9 +395,11 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
           </span>
           <div className="flex items-center gap-1.5">
             <span className={`text-[10px] font-bold ${band.color}`}>{band.label}</span>
-            <span className="font-mono font-black text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md min-w-[42px] text-center border border-gray-200">
-              {currentValue}/100
-            </span>
+            {!isInverse && (
+              <span className="font-mono font-black text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md min-w-[42px] text-center border border-gray-200">
+                {currentValue}/100
+              </span>
+            )}
           </div>
         </div>
         <div className="w-full bg-gray-150 rounded-full h-2.5 overflow-hidden border border-gray-200/40">
@@ -419,14 +421,13 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
       </h4>
       <div className="space-y-4">
         {renderBar("Market Demand", animatedBreakdowns.marketDemand, false, "30%", <TrendingUp className="w-3.5 h-3.5 text-blue-500" />, "Consumer need, search volume, and spending power in your target market area. Higher is better.")}
-        {renderBar("Competition Intensity", animatedBreakdowns.competitionIntensity, true, "25%", <MapPin className="w-3.5 h-3.5 text-emerald-500" />, "Density and strength of existing competitors. Lower scores mean less competition and more opportunity for new entrants.")}
+        {renderBar("Competition Intensity", animatedBreakdowns.competitionIntensity, true, "25%", <MapPin className="w-3.5 h-3.5 text-emerald-500" />, "How crowded the market is with existing competitors. Very Low means plenty of room for a new entrant; Very High means a saturated market.")}
         {renderBar("Financial Feasibility", animatedBreakdowns.financialFeasibility, false, "25%", <DollarSign className="w-3.5 h-3.5 text-purple-500" />, "Projected profitability relative to startup capital required and ongoing operational costs. Higher is better.")}
-        {renderBar("Risk Sensitivity", animatedBreakdowns.riskLevel, true, "20%", <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />, "Aggregate exposure to market volatility, regulatory change, and execution challenges. Lower scores are more favorable.")}
+        {renderBar("Risk Sensitivity", animatedBreakdowns.riskLevel, true, "20%", <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />, "Exposure to market volatility, regulatory change, and execution challenges. Very Low Risk means a stable environment; Very High Risk means significant uncertainties.", " Risk")}
       </div>
       <div className="mt-4 pt-3 border-t border-gray-100">
         <p className="text-[10px] text-gray-350 leading-relaxed">
-          Score ranges: 0–25 Very Low · 26–50 Low · 51–75 Moderate · 76–90 High · 91–100 Very High.
-          {' '}Competition Intensity and Risk Sensitivity are inverse — lower values are favorable.
+          Scores reflect how favorable each factor is for this business — from Very Low to Very High.
         </p>
       </div>
     </div>
@@ -719,15 +720,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
   const getRecommendationStyle = (decision: string) => {
     switch(decision) {
       case 'Recommended':
-        return { bg: 'bg-green-50 text-green-800 border-green-200', label: '✅ HIGH VIABILITY STUDY' };
+        return { bg: 'bg-green-50 text-green-800 border-green-200', label: '✅ Recommended' };
       case 'Caution Advised':
-        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', label: '⚠️ MODERATE VIABILITY CAUTION' };
+        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', label: '⚠️ Caution Advised — Review Risks First' };
       case 'Not Recommended':
-        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', label: '❌ LOW VIABILITY WARNING' };
+        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', label: '❌ Not Recommended — High Risk' };
       case 'Verification Required':
-        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', label: '🔍 FRANCHISE VERIFICATION REQUIRED' };
+        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', label: '🔍 Verify Territory Before Investing' };
       default:
-        return { bg: 'bg-gray-50 text-gray-800 border-gray-200', label: 'STUDY ANALYSIS COMPLETE' };
+        return { bg: 'bg-gray-50 text-gray-800 border-gray-200', label: 'Analysis Complete' };
     }
   };
 
@@ -802,14 +803,14 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                           {report.franchiseTerritoryCheck && (
                             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 font-black text-xs uppercase tracking-wider">
                               <AlertTriangle className="w-3 h-3 shrink-0" />
-                              Franchise — Territory Unverified
+                              Territory Availability Unknown
                             </div>
                           )}
                         </div>
                         <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl">{report.recommendation.reasoning}</p>
                         {report.franchiseTerritoryCheck && (
                           <p className="mt-2 text-xs text-amber-700 font-semibold leading-relaxed max-w-2xl">
-                            ⚠️ This score reflects market conditions only. Opening a {report.franchiseTerritoryCheck.brandName} franchise requires franchisor approval and territory verification — see the Franchise Territory Check below.
+                            ⚠️ This score reflects market conditions only — territory availability is not confirmed. Verify directly with the franchisor before investing.
                           </p>
                         )}
                     </div>
