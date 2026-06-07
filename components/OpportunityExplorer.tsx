@@ -263,7 +263,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                   e.preventDefault(); setLocation(locationDropdownItems[activeLocationIndex]); setShowLocationSuggestions(false);
                 } else if (e.key === 'Escape') setShowLocationSuggestions(false);
               }}
-              placeholder="e.g., Gurnee, IL · Austin, TX · 75001"
+              placeholder="e.g., Austin, TX · Charlotte, NC · 80202"
               className="block w-full pl-12 pr-32 py-4 bg-white border-2 border-slate-100 rounded-2xl shadow-lg focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 outline-none transition-all text-base placeholder:text-slate-400"
               autoComplete="off"
             />
@@ -314,7 +314,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
         {!report && !isLoading && !error && (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             <span className="text-xs text-slate-400 self-center mr-1">Try:</span>
-            {['Gurnee, IL', 'Austin, TX', 'Charlotte, NC', 'Denver, CO', 'Phoenix, AZ'].map(loc => (
+            {['Austin, TX', 'Charlotte, NC', 'Denver, CO', 'Nashville, TN', 'Tampa, FL'].map(loc => (
               <button
                 key={loc}
                 onClick={() => setLocation(loc)}

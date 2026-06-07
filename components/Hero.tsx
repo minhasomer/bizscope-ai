@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { searchBusinessTypes, businessSuggestionsList, BusinessSuggestion } from '../src/data/businessSuggestionsData';
-import { filterLocationSuggestions, defaultLocationSuggestions } from '../src/data/locationSuggestionsData';
+import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSuggestions } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
 
@@ -37,6 +37,15 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
     }
   };
 
+  // Geolocation-based location defaults (populated on mount if permission granted)
+  const [geoLocationDefaults, setGeoLocationDefaults] = useState<string[]>([]);
+
+  useEffect(() => {
+    getGeolocationSuggestions().then(results => {
+      if (results.length > 0) setGeoLocationDefaults(results);
+    });
+  }, []);
+
   // Custom states for smart business autocomplete matching
   const [activeBizIndex, setActiveBizIndex] = useState<number>(-1);
   const [currentBizSuggestions, setCurrentBizSuggestions] = useState<BusinessSuggestion[]>([]);
@@ -60,7 +69,15 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const getLocationSuggestions = filterLocationSuggestions;
+  const getLocationSuggestions = (input: string): string[] => {
+    if (!input.trim()) {
+      // Prepend geolocation results (if available) before national defaults
+      const geo = geoLocationDefaults.slice(0, 4);
+      const national = defaultLocationSuggestions.filter(d => !geo.includes(d)).slice(0, 8 - geo.length);
+      return [...geo, ...national];
+    }
+    return filterLocationSuggestions(input);
+  };
 
   const handleBusinessChange = (value: string) => {
     setBusinessType(value);
@@ -201,7 +218,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                     onChange={(e) => handleBusinessChange(e.target.value)}
                                     onFocus={handleBusinessFocus}
                                     onKeyDown={handleBusinessKeyDown}
-                                    placeholder="e.g., Urgent Care, Med Spa, Junk Removal"
+                                    placeholder="e.g., Chick-fil-A, Coffee Shop, HVAC Company"
                                     className="w-full px-4 py-3.5 rounded-xl bg-white/95 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white transition-all shadow-sm text-sm"
                                     autoComplete="off"
                                     required
@@ -337,7 +354,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                         <div className="mb-4">
                             <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-2 text-left">Try an example</p>
                             <div className="flex flex-wrap gap-1.5">
-                                {['Urgent Care', 'Junk Removal', 'Halal Restaurant', 'Med Spa', 'Brothers Gutters', 'Aircraft Detailing'].map((ex) => (
+                                {['Chick-fil-A', 'Jersey Mike\'s', 'Anytime Fitness', 'Coffee Shop', 'Auto Detailing', 'SERVPRO', 'Great Clips', 'Cleaning Service', 'Senior Home Care', 'HVAC Company'].map((ex) => (
                                     <button
                                         key={ex}
                                         type="button"
