@@ -106,7 +106,7 @@ export const AI_BUDGET: Record<string, ReportBudget> = {
     targetCostUsd:        0.005,
     hardCapUsd:           0.02,
     maxInputTokens:       8_000,
-    maxOutputTokens:      2048,
+    maxOutputTokens:      8192,   // gemini-2.5-flash is a thinking model; tokens consumed by reasoning reduce visible output budget
     maxRetries:           1,
     synthesisTimeoutMs:   25_000,
   },
@@ -117,7 +117,7 @@ export const AI_BUDGET: Record<string, ReportBudget> = {
     targetCostUsd:        0.02,
     hardCapUsd:           0.05,
     maxInputTokens:       16_000,
-    maxOutputTokens:      4096,
+    maxOutputTokens:      8192,   // gemini-2.5-flash thinking model — 4096 was insufficient for full ViabilityReport JSON
     maxRetries:           1,
     synthesisTimeoutMs:   30_000,
   },
@@ -128,7 +128,7 @@ export const AI_BUDGET: Record<string, ReportBudget> = {
     targetCostUsd:        0.03,
     hardCapUsd:           0.05,
     maxInputTokens:       16_000,
-    maxOutputTokens:      4096,
+    maxOutputTokens:      16384,  // gemini-2.5-flash thinking model — raised to prevent mid-JSON truncation
     maxRetries:           1,
     synthesisTimeoutMs:   35_000,
   },
