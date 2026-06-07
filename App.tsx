@@ -179,25 +179,51 @@ const App: React.FC = () => {
   const [savedReports, setSavedReports] = useState<ViabilityReport[]>([]);
 
   // Contact form state
+  const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [contactErrors, setContactErrors] = useState<{ email?: string; message?: string }>({});
+  const [contactErrorMsg, setContactErrorMsg] = useState('');
+  const [contactErrors, setContactErrors] = useState<{ name?: string; email?: string; message?: string }>({});
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs: { email?: string; message?: string } = {};
+    const errs: { name?: string; email?: string; message?: string } = {};
+    if (!contactName.trim()) errs.name = 'Name is required.';
     if (!contactEmail.trim()) errs.email = 'Email address is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) errs.email = 'Enter a valid email address.';
-    if (!contactMessage.trim()) errs.message = 'Message is required.';
+    if (!contactMessage.trim() || contactMessage.trim().length < 10) errs.message = 'Message must be at least 10 characters.';
     if (Object.keys(errs).length > 0) { setContactErrors(errs); return; }
     setContactErrors({});
+    setContactErrorMsg('');
     setContactStatus('sending');
-    // Simulated submission — replace with real API call when backend endpoint exists.
-    await new Promise(r => setTimeout(r, 1500));
-    setContactStatus('sent');
-    setContactEmail('');
-    setContactMessage('');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: contactName.trim(), email: contactEmail.trim(), message: contactMessage.trim() }),
+      });
+      if (res.ok) {
+        setContactStatus('sent');
+        setContactName('');
+        setContactEmail('');
+        setContactMessage('');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          setContactErrorMsg('Too many requests. Please wait an hour and try again.');
+        } else if (data.errors) {
+          setContactErrors(data.errors);
+          setContactErrorMsg('');
+        } else {
+          setContactErrorMsg(data.error || 'Something went wrong. Please try again.');
+        }
+        setContactStatus('error');
+      }
+    } catch {
+      setContactErrorMsg('Network error — please check your connection and try again.');
+      setContactStatus('error');
+    }
   };
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
@@ -778,6 +804,18 @@ const App: React.FC = () => {
               ) : (
                 <form className="space-y-5" onSubmit={handleContactSubmit} noValidate>
                   <div>
+                    <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">Your Name</label>
+                    <input
+                      type="text"
+                      value={contactName}
+                      onChange={e => { setContactName(e.target.value); setContactErrors(prev => ({ ...prev, name: undefined })); }}
+                      className={`block w-full rounded-xl border focus:ring-2 outline-none px-4 py-3 text-sm text-gray-900 bg-white transition-all ${contactErrors.name ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100'}`}
+                      placeholder="Jane Smith"
+                      disabled={contactStatus === 'sending'}
+                    />
+                    {contactErrors.name && <p className="text-xs text-red-600 mt-1">{contactErrors.name}</p>}
+                  </div>
+                  <div>
                     <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">Email Address</label>
                     <input
                       type="email"
@@ -801,6 +839,11 @@ const App: React.FC = () => {
                     />
                     {contactErrors.message && <p className="text-xs text-red-600 mt-1">{contactErrors.message}</p>}
                   </div>
+                  {contactStatus === 'error' && contactErrorMsg && (
+                    <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 font-medium">
+                      {contactErrorMsg}
+                    </div>
+                  )}
                   <button
                     type="submit"
                     disabled={contactStatus === 'sending'}

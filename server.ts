@@ -1294,6 +1294,12 @@ async function startServer() {
     }
   });
 
+  // API 4: /api/contact
+  app.post("/api/contact", async (req: Request, res: Response) => {
+    const contactHandler = (await import('./api/contact.js')).default;
+    return contactHandler(req as any, res as any);
+  });
+
   // -------------------------------------------------------------
 
   // ---- Stripe Routes ----
