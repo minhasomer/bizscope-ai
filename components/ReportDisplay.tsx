@@ -709,7 +709,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
       setShowUpgradeGateModal('pdf');
       return;
     }
-    window.print();
+    setShowExportModal(true);
   };
 
   const getRecommendationStyle = (decision: string) => {
