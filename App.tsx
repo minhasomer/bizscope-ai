@@ -9,7 +9,7 @@ import { OpportunityExplorer } from './components/OpportunityExplorer';
 import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
 import { generateViabilityReport } from './services/geminiService';
-import { isDemoMode, isBetaRoleEnabled } from './src/config/appConfig';
+import { isDemoMode, isBetaRoleEnabled, appConfig } from './src/config/appConfig';
 import type { ViabilityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { mockSavedReports } from './src/data/mockSavedReports.js';
@@ -90,6 +90,21 @@ const App: React.FC = () => {
 
   // Log active service configuration once on mount (collapsed console group).
   useEffect(() => { bootstrapGuardrails(); }, []);
+
+  // ── Temporary beta diagnostics — remove after panel visibility is confirmed ──
+  // Logs every time auth state changes so we can verify the panel guard in prod.
+  useEffect(() => {
+    const panelVisible = import.meta.env.DEV || isAdmin(currentUser?.role ?? '');
+    console.log('[BizScope][PanelDiag]', {
+      email:                  currentUser?.email                ?? '(not signed in)',
+      role:                   currentUser?.role                 ?? '(none)',
+      isDemoMode,
+      importMetaEnvDEV:       import.meta.env.DEV,
+      enableDeveloperTools:   appConfig.enableDeveloperTools,
+      isAdminRole:            isAdmin(currentUser?.role ?? ''),
+      panelVisible,
+    });
+  }, [currentUser]);
 
   // Load session on mount + subscribe to real-time auth state changes
   useEffect(() => {

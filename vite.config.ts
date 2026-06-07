@@ -11,9 +11,12 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.VITE_DEMO_MODE': JSON.stringify(env.VITE_DEMO_MODE || 'true'),
-        'process.env.VITE_REAL_REPORTS_ENABLED': JSON.stringify(env.VITE_REAL_REPORTS_ENABLED || 'false'),
-        'process.env.VITE_BETA_ROLES': JSON.stringify(env.VITE_BETA_ROLES || ''),
+        // Use ?? not || so that an absent env var defaults to the safe value
+        // rather than the permissive one.  With ||, undefined || 'true' = 'true',
+        // meaning every build without an explicit env var was silently in demo mode.
+        'process.env.VITE_DEMO_MODE': JSON.stringify(env.VITE_DEMO_MODE ?? 'false'),
+        'process.env.VITE_REAL_REPORTS_ENABLED': JSON.stringify(env.VITE_REAL_REPORTS_ENABLED ?? 'false'),
+        'process.env.VITE_BETA_ROLES': JSON.stringify(env.VITE_BETA_ROLES ?? ''),
       },
       resolve: {
         alias: {
