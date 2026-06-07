@@ -613,29 +613,30 @@ const App: React.FC = () => {
               <div className="bg-gradient-to-br from-white to-indigo-50/40 border border-indigo-100/80 p-5 rounded-2xl flex flex-col gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-widest">Reports Saved</p>
                 <p className="text-3xl font-bold text-slate-900">{savedReports.length}</p>
-                <p className="text-[11px] text-slate-400">Saved on this device</p>
+                <p className="text-[11px] text-slate-400">Saved to your account</p>
               </div>
 
               {/* Standard Quota */}
               <div className="bg-gradient-to-br from-white to-violet-50/40 border border-violet-100/80 p-5 rounded-2xl flex flex-col gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-widest">Reports Used</p>
+                <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-widest">Analyses This Month</p>
                 <p className="text-3xl font-bold text-slate-900">
                   {usage.standardLimit === null ? '∞' : `${usage.standardUsed}/${usage.standardLimit}`}
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  {usage.standardLimit === null ? 'Unlimited' : `${Math.max(0, usage.standardLimit - usage.standardUsed)} remaining`}
+                  {usage.standardLimit === null ? 'Unlimited' : `${Math.max(0, usage.standardLimit - usage.standardUsed)} remaining this month`}
                 </p>
               </div>
 
               {/* Regional Quota */}
               <div className="bg-gradient-to-br from-white to-slate-50/60 border border-slate-100/80 p-5 rounded-2xl flex flex-col gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Regional Reports</p>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Regional Analyses</p>
                 <p className="text-3xl font-bold text-slate-900">
                   {usage.regionalLimit === 0 ? '—' : usage.regionalLimit === null ? '∞' : `${usage.regionalUsed}/${usage.regionalLimit}`}
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  {usage.regionalLimit === 0 ? 'Pro+ required' : usage.regionalLimit === null ? 'Unlimited' : `${Math.max(0, usage.regionalLimit - usage.regionalUsed)} remaining`}
+                  {usage.regionalLimit === 0 ? 'Upgrade to Pro+ to unlock' : usage.regionalLimit === null ? 'Unlimited' : `${Math.max(0, usage.regionalLimit - usage.regionalUsed)} remaining this month`}
                 </p>
+                <p className="text-[10px] text-slate-300">Multi-area comparison reports</p>
               </div>
 
               {/* Active Plan */}

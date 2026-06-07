@@ -222,7 +222,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
           {/* Active Quota Monitor */}
           <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm">
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-              <h3 className="text-sm font-black text-gray-900 tracking-tight uppercase">Plan Meter & Usage Details</h3>
+              <h3 className="text-sm font-black text-gray-900 tracking-tight uppercase">Your Usage</h3>
               <button 
                 onClick={() => onNavigate('pricing')} 
                 className="text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase tracking-wide cursor-pointer"
@@ -233,19 +233,19 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/50">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Standard Quota Balance</span>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Analyses Used This Month</span>
                 <span className="text-lg font-black text-gray-900 mt-1 block">
                   {usage.standardLimit === null ? 'Unlimited' : `${usage.standardUsed} / ${usage.standardLimit}`}
                 </span>
                 <span className="text-[10px] text-gray-400 mt-0.5 block">{usage.standardLimitDescription}</span>
               </div>
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/50">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Regional Intelligence Quota</span>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Regional Analyses Used</span>
                 <span className="text-lg font-black text-gray-900 mt-1 block">
                   {usage.regionalLimit === 0 ? 'Locked' : usage.regionalLimit === null ? 'Unlimited' : `${usage.regionalUsed} / ${usage.regionalLimit}`}
                 </span>
                 <span className="text-[10px] text-gray-400 mt-0.5 block">
-                  {usage.regionalLimit === 0 ? 'Pro+ feature' : 'Regional analyses used'}
+                  {usage.regionalLimit === 0 ? 'Upgrade to Pro+ to unlock' : 'Multi-area comparison reports'}
                 </span>
               </div>
             </div>
