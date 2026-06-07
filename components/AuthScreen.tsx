@@ -67,13 +67,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
     try {
       if (mode === 'signup') {
         if (!fullName.trim()) {
-          throw new Error('Please input your full legal or business name.');
+          throw new Error('Please enter your full name.');
         }
         if (!tosAccepted) {
           throw new Error('You must accept the Terms of Service and Privacy Policy to create an account.');
         }
         const user = await AuthService.signUp(email, password, fullName.trim(), 'Explorer', new Date().toISOString());
-        setSuccessMessage('Account provisioned successfully! Signing in...');
+        setSuccessMessage('Account created! Signing you in...');
         setTimeout(() => {
           onAuthSuccess(user);
         }, 1000);
@@ -82,11 +82,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
         onAuthSuccess(user);
       } else if (mode === 'forgot') {
         await AuthService.resetPassword(email);
-        setSuccessMessage(`A safe reset token link has been compiled and emailed to ${email}. Check your inbox!`);
+        setSuccessMessage(`Password reset email sent to ${email}. Check your inbox!`);
         setEmail('');
       }
     } catch (err: any) {
-      setError(err?.message || 'Authentication sequence failed. Verify credentials and try again.');
+      setError(err?.message || 'Something went wrong. Please check your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -143,7 +143,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           </h2>
         </div>
         <p className="text-xs text-gray-400 font-mono mt-1 uppercase tracking-widest">
-          {mode === 'forgot' ? 'Password Recovery' : 'Sign In to BizScope'}
+          {mode === 'forgot' ? 'Password Recovery' : mode === 'signup' ? 'Create Your Account' : 'Sign In to BizScope'}
         </p>
       </div>
 
@@ -184,8 +184,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
         </h3>
         <p className="text-xs text-gray-500 mt-1 leading-relaxed">
           {mode === 'login' && 'Sign in to access your persistent ventures, saved reports & regional intelligence.'}
-          {mode === 'signup' && 'Instantly map regional White-Space demand gaps & secure business viability reports.'}
-          {mode === 'forgot' && 'Provide your registered email address and we will dispatch a secure link.'}
+          {mode === 'signup' && 'Discover underserved business opportunities and validate your idea before you invest.'}
+          {mode === 'forgot' && "Enter your email address and we'll send you a link to reset your password."}
         </p>
       </div>
 
@@ -333,14 +333,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              Processing Security Handshake...
+              {mode === 'signup' ? 'Creating your account...' : mode === 'forgot' ? 'Sending reset email...' : 'Signing you in...'}
             </span>
           ) : (
             <>
               <span>
                 {mode === 'login' && 'Unlock My Dashboard'}
                 {mode === 'signup' && 'Create Free Account'}
-                {mode === 'forgot' && 'Send Security Reset Link'}
+                {mode === 'forgot' && 'Send Reset Email'}
               </span>
               <ArrowRight className="w-4 h-4" />
             </>
@@ -389,17 +389,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
         </div>
       )}
 
-      {/* Demo login — only shown when Supabase is not configured (env vars missing). */}
-      {/* When Supabase IS configured, real auth is always used instead. */}
-      {!AuthService.isSupabaseActive() && <div className="mt-8 pt-5 border-t border-dashed border-gray-200 bg-gray-50/50 -mx-8 -mb-8 px-8 pb-8 rounded-b-3xl">
+      {/* Demo login — development only, never shown in production builds */}
+      {import.meta.env.DEV && !AuthService.isSupabaseActive() && <div className="mt-8 pt-5 border-t border-dashed border-gray-200 bg-gray-50/50 -mx-8 -mb-8 px-8 pb-8 rounded-b-3xl">
         <div className="flex items-center gap-1.5 justify-center mb-4">
           <Sparkles className="w-4 h-4 text-gray-500" />
           <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">
-            Use Demo Login
+            Local Dev Login
           </span>
         </div>
         <p className="text-[10px] text-gray-500 text-center leading-relaxed mb-3">
-          Supabase not configured. Select a plan level below to test plan-gated views without real credentials.
+          Auth not configured locally. Select a plan to preview plan-gated views.
         </p>
         <div className="grid grid-cols-2 gap-1.5">
           <button
@@ -407,28 +406,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
             onClick={() => handleInstantDemoLogin('Explorer')}
             className="px-2.5 py-1.5 bg-white border border-gray-205 hover:bg-gray-150 rounded-lg text-[9px] font-bold text-gray-600 transition-all cursor-pointer text-center"
           >
-            🌱 Explorer Sandbox
+            🌱 Explorer
           </button>
           <button
             type="button"
             onClick={() => handleInstantDemoLogin('Pro')}
             className="px-2.5 py-1.5 bg-white border border-blue-150 hover:bg-blue-50 rounded-lg text-[9px] font-bold text-blue-700 transition-all cursor-pointer text-center"
           >
-            ⚡ Pro Sandbox
+            ⚡ Pro
           </button>
           <button
             type="button"
             onClick={() => handleInstantDemoLogin('Pro+')}
             className="px-2.5 py-1.5 bg-white border border-purple-150 hover:bg-purple-50 rounded-lg text-[9px] font-bold text-purple-700 transition-all cursor-pointer text-center"
           >
-            🔮 Pro+ Sandbox
+            🔮 Pro+
           </button>
           <button
             type="button"
             onClick={() => handleInstantDemoLogin('Enterprise')}
             className="px-2.5 py-1.5 bg-white border border-indigo-150 hover:bg-indigo-50 rounded-lg text-[9px] font-bold text-indigo-700 transition-all cursor-pointer text-center"
           >
-            👑 Enterprise Sandbox
+            👑 Enterprise
           </button>
         </div>
       </div>}
