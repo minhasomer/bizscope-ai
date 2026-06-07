@@ -492,9 +492,9 @@ export class AuthService {
     return parsed;
   }
 
-  /** Persist the active demo-mode plan switcher value. No-op in live mode. */
+  /** Persist the active demo-mode plan switcher value. No-op outside local dev. */
   public static saveUserPlan(email: string, plan: string): void {
-    if (!isDemoMode) return;
+    if (!import.meta.env.DEV) return;
     const emailLower = email.toLowerCase().trim();
     localStorage.setItem(`bizscope_user_plan_${emailLower}`, plan);
     localStorage.setItem('bizscope_user_plan', plan);

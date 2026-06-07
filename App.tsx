@@ -83,8 +83,8 @@ const App: React.FC = () => {
     forceRegenerate: boolean;
   } | null>(null);
 
-  // Effective plan driving all feature gating — preview wins when active.
-  const userPlan: SubscriptionPlan = previewRole !== null
+  // Effective plan driving all feature gating — preview only active in local dev.
+  const userPlan: SubscriptionPlan = (import.meta.env.DEV && previewRole !== null)
     ? previewRoleToEffectivePlan(previewRole) as SubscriptionPlan
     : baseUserPlan;
 
@@ -1116,7 +1116,7 @@ const App: React.FC = () => {
         previewRole={previewRole}
         currentUser={currentUser}
         onSetPreview={handleSetPreview}
-        isVisible={(isDemoMode && currentUser !== null) || (!isDemoMode && isAdmin(currentUser?.role ?? ''))}
+        isVisible={import.meta.env.DEV || isAdmin(currentUser?.role ?? '')}
       />
 
       {/* Live-mode cost protection — only shown to Admin users, never in Demo Mode */}
