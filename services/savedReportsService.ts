@@ -1,6 +1,6 @@
 import { SavedReport, ViabilityReport } from '../types';
 import { mockSavedReports } from '../src/data/mockSavedReports.js';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -45,7 +45,10 @@ function loadFromLocalStorage(): SavedReport[] {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return JSON.parse(stored);
 
-    // Auto-seed with mock data on first load
+    // Only seed mock data when Supabase is not configured (true sandbox/offline mode).
+    // When Supabase is configured, new users start with an empty list.
+    if (isSupabaseConfigured) return [];
+
     const seeded = (mockSavedReports || []).map((report: any, idx: number) => ({
       ...report,
       id: report.id || `mock-id-${idx + 1}`,
