@@ -181,6 +181,15 @@ export interface OpportunityReport {
   groundingSources: GroundingSource[];
 }
 
+export interface FranchiseTerritoryCheck {
+  brandName: string;
+  /** Indices into competitionAnalysis.competitors that are same-brand locations. */
+  sameBrandIndices: number[];
+  sameBrandCount: number;
+  /** Whether any same-brand competitor was found in the competitor list. */
+  existingPresenceDetected: boolean;
+}
+
 export interface ViabilityReport {
   businessType: string;
   location: string;
@@ -234,6 +243,9 @@ export interface ViabilityReport {
   // Cache metadata
   loadedFromCache?: boolean;
   cachedAt?: string;
+
+  // Franchise territory check — populated client-side after report generation
+  franchiseTerritoryCheck?: FranchiseTerritoryCheck;
 
   // Set when location confidence is low (demo mode heuristic)
   locationWarning?: string;

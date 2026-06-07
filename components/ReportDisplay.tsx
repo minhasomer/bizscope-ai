@@ -891,6 +891,61 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               <p className="leading-relaxed text-sm text-gray-700 whitespace-normal">{report.executiveSummary}</p>
             </SectionCard>
 
+            {/* Franchise Territory Check */}
+            {report.franchiseTerritoryCheck && (() => {
+              const ftc = report.franchiseTerritoryCheck!;
+              const sameBrandNames = ftc.sameBrandIndices
+                .map(i => report.competitionAnalysis.competitors[i]?.name)
+                .filter(Boolean);
+              return (
+                <div className={`rounded-2xl border-2 p-5 ${ftc.existingPresenceDetected ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 p-2 rounded-xl ${ftc.existingPresenceDetected ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <h3 className={`text-sm font-extrabold uppercase tracking-wide ${ftc.existingPresenceDetected ? 'text-amber-800' : 'text-emerald-800'}`}>
+                          🏪 Franchise Territory Check
+                        </h3>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ftc.existingPresenceDetected ? 'bg-amber-200 text-amber-800' : 'bg-emerald-200 text-emerald-800'}`}>
+                          {ftc.brandName}
+                        </span>
+                      </div>
+                      {ftc.existingPresenceDetected ? (
+                        <>
+                          <p className="text-sm text-amber-900 leading-relaxed mb-3">
+                            <strong>{ftc.sameBrandCount} existing {ftc.brandName} location{ftc.sameBrandCount !== 1 ? 's' : ''}</strong> {ftc.sameBrandCount !== 1 ? 'were' : 'was'} identified near this area
+                            {sameBrandNames.length > 0 && `: ${sameBrandNames.join(', ')}`}.
+                            Nearby same-brand units can indicate strong consumer demand for this concept, but may also signal territory saturation or franchisee exclusivity conflicts.
+                          </p>
+                          <div className="bg-amber-100 border border-amber-200 rounded-xl p-3 space-y-1">
+                            <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">What to verify next</p>
+                            <p className="text-xs text-amber-800">• Confirm territory availability directly with {ftc.brandName}'s franchise development team</p>
+                            <p className="text-xs text-amber-800">• Review the Franchise Disclosure Document (FDD) for protected territory radius</p>
+                            <p className="text-xs text-amber-800">• Existing nearby units may indicate high demand — they are not automatically a deal-breaker</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-emerald-900 leading-relaxed mb-3">
+                            No existing <strong>{ftc.brandName}</strong> locations were identified among the top competitors in this area,
+                            which may indicate open territory. This is a positive signal, but availability must be confirmed with the franchisor.
+                          </p>
+                          <div className="bg-emerald-100 border border-emerald-200 rounded-xl p-3 space-y-1">
+                            <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide mb-1">What to verify next</p>
+                            <p className="text-xs text-emerald-800">• Contact {ftc.brandName}'s franchise development team to confirm territory is available</p>
+                            <p className="text-xs text-emerald-800">• Review the Franchise Disclosure Document (FDD) for protected territory definitions</p>
+                            <p className="text-xs text-emerald-800">• Check for any pending franchise agreements or approved-but-not-yet-open locations</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Financial Outlook Card with Locked Pro indicators */}
             {report.financialProjections && (
               <SectionCard

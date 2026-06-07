@@ -1,5 +1,6 @@
 
 import type { ViabilityReport, UserLocation, OpportunityReport, RegionalIntelligenceData, BusinessOpportunity } from '../types';
+import { detectFranchise, findSameBrandCompetitors } from '../src/utils/franchiseDetection';
 import { mockReport } from '../src/data/mockReport.js';
 import { ReportCacheService } from './reportCacheService';
 import { mockRegionalReport } from '../src/data/mockRegionalReport.js';
@@ -657,6 +658,22 @@ export const generateViabilityReport = async (
         }
 
         result = await response.json() as ViabilityReport;
+    }
+
+    // Inject franchise territory check (client-side, zero-cost)
+    const franchiseDetection = detectFranchise(businessType);
+    if (franchiseDetection.isFranchise && franchiseDetection.brandName) {
+        const competitors = result.competitionAnalysis?.competitors ?? [];
+        const sameBrandIndices = findSameBrandCompetitors(franchiseDetection.brandName, competitors);
+        result = {
+            ...result,
+            franchiseTerritoryCheck: {
+                brandName: franchiseDetection.brandName,
+                sameBrandIndices,
+                sameBrandCount: sameBrandIndices.length,
+                existingPresenceDetected: sameBrandIndices.length > 0,
+            },
+        };
     }
 
     await ReportCacheService.set(businessType, location, 'standard', planTier, result);
