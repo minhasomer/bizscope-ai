@@ -660,7 +660,15 @@ export const generateViabilityReport = async (
         result = await response.json() as ViabilityReport;
     }
 
-    // Inject franchise territory check (client-side, zero-cost)
+    // Inject franchise territory check (client-side, zero-cost).
+    //
+    // IMPORTANT: existingPresenceDetected is ALWAYS true for any known franchise.
+    // Rationale: no AI competitor search can confirm territory is open — only the
+    // franchisor can. The mock competitor list contains fake names that will never
+    // match a real brand, and the live search asks for "competitors of a new [Brand]"
+    // which Gemini answers with rival brands, not existing same-brand locations.
+    // Waiting for a same-brand hit before warning users produces dangerous false-
+    // negatives (green "territory looks clear" when it may not be).
     const franchiseDetection = detectFranchise(businessType);
     if (franchiseDetection.isFranchise && franchiseDetection.brandName) {
         const competitors = result.competitionAnalysis?.competitors ?? [];
@@ -671,7 +679,8 @@ export const generateViabilityReport = async (
                 brandName: franchiseDetection.brandName,
                 sameBrandIndices,
                 sameBrandCount: sameBrandIndices.length,
-                existingPresenceDetected: sameBrandIndices.length > 0,
+                existingPresenceDetected: true, // always true — see note above
+                sameBrandFoundInSearch: sameBrandIndices.length > 0,
             },
         };
     }

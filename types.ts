@@ -186,8 +186,17 @@ export interface FranchiseTerritoryCheck {
   /** Indices into competitionAnalysis.competitors that are same-brand locations. */
   sameBrandIndices: number[];
   sameBrandCount: number;
-  /** Whether any same-brand competitor was found in the competitor list. */
+  /**
+   * Always true for any known franchise brand.
+   * Territory cannot be confirmed available without direct franchisor confirmation —
+   * regardless of what the AI competitor search returned.
+   */
   existingPresenceDetected: boolean;
+  /**
+   * True only when the AI competitor search actually surfaced a same-brand location.
+   * Distinct from existingPresenceDetected (which is always true for known franchises).
+   */
+  sameBrandFoundInSearch: boolean;
 }
 
 export interface ViabilityReport {

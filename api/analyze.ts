@@ -8,6 +8,7 @@ import {
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
+import { detectFranchise } from '../src/utils/franchiseDetection.js';
 
 export const maxDuration = 60;
 
@@ -529,7 +530,13 @@ export default async function handler(
     }
 
     // Phase 1: competitor lookup via Maps grounding
-    const phase1Prompt = `List the top 5 direct competitors for a new '${businessType}' in or very near '${location}'. For each, provide the name and address.`;
+    const franchiseCheck = detectFranchise(businessType);
+    const phase1Prompt = franchiseCheck.isFranchise
+      ? `Search for two things near '${location}':
+1. Any EXISTING '${businessType}' locations already operating in or within 20 miles of '${location}'. List each with its name and address. Label these clearly as "Existing ${businessType} location".
+2. The top 4 other direct competitors (different brands) for a new '${businessType}' in '${location}'. For each, provide the name and address.
+Return all results combined, existing same-brand locations listed first.`
+      : `List the top 5 direct competitors for a new '${businessType}' in or very near '${location}'. For each, provide the name and address.`;
     console.log('[analyze diag] phase 1 start:', { phase: 1, model, promptChars: phase1Prompt.length, tool: 'googleMaps' });
     try {
       const mapsConfig: any = { tools: [{ googleMaps: {} }] };
@@ -599,6 +606,14 @@ Synthesize the data into a comprehensive JSON report. Do not output any wrapping
 1. Assign sub-scores (0-100): Market Demand, Competition Intensity (higher = more competition), Financial Feasibility, Risk Level (higher = more risk).
 2. Viability Score = (0.30 × Market Demand) + (0.25 × (100 - Competition Intensity)) + (0.25 × Financial Feasibility) + (0.20 × (100 - Risk Level))
 3. Classification: 0-39 Not Recommended, 40-69 Caution Advised, 70-100 Recommended. Final recommendation must match score.
+${franchiseCheck.isFranchise ? `
+**FRANCHISE REQUIREMENT (MANDATORY):**
+'${businessType}' is a franchise brand. You MUST include the following in both the executiveSummary and recommendation.reasoning:
+- State explicitly that this viability analysis reflects market conditions only.
+- State that opening a ${businessType} franchise requires direct approval from the franchisor.
+- State that territory availability and protected radius must be verified with ${businessType}'s franchise development team before any investment decision.
+- If any existing ${businessType} locations were found in the competition data above, name them and note they may indicate either strong demand or territory saturation.
+- The recommendation.decision should be at most "Caution Advised" if existing same-brand locations were found nearby, since territory overlap is a real risk.` : ''}
 
 Estimate latitude/longitude for '${location}' and each competitor for map visualisation.
     `.trim();
