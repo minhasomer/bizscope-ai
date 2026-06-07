@@ -410,6 +410,7 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
           responseSchema: opportunitySchema,
           temperature: 0.6,
           maxOutputTokens: budget.maxOutputTokens,
+          thinkingConfig: { thinkingBudget: 0 },  // disable thinking — pure JSON assembly, no reasoning needed
         },
       }),
       budget.synthesisTimeoutMs,

@@ -561,7 +561,22 @@ ${franchiseCheck.isFranchise ? `
 Estimate latitude/longitude for '${location}' and each competitor for map visualisation.
     `.trim();
 
-    console.log('[analyze diag] phase 3 start:', { phase: 3, model, promptChars: prompt.length, maxOutputTokens: budget.maxOutputTokens });
+    // Phase 3 uses thinkingBudget=0 to disable the thinking step.
+    // gemini-2.5-flash is a thinking model — without this, the model spends
+    // 60–90 s on internal reasoning before emitting a single output token,
+    // which exceeds Vercel's function timeout. Phase 3 is pure JSON assembly
+    // (the research was done in phases 1 & 2), so thinking adds no value here.
+    const synthesisMaxTokens = Math.min(budget.maxOutputTokens, 8192);
+    const synthesisTimeoutMs = budget.synthesisTimeoutMs;
+    const phase3StartMs = Date.now();
+    console.log('[analyze diag] phase 3 start:', {
+      phase: 3,
+      model,
+      promptChars: prompt.length,
+      maxOutputTokens: synthesisMaxTokens,
+      thinkingBudget: 0,
+      synthesisTimeoutMs,
+    });
     const synthesis = await withTimeout(
       ai.models.generateContent({
         model,
@@ -570,18 +585,20 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
           responseMimeType: 'application/json',
           responseSchema: reportSchema,
           temperature: 0.4,
-          maxOutputTokens: budget.maxOutputTokens,
+          maxOutputTokens: synthesisMaxTokens,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
-      30000,
+      synthesisTimeoutMs,
       'synthesis timed out',
     );
+    const phase3ElapsedMs = Date.now() - phase3StartMs;
 
     const usage = (synthesis as any).usageMetadata;
     const inputTokens: number | null = usage?.promptTokenCount ?? null;
     const outputTokens: number | null = usage?.candidatesTokenCount ?? null;
     const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 2);
-    console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)}`);
+    console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)} phase3Ms=${phase3ElapsedMs}`);
 
     const withinHardCap = !wouldExceedHardCap(cost.estimatedCostUsd, budget);
     if (!withinHardCap) {

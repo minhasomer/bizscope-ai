@@ -128,7 +128,7 @@ export const AI_BUDGET: Record<string, ReportBudget> = {
     targetCostUsd:        0.03,
     hardCapUsd:           0.05,
     maxInputTokens:       16_000,
-    maxOutputTokens:      16384,  // gemini-2.5-flash thinking model — raised to prevent mid-JSON truncation
+    maxOutputTokens:      8192,   // synthesis uses thinkingBudget=0 — 8192 is sufficient for full ViabilityReport JSON
     maxRetries:           1,
     synthesisTimeoutMs:   35_000,
   },
