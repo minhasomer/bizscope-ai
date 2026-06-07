@@ -231,68 +231,6 @@ function getGroundingSources(response: any): { title: string; uri: string }[] {
   });
 }
 
-function getViabilityReportFallback(businessType: string, location: string): any {
-  const cap = businessType.charAt(0).toUpperCase() + businessType.slice(1);
-  const coords = getCoordinatesForLocation(location);
-  return {
-    businessType: cap, location, targetCoordinates: coords,
-    viabilityScore: 78,
-    scoreBreakdown: { marketDemand: 82, competitionIntensity: 50, financialFeasibility: 75, riskLevel: 35 },
-    executiveSummary: `Fallback report for ${cap} in ${location}. Growth indices remain reliable with under-served gaps providing a clear path to customer capture.`,
-    financialProjections: {
-      summary: 'Viable margin profile.', startupCostRange: '$100,000 - $180,000',
-      startupCostBreakdown: 'Fit-out ($65k), equipment ($40k), reserve ($45k), marketing ($30k).',
-      revenueYear1: '$280,000', revenueYear3: '$440,000', breakEvenTime: '15 months',
-      roiTime: '2.8 years', profitMargin: '17%', scalability: 'Medium',
-      keyStats: [
-        { label: 'Est. Ticket Price', value: '$12.50' },
-        { label: 'Target Conversions/Day', value: '110' },
-      ],
-    },
-    competitionAnalysis: {
-      summary: 'Active independent options with a void of specialised brands.',
-      competitors: [
-        { name: 'Vanguard Enterprises', details: 'Established generic provider.', address: `100 Main St, ${location}`, latitude: coords.latitude + 0.003, longitude: coords.longitude - 0.002 },
-        { name: 'Apex Retail Services', details: 'Standardised franchise with strong foot traffic.', address: `250 Highway Corridor, ${location}`, latitude: coords.latitude - 0.004, longitude: coords.longitude + 0.004 },
-      ],
-    },
-    marketTrends: {
-      summary: 'Demand leans towards custom experiences and digital integration.',
-      trends: [
-        { trend: 'Personalised Customer Styling', impact: 'Fosters word-of-mouth referral spikes.' },
-        { trend: 'Eco-Conscious Infrastructure', impact: 'Appeals to higher-spending demographics.' },
-      ],
-    },
-    demographicInsights: {
-      summary: 'Balanced sector with high commuter ratio and stable income markers.',
-      demographics: [
-        { metric: 'Active Age Pool (18-49)', value: '48%', insight: 'Primary demographic.' },
-        { metric: 'Household Income Cohort', value: 'Above National Median', insight: 'Supports premium pricing.' },
-      ],
-    },
-    riskAssessment: {
-      summary: 'General operating risks including lease rates and labour sourcing.',
-      risks: [
-        { risk: 'Overhead inflation', impact: 'Increased transactions needed to reach profitability.', severity: 'Medium', mitigation: 'Secure long-term flat lease.' },
-        { risk: 'Service inconsistency', impact: 'Losing recurring customers.', severity: 'Medium', mitigation: 'Persistent staff workshops.' },
-      ],
-    },
-    successFactors: {
-      summary: 'Consistency and premium location positioning outline the path to success.',
-      factors: [
-        { factor: 'Strategic Micro-Location', description: 'Corner plots with strong pedestrian pathways.', importance: 'Critical' },
-        { factor: 'Modern Visual Branding', description: 'Clean logo and digital media engagement.', importance: 'High' },
-      ],
-    },
-    recommendation: { decision: 'Caution Advised', reasoning: 'Careful site mapping and localised marketing required to secure early transaction volume.' },
-    methodology: 'Data generated via fallback engine leveraging default localised benchmarks.',
-    groundingSources: [
-      { title: 'National Industry Benchmarks', uri: 'https://www.census.gov' },
-      { title: 'Local Business Registry', uri: 'https://maps.google.com' },
-    ],
-  };
-}
-
 // ─── Supabase admin client (lazy singleton) ───────────────────────────────────
 
 const supabaseAdmin = (() => {

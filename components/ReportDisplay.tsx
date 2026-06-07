@@ -927,7 +927,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                       <strong>{ftc.brandName} is a nationally established franchise brand.</strong>{' '}
                       The competitor search above reflects general market rivals, not a confirmed map of every existing {ftc.brandName} unit.{' '}
                       <strong>Absence from this search does not mean territory is available.</strong>{' '}
-                      Gurnee, IL and similar markets may already have nearby units or pending agreements that only the franchisor can disclose.
+                      Your target market and similar areas may already have nearby units or pending agreements that only the franchisor can disclose.
                     </p>
                   )}
 
@@ -1182,16 +1182,25 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   icon={<Compass className="w-5 h-5 text-indigo-600" />}
                 >
                   <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Competitors in this area</p>
-                  <p className="mb-4 text-sm text-gray-700 leading-relaxed">{report.competitionAnalysis.summary}</p>
-                  <ul className="space-y-4">
-                    {report.competitionAnalysis.competitors.map((comp, index) => (
-                      <li key={index} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-150 transition-colors hover:bg-white">
-                        <div className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{comp.name}</div>
-                        <div className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wide">{comp.address || 'Address documented'}</div>
-                        <p className="text-xs text-gray-600 leading-relaxed">{comp.details}</p>
-                      </li>
-                    ))}
-                  </ul>
+                  {report.generationMeta?.isLiveGenerated ? (
+                    <>
+                      <p className="mb-4 text-sm text-gray-700 leading-relaxed">{report.competitionAnalysis.summary}</p>
+                      <ul className="space-y-4">
+                        {report.competitionAnalysis.competitors.map((comp, index) => (
+                          <li key={index} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-150 transition-colors hover:bg-white">
+                            <div className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{comp.name}</div>
+                            <div className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wide">{comp.address || 'Address documented'}</div>
+                            <p className="text-xs text-gray-600 leading-relaxed">{comp.details}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50/60 rounded-2xl border border-dashed border-gray-200 text-center">
+                      <p className="text-sm font-bold text-gray-700">Insufficient verified competitor data</p>
+                      <p className="text-xs text-gray-400 mt-1 max-w-xs leading-relaxed">Real competitor intelligence is only available for live AI-generated reports. Run a new analysis to see verified market data for this location.</p>
+                    </div>
+                  )}
                 </SectionCard>
 
                 {/* Market Trends */}
@@ -1676,12 +1685,19 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   </div>
                   
                   <div className="mt-2 relative">
-                      <p className="text-xs text-gray-500 mb-4 font-semibold uppercase flex items-center gap-1">
-                          <Navigation className="w-3.5 h-3.5 text-blue-500" />
-                          <span>Map points for <strong className="text-gray-800">{report.competitionAnalysis.competitors.length}</strong> competitors based on available location data from the analysis pipeline</span>
-                      </p>
+                      {report.generationMeta?.isLiveGenerated ? (
+                        <p className="text-xs text-gray-500 mb-4 font-semibold uppercase flex items-center gap-1">
+                            <Navigation className="w-3.5 h-3.5 text-blue-500" />
+                            <span>Map points for <strong className="text-gray-800">{report.competitionAnalysis.competitors.length}</strong> competitors based on available location data from the analysis pipeline</span>
+                        </p>
+                      ) : (
+                        <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2">
+                          <span>⚠️</span>
+                          <span>Competitor location data is unavailable — this report was not generated from live AI analysis. Run a new report to see real market coverage.</span>
+                        </div>
+                      )}
 
-                      {canViewFullFinancials(currentPlan) ? (
+                      {report.generationMeta?.isLiveGenerated && canViewFullFinancials(currentPlan) ? (
                           <div className="rounded-2xl overflow-hidden border border-gray-150 h-[450px]">
                               <CompetitorMap
                                   competitors={report.competitionAnalysis.competitors}
@@ -1689,7 +1705,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   coordinatesAreReal={report.coordinatesAreReal}
                               />
                           </div>
-                      ) : (
+                      ) : report.generationMeta?.isLiveGenerated ? (
                           <div className="relative rounded-2xl overflow-hidden border border-gray-200">
                               <div className="filter blur-[5px] opacity-25 select-none pointer-events-none h-[420px] w-full bg-slate-100 flex items-center justify-center">
                                   <span className="text-gray-400 font-mono">Loading Map Coordinates...</span>
@@ -1714,7 +1730,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   </div>
                               </div>
                           </div>
-                      )}
+                      ) : null}
                   </div>
                 </div>
                 <div className="bg-gray-50 px-5 py-4 flex flex-col sm:flex-row-reverse border-t border-gray-105">

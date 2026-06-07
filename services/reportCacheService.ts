@@ -113,6 +113,14 @@ export class ReportCacheService {
       return null;
     }
 
+    // In live mode, never serve a cached mock/demo report — force a live regeneration.
+    // This prevents stale demo-mode reports (seeded before beta access was granted)
+    // from surfacing fake competitors and a "Demo data" label to live users.
+    if (!isDemo && !entry.isLiveGenerated) {
+      console.log(`[Cache Skip] Cached entry is demo/mock data in live mode — forcing live regeneration.`);
+      return null;
+    }
+
     console.log(`[Cache Hit] Serving cached report from ${entry.timestamp}`);
     return {
       ...entry.report,
