@@ -653,7 +653,13 @@ export const generateViabilityReport = async (
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const message = errorData.error || `Server responded with status ${response.status}`;
+            // errorData.error may be a string (our API) or an object (Vercel platform errors
+            // e.g. FUNCTION_INVOCATION_TIMEOUT). Coercing an object with new Error(obj) produces
+            // the unhelpful "[object Object]" message — extract .message first.
+            const errField = errorData.error;
+            const message = typeof errField === 'string'
+                ? errField
+                : (errField?.message ?? `Server responded with status ${response.status}`);
             throw new Error(message);
         }
 
@@ -826,7 +832,10 @@ export const generateOpportunityReport = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const message = errorData.error || `Server responded with status ${response.status}`;
+        const errField = errorData.error;
+        const message = typeof errField === 'string'
+            ? errField
+            : (errField?.message ?? `Server responded with status ${response.status}`);
         throw new Error(message);
     }
 
