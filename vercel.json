@@ -2,10 +2,5 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "build": {
-    "env": {
-      "VITE_DEMO_MODE": "true"
-    }
-  }
+  ]
 }
