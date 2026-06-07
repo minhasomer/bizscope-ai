@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AuthService, UserProfile } from '../services/authService';
+import { AuthService, UserProfile, EmailConfirmationRequiredError } from '../services/authService';
 import { isDemoMode } from '../src/config/appConfig';
 import {
   Lock,
@@ -73,6 +73,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           throw new Error('You must accept the Terms of Service and Privacy Policy to create an account.');
         }
         const user = await AuthService.signUp(email, password, fullName.trim(), 'Explorer', new Date().toISOString());
+        // Email confirmation is NOT required — sign the user in immediately.
         setSuccessMessage('Account created! Signing you in...');
         setTimeout(() => {
           onAuthSuccess(user);
@@ -86,7 +87,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
         setEmail('');
       }
     } catch (err: any) {
-      setError(err?.message || 'Something went wrong. Please check your details and try again.');
+      if (err instanceof EmailConfirmationRequiredError) {
+        setSuccessMessage(err.message);
+      } else {
+        setError(err?.message || 'Something went wrong. Please check your details and try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,25 @@ import { ProfileService } from './profileService';
 import { getEffectivePlan } from '../src/utils/planUtils';
 import { isDemoMode } from '../src/config/appConfig';
 
+// ─── Custom errors ──────────────────────────────────────────────────────────
+
+/**
+ * Thrown by signUp when Supabase requires email confirmation before the account
+ * is active. The UI should display this as a success/informational message and
+ * NOT attempt to sign the user in.
+ *
+ * Two cases both throw this:
+ *  1. data.user present, data.session null → fresh signup, confirmation email sent.
+ *  2. data.user null, no API error → email already registered (Supabase anti-enumeration).
+ *     We cannot distinguish this from case 1 without leaking whether the email exists.
+ */
+export class EmailConfirmationRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EmailConfirmationRequiredError';
+  }
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface UserProfile {
@@ -259,10 +278,12 @@ export class AuthService {
     if (password.length < 6) throw new Error('Password must be at least 6 characters long.');
 
     if (this.isSupabaseActive()) {
+      const redirectTo = (import.meta.env.VITE_APP_URL as string | undefined) || window.location.origin;
       const { data, error } = await supabase!.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectTo,
           data: {
             full_name: fullName,
             avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${fullName || email}`,
@@ -270,9 +291,27 @@ export class AuthService {
         },
       });
 
+      // Diagnostics — intentionally not logging password
+      console.log('[Auth] signUp email          :', email);
+      console.log('[Auth] signUp error          :', error ? `${error.message} (status ${(error as any).status})` : 'none');
+      console.log('[Auth] signUp data.user      :', data.user ? data.user.id : 'null');
+      console.log('[Auth] signUp data.session   :', data.session ? 'present' : 'null');
+      console.log('[Auth] signUp identities     :', data.user?.identities?.length ?? 'n/a');
+      console.log('[Auth] signUp confirmed_at   :', data.user?.email_confirmed_at ?? 'null');
+      console.log('[Auth] signUp conf_sent_at   :', (data.user as any)?.confirmation_sent_at ?? 'null');
+
       if (error) throw new Error(error.message);
+
       const user = data.user;
-      if (!user) throw new Error('Signup succeeded but no user was returned. Please check confirmation email.');
+
+      // No session means email confirmation is required (or the email already exists —
+      // Supabase returns { user: null, session: null } for existing emails to prevent
+      // enumeration). Either way, the user must check their inbox before signing in.
+      if (!user || !data.session) {
+        throw new EmailConfirmationRequiredError(
+          'Account created. Please check your email to verify your account before signing in.',
+        );
+      }
 
       // Store ToS acceptance timestamp in the profiles table if available.
       // This is best-effort — a missing profiles row (race condition on trigger) is
