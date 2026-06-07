@@ -108,8 +108,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
   return (
     <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative">
       
-      {/* Environment mode indicators — visible to developers only */}
-      {isDemoMode && (
+      {/* Environment mode indicators — development builds only */}
+      {import.meta.env.DEV && isDemoMode && (
         <div className="flex items-center gap-2 mb-5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[10px] font-bold text-amber-800">
           <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-600" />
           <span>Demo Mode Active — AI calls disabled</span>
@@ -124,7 +124,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           )}
         </div>
       )}
-      {!isDemoMode && AuthService.isSupabaseActive() && (
+      {import.meta.env.DEV && !isDemoMode && AuthService.isSupabaseActive() && (
         <div className="flex items-center gap-2 mb-5 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[10px] font-bold text-emerald-800">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
           Using real Supabase authentication
@@ -339,7 +339,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
             <>
               <span>
                 {mode === 'login' && 'Unlock My Dashboard'}
-                {mode === 'signup' && 'Authorize Lifetime Free Access'}
+                {mode === 'signup' && 'Create Free Account'}
                 {mode === 'forgot' && 'Send Security Reset Link'}
               </span>
               <ArrowRight className="w-4 h-4" />

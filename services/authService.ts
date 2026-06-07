@@ -392,7 +392,7 @@ export class AuthService {
     const redirectTo = (import.meta.env.VITE_APP_URL as string | undefined) || window.location.origin;
     const { data, error } = await supabase!.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: { redirectTo, queryParams: { prompt: 'select_account' } },
     });
     if (error) throw new Error(error.message);
     if (!data.url) {
