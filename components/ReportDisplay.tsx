@@ -416,8 +416,8 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs flex-grow">
       <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2 flex items-center justify-between">
-        <span>Weighted Score Composition</span>
-        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">Score Breakdown</span>
+        <span>Score Factors</span>
+        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">AI Estimate</span>
       </h4>
       <div className="space-y-4">
         {renderBar("Market Demand", animatedBreakdowns.marketDemand, false, "30%", <TrendingUp className="w-3.5 h-3.5 text-blue-500" />, "Consumer need, search volume, and spending power in your target market area. Higher is better.")}
@@ -813,6 +813,16 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             ⚠️ This score reflects market conditions only — territory availability is not confirmed. Verify directly with the franchisor before investing.
                           </p>
                         )}
+                        {/* AI disclaimer — inside header, near score and recommendation */}
+                        {report.generationMeta?.isLiveGenerated && (
+                          <div className="mt-3 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 max-w-2xl print:hidden">
+                            <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-blue-800 leading-relaxed">
+                              <strong>AI-generated estimates</strong> based on market signals, public data, and industry benchmarks.
+                              {' '}Financial figures are projections, not guarantees — verify with independent research before investing.
+                            </p>
+                          </div>
+                        )}
                     </div>
 
                     {/* Score Breakdown Visualization */}
@@ -873,16 +883,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             </div>
         </div>
 
-        {/* AI disclaimer — shown only for live Gemini-generated reports */}
-        {report.generationMeta?.isLiveGenerated && (
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 flex items-center gap-3 print:hidden">
-                <Info className="w-4 h-4 text-blue-500 shrink-0" />
-                <p className="text-xs text-blue-800 leading-relaxed">
-                    <strong>AI-generated business intelligence estimates.</strong>{' '}
-                    Verify critical decisions with independent research.
-                </p>
-            </div>
-        )}
 
         {/* Sticky Report Navigation Block */}
         <ReportSubNav activeSection={activeSection} setActiveSection={setActiveSection} />
@@ -976,6 +976,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   icon={<Coins className="w-5 h-5 text-blue-600" />}
               >
                   <div className="space-y-6">
+                      {/* Methodology note */}
+                      <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
+                        <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-blue-800 leading-relaxed">
+                          <strong>Projected estimates only.</strong> Figures are derived from market signals, public data, and industry benchmarks analyzed by AI — not audited financials. Actual results will vary based on execution, local conditions, and market timing.
+                        </p>
+                      </div>
                       {/* Basic Startup Cost Range - Always visible to free tier */}
                       <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-150 flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div>
@@ -1020,15 +1027,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   {/* Timeline & Stats */}
                                   <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
                                       <div className="flex flex-col border-r border-gray-150 pr-2">
-                                          <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Break-Even</span>
+                                          <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Est. Break-Even</span>
                                           <span className="font-black text-blue-600 text-xs mt-1">{report.financialProjections.breakEvenTime}</span>
                                       </div>
                                       <div className="flex flex-col border-r border-gray-150 px-2">
-                                          <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">ROI Payoff</span>
+                                          <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Est. ROI Payoff</span>
                                           <span className="font-black text-blue-700 text-xs mt-1">{report.financialProjections.roiTime}</span>
                                       </div>
                                        <div className="flex flex-col pl-2">
-                                          <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Net Margin</span>
+                                          <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Est. Net Margin</span>
                                           <span className="font-black text-green-600 text-xs mt-1">{report.financialProjections.profitMargin}</span>
                                       </div>
                                   </div>

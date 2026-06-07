@@ -35,10 +35,10 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
   const truncated = summary.length > 220 ? summary.slice(0, 220).trimEnd() + '…' : summary;
 
   const stats = [
-    { label: 'Startup Cost',   value: fp.startupCostRange },
-    { label: 'Year 1 Revenue', value: fp.revenueYear1 },
-    { label: 'Break-Even',     value: fp.breakEvenTime },
-    { label: 'Profit Margin',  value: fp.profitMargin },
+    { label: 'Est. Startup Cost',   value: fp.startupCostRange },
+    { label: 'Est. Year 1 Revenue', value: fp.revenueYear1 },
+    { label: 'Est. Break-Even',     value: fp.breakEvenTime },
+    { label: 'Est. Profit Margin',  value: fp.profitMargin },
   ];
 
   return (
