@@ -82,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
               <span className="text-xl font-black text-slate-900 tracking-tight">BizScope</span>
               <span className="text-[11px] font-semibold text-slate-400 tracking-wide">AI</span>
             </button>
-            {demoActive && (
+            {import.meta.env.DEV && demoActive && (
               <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-semibold rounded-full border border-slate-200">
                 <Sparkles className="w-2.5 h-2.5" /> Sandbox
               </span>

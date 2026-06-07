@@ -1028,7 +1028,7 @@ const App: React.FC = () => {
         <Navbar onNavigate={setCurrentView} currentPage={currentView} currentPlan={userPlan} user={currentUser} onSignOut={handleSignOut} authLoading={authLoading} />
       </div>
       
-      {isDemoMode && (() => {
+      {import.meta.env.DEV && isDemoMode && (() => {
         const role = currentUser?.role ?? '';
         const isLiveCapable = isBetaRoleEnabled(role);
         return (
