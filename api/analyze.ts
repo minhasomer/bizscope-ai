@@ -619,7 +619,6 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
     `.trim();
 
     console.log('[analyze diag] phase 3 start:', { phase: 3, model, promptChars: prompt.length, maxOutputTokens: budget.maxOutputTokens });
-    const fallback = getViabilityReportFallback(businessType, location);
     const synthesis = await withTimeout(
       ai.models.generateContent({
         model,
@@ -646,8 +645,8 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
       console.warn(`[AICost] OVER_HARD_CAP role=${verifiedRole} plan=${normalizedPlan} cap=$${budget.hardCapUsd} actual=$${cost.estimatedCostUsd.toFixed(5)}`);
     }
 
-    const parsed = cleanAndParseJSON(synthesis.text || '', fallback);
-    parsed.groundingSources = sources.length > 0 ? sources : fallback.groundingSources;
+    const parsed = cleanAndParseJSON(synthesis.text || '');
+    parsed.groundingSources = sources;
 
     if (!parsed.targetCoordinates) {
       parsed.targetCoordinates = getCoordinatesForLocation(location);
@@ -731,7 +730,10 @@ Estimate latitude/longitude for '${location}' and each competitor for map visual
     if (resMessage.includes('API key'))  { httpStatus = 401; resCode = 'MISSING_API_KEY'; }
     else if (isRateLimit)                { httpStatus = 429; resCode = 'RATE_LIMIT'; resMessage = 'Gemini rate limit hit. Please try again shortly.'; }
     else if (msgLower.includes('timeout')) { httpStatus = 504; resCode = 'TIMEOUT'; resMessage = 'Analysis timed out. Please try again.'; }
-    else if (msgLower.includes('malformed_response')) { httpStatus = 502; resCode = 'MALFORMED_RESPONSE'; }
+    else if (msgLower.includes('malformed_response')) {
+      httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
+      console.error('[analyze] Gemini returned unparseable JSON — no report generated.', { businessType: businessType?.slice(0, 60) });
+    }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });
   }
