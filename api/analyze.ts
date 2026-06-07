@@ -9,6 +9,7 @@ import {
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise } from '../src/utils/franchiseDetection.js';
+import { validateUSLocation } from '../src/utils/locationValidation.js';
 
 export const maxDuration = 60;
 
@@ -489,6 +490,10 @@ export default async function handler(
   }
   if (!location?.trim()) {
     return json(res, 400, { error: 'Missing or invalid location.', code: 'INVALID_INPUT' });
+  }
+  const locationCheck = validateUSLocation(location.trim());
+  if (!locationCheck.valid) {
+    return json(res, 400, { error: locationCheck.reason, code: 'UNSUPPORTED_LOCATION' });
   }
 
   // ── Blocked category guard ────────────────────────────────────────────────

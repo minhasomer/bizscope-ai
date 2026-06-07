@@ -8,6 +8,7 @@ import {
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
+import { validateUSLocation } from '../src/utils/locationValidation.js';
 
 export const maxDuration = 60;
 
@@ -315,6 +316,10 @@ export default async function handler(
   if (!location?.trim()) {
     return json(res, 400, { error: 'Missing or invalid location.', code: 'INVALID_INPUT' });
   }
+  const locationCheck = validateUSLocation(location.trim());
+  if (!locationCheck.valid) {
+    return json(res, 400, { error: locationCheck.reason, code: 'UNSUPPORTED_LOCATION' });
+  }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -396,7 +401,6 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
 
     console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: budget.maxOutputTokens, synthesisTimeoutMs: budget.synthesisTimeoutMs });
     const phase2StartMs = Date.now();
-    const fallback = getOpportunityReportFallback(location);
     const synthesis = await withTimeout(
       ai.models.generateContent({
         model,
@@ -436,18 +440,8 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
       phase2ElapsedMs,
     });
 
-    const parsed = cleanAndParseJSON(rawText || '', fallback);
-
-    if (parsed === fallback) {
-      console.warn('[opportunities] FALLBACK TRIGGERED — synthesis produced no parseable output', {
-        finishReason,
-        candidateCount,
-        textLength: rawText?.length ?? 0,
-        candidatesTokenCount: outputTokens,
-      });
-    }
-
-    parsed.groundingSources = sources.length > 0 ? sources : fallback.groundingSources;
+    const parsed = cleanAndParseJSON(rawText || '');
+    parsed.groundingSources = sources;
     parsed.location = location;
 
     parsed.generationMeta = {
@@ -507,7 +501,10 @@ Generate the output in JSON format adhering to the opportunity schema. Do not ou
     if (resMessage.includes('API key'))        { httpStatus = 401; resCode = 'MISSING_API_KEY'; }
     else if (isRateLimit)                       { httpStatus = 429; resCode = 'RATE_LIMIT'; resMessage = 'Gemini rate limit hit. Please try again shortly.'; }
     else if (msgLower.includes('timeout'))      { httpStatus = 504; resCode = 'TIMEOUT'; resMessage = 'Analysis timed out. Please try again.'; }
-    else if (msgLower.includes('malformed_response')) { httpStatus = 502; resCode = 'MALFORMED_RESPONSE'; }
+    else if (msgLower.includes('malformed_response')) {
+      httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
+      console.error('[opportunities] Gemini returned unparseable JSON — no opportunities generated.', { location: location?.slice(0, 60) });
+    }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });
   }

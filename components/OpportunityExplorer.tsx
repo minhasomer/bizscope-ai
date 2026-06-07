@@ -505,6 +505,14 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                 <Info className="w-5 h-5" />
                 Methodology & Data Sources
               </h4>
+              {report.groundingSources.length === 0 && (
+                <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-300 leading-relaxed">
+                    <strong className="text-amber-200">Limited grounding:</strong> Live web search data was unavailable for this analysis. All scores and recommendations are based on Gemini's training knowledge only, not verified live market data. Treat results as directional only.
+                  </p>
+                </div>
+              )}
               <p className="text-gray-400 mb-6 leading-relaxed text-sm">{report.methodology}</p>
               <div className="flex flex-wrap gap-3">
                 {report.groundingSources.map((source, idx) => (
@@ -636,6 +644,10 @@ const OpportunityCard: React.FC<{
 
         {/* Score bars */}
         <div className="space-y-2.5 mb-5">
+          <div className="flex items-center gap-1 mb-1.5">
+            <Sparkles className="w-2.5 h-2.5 text-slate-300" />
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">AI-estimated from web signals</span>
+          </div>
           <ScoreBar label="Competition" score={opportunity.scores.competitionLevel} inverse hint="Lower score = less competition (better for you)" />
           <ScoreBar label="Startup Capital" score={opportunity.scores.capEx} hint="Lower score = less money needed to launch" />
           <ScoreBar label="Monthly Overhead" score={opportunity.scores.overhead} hint="Lower score = lower ongoing monthly costs" />
@@ -655,6 +667,9 @@ const OpportunityCard: React.FC<{
             </span>
             <span className="font-black text-gray-900">{opportunity.financials.potentialRevenue}</span>
           </div>
+          <p className="text-[9px] text-gray-400 pt-1 border-t border-gray-100 leading-snug">
+            Estimates based on available market signals. Verify before committing capital.
+          </p>
         </div>
 
         {/* Full Analysis button */}
