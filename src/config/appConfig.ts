@@ -57,6 +57,13 @@ const _rawDemoMode: string | undefined = process.env.VITE_DEMO_MODE;
 const _isDemoMode: boolean =
   _rawDemoMode === 'true' || (_rawDemoMode as unknown) === true || _rawDemoMode === '1';
 
+// Private-beta full-access flag — must be declared before appConfig uses it.
+// VITE_BETA_FULL_ACCESS is statically replaced by the vite.config.ts define block.
+// Defaults to 'false' when the env var is absent so omitting it is always safe.
+const _betaFullAccess: boolean =
+  process.env.VITE_BETA_FULL_ACCESS === 'true' ||
+  (process.env.VITE_BETA_FULL_ACCESS as unknown) === true;
+
 // ─── App Config (frozen object — never mutate at runtime) ────────────────────
 
 export const appConfig = {
@@ -185,18 +192,6 @@ export const useRealAuth: boolean = appConfig.useRealAuth;
 export const betaFullAccess: boolean = appConfig.betaFullAccess;
 
 // ─── Beta real-reports gate ──────────────────────────────────────────────────
-
-// ─── Private-beta full-access flag ──────────────────────────────────────────
-//
-// VITE_BETA_FULL_ACCESS=true → every authenticated non-Admin user is resolved
-// to effective Pro+ by getEffectivePlan(). Set to false (or omit) to revert
-// everyone to their real stored plan without any manual DB changes.
-//
-// Statically replaced at build time (like VITE_DEMO_MODE). Never set this via
-// import.meta.env at runtime — the vite.config.ts define block handles it.
-const _betaFullAccess: boolean =
-  process.env.VITE_BETA_FULL_ACCESS === 'true' ||
-  (process.env.VITE_BETA_FULL_ACCESS as unknown) === true;
 
 const _realReportsEnabled: boolean =
   process.env.VITE_REAL_REPORTS_ENABLED === 'true' ||
