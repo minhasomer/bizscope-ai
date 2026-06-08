@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { SavedReport } from '../types';
+import { SavedReport, SavedMarketGapReport, OpportunityReport } from '../types';
 import { SavedReportsService } from '../services/savedReportsService';
 import { isDemoMode } from '../src/config/appConfig';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
@@ -32,9 +32,10 @@ interface SavedReportsProps {
   onViewReport: (report: any) => void;
   onDeleteReport?: (indexOrId: number | string) => void; // Optional fallback
   onNavigateHome?: () => void;
+  onViewMarketGapReport?: (reportData: OpportunityReport) => void;
 }
 
-export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan, onViewReport, onNavigateHome }) => {
+export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan, onViewReport, onNavigateHome, onViewMarketGapReport }) => {
   const [localReports, setLocalReports] = useState<SavedReport[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -48,6 +49,11 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
   
   // Custom state for UI feedback toast after favorite toggle or deletion
   const [toastMessage, setToastMessage] = useState<string>('');
+
+  // Market Gap saved reports
+  const [marketGapReports, setMarketGapReports] = useState<SavedMarketGapReport[]>([]);
+  const [mgReportToDelete, setMgReportToDelete] = useState<SavedMarketGapReport | null>(null);
+  const [isDeletingMg, setIsDeletingMg] = useState(false);
 
   // Custom states for Side-by-Side Comparison
   const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([]);
@@ -109,16 +115,27 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
     }
   };
 
+  const fetchMarketGapReports = async () => {
+    try {
+      const data = await SavedReportsService.getMarketGapReports();
+      setMarketGapReports(data);
+    } catch (err) {
+      console.error('Error fetching market gap reports:', err);
+    }
+  };
+
   useEffect(() => {
     fetchReportsList(true);
+    fetchMarketGapReports();
 
-    const handleSync = () => {
-      fetchReportsList(false);
-    };
+    const handleSync = () => fetchReportsList(false);
+    const handleMgSync = () => fetchMarketGapReports();
 
     window.addEventListener('bizscope_reports_changed', handleSync);
+    window.addEventListener('bizscope_market_gap_reports_changed', handleMgSync);
     return () => {
       window.removeEventListener('bizscope_reports_changed', handleSync);
+      window.removeEventListener('bizscope_market_gap_reports_changed', handleMgSync);
     };
   }, []);
 
@@ -152,6 +169,19 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
     } catch (_) {
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const confirmDeleteMarketGapReport = async () => {
+    if (!mgReportToDelete) return;
+    setIsDeletingMg(true);
+    try {
+      await SavedReportsService.deleteMarketGapReport(mgReportToDelete.id);
+      triggerToast(`Market Gap report for "${mgReportToDelete.location}" deleted.`);
+      setMgReportToDelete(null);
+    } catch (_) {
+    } finally {
+      setIsDeletingMg(false);
     }
   };
 
@@ -525,6 +555,109 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
           </div>
         )}
       </div>
+
+      {/* ── Market Gap Reports Section ─────────────────────────────────────── */}
+      {marketGapReports.length > 0 && (
+        <div className="px-6 md:px-8 pb-8 mt-2">
+          <div className="border-t border-gray-100 pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm">🔍</span>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 tracking-tight">Market Gap Reports</h4>
+                <p className="text-[10px] text-gray-400">Saved opportunity scans — reopening does not consume quota</p>
+              </div>
+              <span className="ml-auto text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                {marketGapReports.length} saved
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {marketGapReports.map((mgr) => (
+                <div
+                  key={mgr.id}
+                  className="group bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
+                          <TrendingUp className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-extrabold uppercase tracking-wide text-gray-400 block">Market Gap Scan</span>
+                          <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md inline-block mt-0.5">
+                            {mgr.reportData.topOpportunities.length} opportunities
+                          </span>
+                        </div>
+                      </div>
+                      {mgr.reportData.groundingSources.length > 0 && (
+                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md shrink-0">
+                          Live Data
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-slate-900 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      {mgr.location}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Saved {new Date(mgr.dateSaved).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => onViewMarketGapReport?.(mgr.reportData)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all text-xs font-medium rounded-xl"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Open Report
+                    </button>
+                    <button
+                      onClick={() => setMgReportToDelete(mgr)}
+                      className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors rounded-xl"
+                      title="Delete Report"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Market Gap Delete Confirmation */}
+      {mgReportToDelete && (
+        <div className="fixed inset-0 bg-gray-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full border border-gray-100 shadow-2xl relative animate-scale-up text-center">
+            <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-rose-50 border border-rose-100 text-rose-600 mb-4">
+              <Trash className="w-6 h-6 animate-bounce" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 leading-snug">Delete Market Gap Report?</h3>
+            <p className="text-xs text-gray-500 mt-2">
+              Permanently delete the saved Market Gap scan for{' '}
+              <strong className="text-gray-900">"{mgReportToDelete.location}"</strong>? This cannot be undone.
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row gap-2.5">
+              <button
+                disabled={isDeletingMg}
+                onClick={() => setMgReportToDelete(null)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isDeletingMg}
+                onClick={confirmDeleteMarketGapReport}
+                className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center justify-center gap-1 disabled:opacity-50"
+              >
+                {isDeletingMg ? 'Deleting...' : <><Trash2 className="w-3.5 h-3.5" /> Delete</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modern Dialog Modal to trigger Custom Delete Confirmation - avoids ugly default alerts */}
       {reportToDelete && (

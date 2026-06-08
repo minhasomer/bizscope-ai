@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { OpportunityReport, BusinessOpportunity } from '../types';
 import { generateOpportunityReport, generateOpportunityDossier } from '../services/geminiService';
+import { SavedReportsService } from '../services/savedReportsService';
 import { Loader } from './Loader';
 import { SubscriptionPlan } from '../src/utils/planUtils';
 import { filterLocationSuggestions } from '../src/data/locationSuggestionsData';
@@ -44,6 +45,8 @@ interface OpportunityExplorerProps {
   currentPlan: SubscriptionPlan;
   onNavigate: (page: string) => void;
   userRole?: string;
+  isAuthenticated?: boolean;
+  initialReport?: OpportunityReport | null;
 }
 
 const PLAN_LIMITS: Record<SubscriptionPlan, number> = {
@@ -59,13 +62,13 @@ const RANK_CONFIGS = [
   { badge: 'bg-orange-300 text-orange-900 border-orange-200', Icon: Award, label: '#3' },
 ];
 
-export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ currentPlan, onNavigate, userRole = '' }) => {
-  const [location, setLocation] = useState('');
+export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ currentPlan, onNavigate, userRole = '', isAuthenticated = false, initialReport = null }) => {
+  const [location, setLocation] = useState(initialReport?.location ?? '');
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [activeLocationIndex, setActiveLocationIndex] = useState(-1);
   const locationRef = useRef<HTMLDivElement>(null);
 
-  const [report, setReport] = useState<OpportunityReport | null>(null);
+  const [report, setReport] = useState<OpportunityReport | null>(initialReport ?? null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +90,16 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Restore a saved Market Gap Report without calling the API.
+  // Fires when App.tsx sets initialReport after the user opens a saved report
+  // from the dashboard while this component is already mounted.
+  useEffect(() => {
+    if (initialReport) {
+      setReport(initialReport);
+      setLocation(initialReport.location);
+    }
+  }, [initialReport]);
 
   const locationDropdownItems = filterLocationSuggestions(location);
 
@@ -169,6 +182,13 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       if (displayLocation !== location.trim()) setLocation(displayLocation);
       const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole);
       setReport(result);
+
+      // Auto-save for authenticated users — deduplicates by location, no quota consumed.
+      if (isAuthenticated && result) {
+        SavedReportsService.saveMarketGapReport(result).catch((err) =>
+          console.warn('[OpportunityExplorer] Auto-save market gap report failed:', err),
+        );
+      }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Failed to analyze opportunities');

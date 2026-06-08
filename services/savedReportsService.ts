@@ -1,10 +1,11 @@
-import { SavedReport, ViabilityReport } from '../types';
+import { SavedReport, ViabilityReport, OpportunityReport, SavedMarketGapReport } from '../types';
 import { mockSavedReports } from '../src/data/mockSavedReports.js';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'bizscope_saved_reports';
+const MARKET_GAP_STORAGE_KEY = 'bizscope_saved_market_gap_reports';
 
 // Per-user migration flag: set once after localStorage reports are imported into
 // Supabase so the one-time import never runs again for that user.
@@ -35,6 +36,16 @@ function rowToSavedReport(row: Record<string, unknown>): SavedReport {
     dateSaved: row.date_saved as string,
     isFavorite: row.is_favorite as boolean,
     reportType: row.report_type as 'standard' | 'regional',
+  };
+}
+
+function rowToSavedMarketGapReport(row: Record<string, unknown>): SavedMarketGapReport {
+  return {
+    id: row.id as string,
+    dateSaved: row.date_saved as string,
+    isFavorite: row.is_favorite as boolean,
+    location: row.location as string,
+    reportData: row.report_data as OpportunityReport,
   };
 }
 
@@ -167,6 +178,7 @@ export class SavedReportsService {
         .from('saved_reports')
         .select('*')
         .eq('user_id', userId)
+        .neq('report_type', 'market_gap')
         .order('date_saved', { ascending: false });
 
       if (!error && data) {
@@ -176,9 +188,9 @@ export class SavedReportsService {
       console.warn('[SavedReports] Supabase fetch failed, falling back to localStorage:', error?.message);
     }
 
-    // Offline / unauthenticated fallback
+    // Offline / unauthenticated fallback — exclude market_gap reports
     await new Promise((r) => setTimeout(r, 250));
-    return loadFromLocalStorage();
+    return loadFromLocalStorage().filter((r) => (r as any).reportType !== 'market_gap');
   }
 
   // ── Create ─────────────────────────────────────────────────────────────────
@@ -314,6 +326,134 @@ export class SavedReportsService {
     const reports = loadFromLocalStorage();
     writeToLocalStorage(reports.filter((r) => r.id !== id));
     window.dispatchEvent(new Event('bizscope_reports_changed'));
+    return true;
+  }
+
+  // ── Market Gap Reports ─────────────────────────────────────────────────────
+
+  public static async getMarketGapReports(): Promise<SavedMarketGapReport[]> {
+    const userId = await getAuthUserId();
+
+    if (userId && supabase) {
+      const { data, error } = await supabase
+        .from('saved_reports')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('report_type', 'market_gap')
+        .order('date_saved', { ascending: false });
+
+      if (!error && data) {
+        return data.map(rowToSavedMarketGapReport);
+      }
+      console.warn('[SavedReports] Supabase market gap fetch failed, falling back to localStorage:', error?.message);
+    }
+
+    // localStorage fallback
+    await new Promise((r) => setTimeout(r, 250));
+    try {
+      const raw = localStorage.getItem(MARKET_GAP_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Saves a Market Gap report. Deduplicates by (user, location) — if a saved
+   * report for the same location already exists, returns it without overwriting.
+   * Pass a fresh report only when the user explicitly regenerates.
+   */
+  public static async saveMarketGapReport(report: OpportunityReport): Promise<SavedMarketGapReport> {
+    const userId = await getAuthUserId();
+    const location = report.location.trim();
+
+    if (userId && supabase) {
+      // Dedup check
+      const { data: existing } = await supabase
+        .from('saved_reports')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('report_type', 'market_gap')
+        .ilike('location', location)
+        .maybeSingle();
+
+      if (existing) {
+        return rowToSavedMarketGapReport(existing as Record<string, unknown>);
+      }
+
+      const { data, error } = await supabase
+        .from('saved_reports')
+        .insert({
+          user_id: userId,
+          business_type: '',
+          location,
+          is_favorite: false,
+          report_type: 'market_gap',
+          date_saved: new Date().toISOString(),
+          report_data: report,
+        })
+        .select()
+        .single();
+
+      if (!error && data) {
+        window.dispatchEvent(new Event('bizscope_market_gap_reports_changed'));
+        return rowToSavedMarketGapReport(data as Record<string, unknown>);
+      }
+      console.warn('[SavedReports] Supabase market gap save failed, falling back to localStorage:', error?.message);
+    }
+
+    // localStorage fallback
+    await new Promise((r) => setTimeout(r, 200));
+    let stored: SavedMarketGapReport[] = [];
+    try {
+      const raw = localStorage.getItem(MARKET_GAP_STORAGE_KEY);
+      stored = raw ? JSON.parse(raw) : [];
+    } catch { /* empty */ }
+
+    const existingLocal = stored.find(
+      (r) => r.location.toLowerCase().trim() === location.toLowerCase(),
+    );
+    if (existingLocal) return existingLocal;
+
+    const newRecord: SavedMarketGapReport = {
+      id: `mgr-${Math.random().toString(36).substring(2, 11)}`,
+      dateSaved: new Date().toISOString(),
+      isFavorite: false,
+      location,
+      reportData: report,
+    };
+    stored.unshift(newRecord);
+    localStorage.setItem(MARKET_GAP_STORAGE_KEY, JSON.stringify(stored));
+    window.dispatchEvent(new Event('bizscope_market_gap_reports_changed'));
+    return newRecord;
+  }
+
+  public static async deleteMarketGapReport(id: string): Promise<boolean> {
+    const userId = await getAuthUserId();
+
+    if (userId && supabase) {
+      const { error } = await supabase
+        .from('saved_reports')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+        .eq('report_type', 'market_gap');
+
+      if (!error) {
+        window.dispatchEvent(new Event('bizscope_market_gap_reports_changed'));
+        return true;
+      }
+      console.warn('[SavedReports] Supabase market gap delete failed, falling back to localStorage:', error?.message);
+    }
+
+    // localStorage fallback
+    await new Promise((r) => setTimeout(r, 200));
+    try {
+      const raw = localStorage.getItem(MARKET_GAP_STORAGE_KEY);
+      const stored: SavedMarketGapReport[] = raw ? JSON.parse(raw) : [];
+      localStorage.setItem(MARKET_GAP_STORAGE_KEY, JSON.stringify(stored.filter((r) => r.id !== id)));
+    } catch { /* empty */ }
+    window.dispatchEvent(new Event('bizscope_market_gap_reports_changed'));
     return true;
   }
 }

@@ -314,3 +314,11 @@ export interface SavedReport extends ViabilityReport {
   reportType: 'standard' | 'regional';
 }
 
+export interface SavedMarketGapReport {
+  id: string;
+  dateSaved: string;
+  isFavorite: boolean;
+  location: string;
+  reportData: OpportunityReport;
+}
+

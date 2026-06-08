@@ -10,7 +10,7 @@ import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
 import { generateViabilityReport, generateAnonymousPreviewReport } from './services/geminiService';
 import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess } from './src/config/appConfig';
-import type { ViabilityReport } from './types';
+import type { ViabilityReport, OpportunityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { mockSavedReports } from './src/data/mockSavedReports.js';
 import { AlertTriangle, Sparkles, Lock } from 'lucide-react';
@@ -196,6 +196,9 @@ const App: React.FC = () => {
 
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
   const [savedReports, setSavedReports] = useState<ViabilityReport[]>([]);
+  // Carries a saved Market Gap report into OpportunityExplorer for replay.
+  // Set when the user opens a saved report from the dashboard; cleared after one render.
+  const [marketGapInitialReport, setMarketGapInitialReport] = useState<OpportunityReport | null>(null);
 
   // Contact form state
   const [contactName, setContactName] = useState('');
@@ -615,7 +618,13 @@ const App: React.FC = () => {
       case 'opportunities':
         return (
           <div className="print:hidden">
-            <OpportunityExplorer currentPlan={userPlan} onNavigate={setCurrentView} userRole={currentUser?.role ?? ''} />
+            <OpportunityExplorer
+              currentPlan={userPlan}
+              onNavigate={setCurrentView}
+              userRole={currentUser?.role ?? ''}
+              isAuthenticated={!!currentUser}
+              initialReport={marketGapInitialReport}
+            />
           </div>
         );
       case 'dashboard':
@@ -730,6 +739,12 @@ const App: React.FC = () => {
               }}
               onDeleteReport={handleDeleteReport}
               onNavigateHome={() => setCurrentView('home')}
+              onViewMarketGapReport={(reportData) => {
+                setMarketGapInitialReport(reportData);
+                setCurrentView('opportunities');
+                // Clear after one render so the prop doesn't persist on re-mounts.
+                setTimeout(() => setMarketGapInitialReport(null), 0);
+              }}
             />
           </div>
         );
