@@ -17,6 +17,11 @@ const CompetitorTable: React.FC<{ competitors: Competition[] }> = ({ competitors
     <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
       Geographic coordinates were not available for this report. Competitor locations are listed below.
     </p>
+    {competitors.length > 0 && (
+      <p className="text-[11px] text-gray-400 italic px-1">
+        Showing representative competitors based on available location data.
+      </p>
+    )}
     {competitors.length === 0 ? (
       <p className="text-sm text-gray-500 text-center py-8">No competitor data found for this location.</p>
     ) : (
@@ -188,8 +193,13 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
       {/* Competitor list panel */}
       {competitorsWithCoords.length > 0 && (
         <div className="border-t border-gray-100 bg-white overflow-y-auto competitor-print-list" style={{ flex: '0 0 40%' }}>
-          <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            Competitors · click to focus
+          <div className="px-3 pt-2 pb-0.5 flex items-baseline justify-between gap-2">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              {competitorsWithCoords.length} Competitor{competitorsWithCoords.length !== 1 ? 's' : ''} · click to focus
+            </span>
+          </div>
+          <div className="px-3 pb-1.5 text-[10px] text-gray-400 italic">
+            Showing representative competitors based on available location data.
           </div>
           <ul>
             {competitorsWithCoords.map((comp, idx) => (

@@ -213,6 +213,38 @@ function cleanAndParseJSON(text: string, fallback?: any): any {
   throw new Error('malformed_response');
 }
 
+/** Density-calibrated competitor count — mirrors analyze.ts logic. */
+function competitorCountForCategory(businessType: string): { target: number; label: string } {
+  const bt = businessType.toLowerCase();
+  const dense = [
+    'coffee', 'cafe', 'espresso', 'boba', 'bubble tea',
+    'fast food', 'burger', 'pizza', 'sandwich', 'sub', 'taco', 'sushi',
+    'chinese', 'mexican', 'thai', 'indian', 'italian', 'restaurant',
+    'bar', 'brewery', 'pub', 'nightclub', 'lounge',
+    'gas station', 'convenience store', 'c-store',
+    'gym', 'fitness', 'yoga', 'pilates', 'crossfit',
+    'nail salon', 'hair salon', 'barber', 'beauty salon',
+    'pharmacy', 'drug store', 'grocery',
+    'dry cleaning', 'laundromat', 'laundry',
+    'car wash', 'auto detail',
+    'dentist', 'dental', 'orthodontist',
+    'urgent care', 'medical clinic', 'physical therapy',
+    'tutoring', 'learning center',
+  ];
+  const sparse = [
+    'rv repair', 'rv service', 'rv dealer', 'motorhome',
+    'boat repair', 'marine', 'aircraft',
+    'taxidermy', 'taxidermist',
+    'specialty', 'niche', 'artisan', 'bespoke',
+    'helicopter', 'skydiving', 'scuba',
+    'exotic', 'vintage', 'antique dealer',
+    'escape room',
+  ];
+  if (dense.some(k => bt.includes(k))) return { target: 15, label: 'dense' };
+  if (sparse.some(k => bt.includes(k))) return { target: 6, label: 'sparse' };
+  return { target: 10, label: 'normal' };
+}
+
 function getCoordinatesForLocation(loc: string) {
   let h = 0;
   for (let i = 0; i < loc.length; i++) h = loc.charCodeAt(i) + ((h << 5) - h);
@@ -340,12 +372,13 @@ export default async function handler(
 
     // Phase 1: competitor lookup via Maps grounding
     const franchiseCheck = detectFranchise(businessType);
+    const { target: competitorTarget } = competitorCountForCategory(businessType);
     const phase1Prompt = franchiseCheck.isFranchise
       ? `Search for two things near '${location}':
-1. Any EXISTING '${businessType}' locations already operating in or within 20 miles of '${location}'. List each with its name and address. Label these clearly as "Existing ${businessType} location".
-2. The top 4 other direct competitors (different brands) for a new '${businessType}' in '${location}'. For each, provide the name and address.
-Return all results combined, existing same-brand locations listed first.`
-      : `List the top 5 direct competitors for a new '${businessType}' in or very near '${location}'. For each, provide the name and address.`;
+1. Any EXISTING '${businessType}' locations already operating in or within 20 miles of '${location}'. List each with its name and full street address. Label these clearly as "Existing ${businessType} location".
+2. The top ${Math.max(competitorTarget - 3, 6)} other direct competitors (different brands) for a new '${businessType}' in '${location}'. For each, provide the business name and full street address.
+Return all results combined, existing same-brand locations listed first. Include as many real, verified businesses as you can find — do not truncate the list.`
+      : `List up to ${competitorTarget} real, currently operating direct competitors for a new '${businessType}' in or very near '${location}'. For each business provide: the real business name and full street address. Use Google Maps data to find actual businesses — do not use generic placeholder names. Include as many as are genuinely present; if fewer than ${competitorTarget} exist in the area, list all you can find.`;
 
     try {
       const mapsConfig: any = { tools: [{ googleMaps: {} }] };
@@ -417,7 +450,8 @@ ${franchiseCheck.isFranchise ? `
 - If any existing ${businessType} locations were found in the competition data above, name them and note they may indicate either strong demand or territory saturation.
 - The recommendation.decision should be at most "Caution Advised" if existing same-brand locations were found nearby, since territory overlap is a real risk.` : ''}
 
-Estimate latitude/longitude for '${location}' and each competitor for map visualisation.
+**COMPETITOR LIST RULE (MANDATORY):**
+Include ALL competitors found in the Competition Analysis above in the competitionAnalysis.competitors array — do not truncate or summarise. For each competitor, populate: name (real business name), details (1-sentence description), address (full street address if available), latitude, longitude. If coordinates are not in the research data, estimate realistic lat/lng near '${location}' — spread pins realistically across the area, not clustered at one point.
     `.trim();
 
     const synthesisMaxTokens = Math.min(budget.maxOutputTokens, 8192);
