@@ -594,7 +594,10 @@ if (!supabaseAdmin) {
 }
 
 // ── Shared server-side report cache (Supabase report_cache table) ─────────────
-// Keyed by (business_type, location, report_type, plan_tier, analysis_version).
+// Keyed by (business_type, location, report_type, analysis_version) only.
+// plan_tier is intentionally excluded from the key so the same report is
+// served to all users regardless of their plan, ensuring cross-account and
+// cross-device consistency.
 // Accessed via the service-role key only — authenticated users have no direct access.
 
 const CACHE_VERSION = 'v1';
@@ -607,8 +610,7 @@ function normalizeCacheKey(s: string): string {
 async function getFromServerCache(
   businessType: string,
   location: string,
-  reportType: string,
-  planTier: string
+  reportType: string
 ): Promise<any | null> {
   if (!supabaseAdmin) return null;
   try {
@@ -618,7 +620,6 @@ async function getFromServerCache(
       .eq('business_type', normalizeCacheKey(businessType))
       .eq('location', normalizeCacheKey(location))
       .eq('report_type', reportType)
-      .eq('plan_tier', normalizeCacheKey(planTier))
       .eq('analysis_version', CACHE_VERSION)
       .single();
 
@@ -642,7 +643,7 @@ async function setInServerCache(
   businessType: string,
   location: string,
   reportType: string,
-  planTier: string,
+  planTierMeta: string,  // metadata only — not part of the cache key
   report: any
 ): Promise<void> {
   if (!supabaseAdmin) return;
@@ -658,12 +659,12 @@ async function setInServerCache(
           business_type: normalizeCacheKey(businessType),
           location: normalizeCacheKey(location),
           report_type: reportType,
-          plan_tier: normalizeCacheKey(planTier),
           analysis_version: CACHE_VERSION,
+          plan_tier: normalizeCacheKey(planTierMeta), // metadata: which plan first generated this
           report: cleanReport,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'business_type,location,report_type,plan_tier,analysis_version' }
+        { onConflict: 'business_type,location,report_type,analysis_version' }
       );
 
     if (error) {
@@ -954,8 +955,9 @@ async function startServer() {
     }
 
     // Server-side shared cache check — before quota so cache hits are always free.
+    // Cache is global: same report is served to all plans/accounts for the same input.
     if (!forceRegenerate) {
-      const cached = await getFromServerCache(businessType, location, 'standard', planTier);
+      const cached = await getFromServerCache(businessType, location, 'standard');
       if (cached) {
         console.log(`[Analyze] Cache hit — skipping Gemini and quota for ${businessType} / ${location}`);
         return res.json(cached);
@@ -989,8 +991,10 @@ async function startServer() {
       });
       
       const cheaperModel = GEMINI_MODELS.standard;
-      const normalizedPlan = normalizeTierToBudgetPlan(planTier);
-      const budget = getReportBudget(normalizedPlan, 'standard');
+      const normalizedPlan = normalizeTierToBudgetPlan(planTier); // used for cost logging only
+      // Canonical quality: all cached reports are generated at Enterprise level so every
+      // plan receives the same underlying data. Plan differences are handled by UI gating.
+      const budget = getReportBudget('Enterprise', 'standard');
       let combinedSources: any[] = [];
       let competitionInfo = "No competitor data available.";
       let marketTrendsInfo = "No trend data available.";
@@ -1156,7 +1160,7 @@ async function startServer() {
         });
       }
 
-      // Store in shared server-side cache so all devices get the same report.
+      // Store in shared server-side cache so all accounts and devices get the same report.
       await setInServerCache(businessType, location, 'standard', planTier, parsed);
 
       incrementServerLimit(userEmail, false);
@@ -1195,8 +1199,9 @@ async function startServer() {
     }
 
     // Server-side shared cache check — cache hits skip Gemini entirely.
+    // Cache is global: same opportunities are served to all plans/accounts for the same location.
     if (!forceRegenerate) {
-      const cached = await getFromServerCache('market_gaps', location, 'opportunities', verifiedPlan);
+      const cached = await getFromServerCache('market_gaps', location, 'opportunities');
       if (cached) {
         console.log(`[Opportunities] Cache hit — skipping Gemini for ${location}`);
         return res.json(cached);
@@ -1328,7 +1333,7 @@ async function startServer() {
 
       console.log(`[Opportunities] Success — model=${cheaperModel} opportunityCount=${parsed.topOpportunities?.length ?? 0} groundingSources=${parsed.groundingSources?.length ?? 0}`);
 
-      // Store in shared server-side cache so all devices get the same opportunities.
+      // Store in shared server-side cache so all accounts and devices get the same opportunities.
       await setInServerCache('market_gaps', location, 'opportunities', verifiedPlan, parsed);
 
       res.json(parsed);
