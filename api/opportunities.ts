@@ -165,9 +165,16 @@ const _srKeyDiag = (() => {
   return { isJwt, isSbSecret, roleClaim };
 })();
 
+// Server-side beta full-access flag. Set BETA_FULL_ACCESS=true in Vercel env vars
+// (NOT VITE_-prefixed — never sent to browser). When true, any authenticated
+// non-Admin user is promoted to Pro+ for plan gating. Admin stays Enterprise.
+// Remove or set false to revert to stored-role behaviour post-beta.
+const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
+
 function getServerSidePlan(role: string, subscription_tier: string): string {
   const r = (role ?? '').trim().toLowerCase();
   if (r === 'admin') return 'Enterprise';
+  if (_serverBetaFullAccess) return 'Pro+';
   if (r === 'betatester' || r === 'beta_tester' || r === 'beta_vip') return 'Pro+';
   return normalizeTierToBudgetPlan(subscription_tier);
 }
@@ -269,10 +276,6 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   }
 }
 
-// ─── Allowed beta roles ───────────────────────────────────────────────────────
-
-const BETA_ROLES = ['Admin', 'BetaTester'];
-
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -297,16 +300,22 @@ export default async function handler(
     realReportsEnabledValue: process.env.REAL_REPORTS_ENABLED,
     hasGeminiApiKey:         !!process.env.GEMINI_API_KEY,
     supabaseAdminInitialized: !!supabaseAdmin,
+    betaFullAccess:          _serverBetaFullAccess,
   });
 
   const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
 
-  if (!BETA_ROLES.includes(verifiedRole)) {
+  // Gate: must be authenticated and have an upgraded plan.
+  // When BETA_FULL_ACCESS=true, getServerSidePlan() already promotes any
+  // authenticated non-Admin user to Pro+, so this check passes transparently.
+  // Unauthenticated users always fall back to verifiedUserId=null / plan=Explorer.
+  if (!verifiedUserId || verifiedPlan === 'Explorer') {
+    console.warn(`[Opportunities] Rejected — userId=${verifiedUserId ?? 'null'} plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
     return json(res, 403, {
-      error: 'Market Gap analysis with real AI requires Admin or BetaTester role.',
-      code: 'BETA_RESTRICTED',
+      error: 'Market Gap analysis with real AI requires a Pro or higher plan.',
+      code: 'INSUFFICIENT_PLAN',
     });
   }
 

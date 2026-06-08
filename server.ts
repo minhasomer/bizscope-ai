@@ -593,9 +593,12 @@ if (!supabaseAdmin) {
     'Set both env vars and redeploy to enable enforcement.');
 }
 
+const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
+
 function getServerSidePlan(role: string, subscription_tier: string): string {
   const r = (role ?? '').trim().toLowerCase();
   if (r === 'admin') return 'Enterprise';
+  if (_serverBetaFullAccess) return 'Pro+';
   if (r === 'betatester' || r === 'beta_tester' || r === 'beta_vip') return 'Pro+';
   return normalizeTierToBudgetPlan(subscription_tier);
 }
@@ -1072,20 +1075,13 @@ async function startServer() {
       req.headers["authorization"] as string | undefined
     );
 
-    const normalizedRole = (verifiedRole ?? '').trim().toLowerCase();
-    const isBetaAuthorized =
-      normalizedRole === 'admin' ||
-      normalizedRole === 'betatester' ||
-      normalizedRole === 'beta_tester' ||
-      normalizedRole === 'beta_vip';
+    console.log(`[Opportunities] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} betaFullAccess=${_serverBetaFullAccess}`);
 
-    console.log(`[Opportunities] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} authorized=${isBetaAuthorized}`);
-
-    if (!isBetaAuthorized) {
-      console.warn(`[Opportunities] Rejected — role "${verifiedRole}" is not authorized for real Gemini opportunities`);
+    if (verifiedPlan === 'Explorer') {
+      console.warn(`[Opportunities] Rejected — plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
       return res.status(403).json({
-        error: "Market Gap analysis with real AI requires Admin or BetaTester role. Explorer and unauthenticated users receive demo data client-side.",
-        code: "INSUFFICIENT_ROLE",
+        error: "Market Gap analysis with real AI requires a Pro or higher plan.",
+        code: "INSUFFICIENT_PLAN",
       });
     }
 
