@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { SavedReport } from '../types';
 import { SavedReportsService } from '../services/savedReportsService';
 import { isDemoMode } from '../src/config/appConfig';
+import { formatLocationDisplay } from '../src/utils/locationUtils';
 import { 
   Briefcase, 
   MapPin, 
@@ -493,7 +494,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                   </h4>
                   <p className="text-xs text-gray-500 flex items-center gap-1 mt-1 font-medium">
                     <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                    {report.location}
+                    {formatLocationDisplay(report.location)}
                   </p>
                   
                   {/* Generated Date label */}
@@ -543,7 +544,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
             <p className="text-xs text-gray-500 mt-2">
               Are you sure you want to permanently delete the saved report for{' '}
               <strong className="text-gray-900 font-bold">"{reportToDelete.businessType}"</strong> in{' '}
-              <strong className="text-gray-900 font-bold">"{reportToDelete.location}"</strong>? This action cannot be undone.
+              <strong className="text-gray-900 font-bold">"{formatLocationDisplay(reportToDelete.location)}"</strong>? This action cannot be undone.
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-2.5">
@@ -656,7 +657,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                     <span className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wide">Option alpha</span>
                     <h4 className="text-base font-black text-gray-900 mt-0.5">{reportA.businessType}</h4>
                     <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                      <MapPin className="w-3 h-3 text-gray-450" /> {reportA.location}
+                      <MapPin className="w-3 h-3 text-gray-450" /> {formatLocationDisplay(reportA.location)}
                     </p>
                   </div>
                   <div className="mt-4 flex items-center gap-3">
@@ -676,7 +677,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                     <span className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wide">Option beta</span>
                     <h4 className="text-base font-black text-gray-900 mt-0.5">{reportB.businessType}</h4>
                     <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                      <MapPin className="w-3 h-3 text-gray-450" /> {reportB.location}
+                      <MapPin className="w-3 h-3 text-gray-450" /> {formatLocationDisplay(reportB.location)}
                     </p>
                   </div>
                   <div className="mt-4 flex items-center gap-3">
@@ -726,11 +727,11 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
                     <div className="p-4 flex items-center gap-1.5 text-xs font-semibold text-gray-700">
                       <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span>{reportA.location}</span>
+                      <span>{formatLocationDisplay(reportA.location)}</span>
                     </div>
                     <div className="p-4 flex items-center gap-1.5 text-xs font-semibold text-gray-700">
                       <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span>{reportB.location}</span>
+                      <span>{formatLocationDisplay(reportB.location)}</span>
                     </div>
                   </div>
                 </div>

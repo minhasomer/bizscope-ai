@@ -1,6 +1,7 @@
 
 import React from 'react';
 import type { ViabilityReport } from '../types';
+import { formatLocationDisplay } from '../src/utils/locationUtils';
 
 interface ReportSummaryCardProps {
   report: ViabilityReport;
@@ -52,7 +53,7 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
               Viability Analysis
             </p>
             <h2 className="text-base font-black text-white leading-tight truncate">{businessType}</h2>
-            <p className="text-xs text-slate-400 mt-0.5">{location}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{formatLocationDisplay(location)}</p>
           </div>
 
           <div className="flex items-center gap-4 shrink-0">

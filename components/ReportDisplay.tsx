@@ -44,6 +44,7 @@ import {
   canCompareReports 
 } from '../src/utils/planUtils';
 import { PDFService, PDFExportOptions } from '../services/pdfService';
+import { formatLocationDisplay } from '../src/utils/locationUtils';
 
 interface ReportDisplayProps {
   report: ViabilityReport;
@@ -941,7 +942,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         </h2>
                         <p className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-1 mb-4 font-semibold uppercase tracking-wide">
                           <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>Location: <strong className="text-blue-600">{report.location}</strong></span>
+                          <span>Location: <strong className="text-blue-600">{formatLocationDisplay(report.location)}</strong></span>
                         </p>
                         
                         <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -1041,7 +1042,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <p className="text-xs font-mono text-gray-400 mt-1 uppercase">Confidential Business Analysis Report</p>
             <div className="mt-5 grid grid-cols-4 gap-6 text-sm border-t border-gray-100 pt-4">
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Business</span> {report.businessType}</div>
-                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Location</span> {report.location}</div>
+                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Location</span> {formatLocationDisplay(report.location)}</div>
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Viability Score</span> {report.viabilityScore} / 100</div>
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Plan</span> {currentPlan}</div>
             </div>
@@ -1072,7 +1073,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   {ftc.sameBrandFoundInSearch ? (
                     // AI search actually surfaced same-brand locations
                     <p className="text-sm text-amber-900 leading-relaxed mb-3">
-                      <strong>{ftc.sameBrandCount} existing {ftc.brandName} location{ftc.sameBrandCount !== 1 ? 's' : ''}</strong> {ftc.sameBrandCount !== 1 ? 'were' : 'was'} identified near {report.location}
+                      <strong>{ftc.sameBrandCount} existing {ftc.brandName} location{ftc.sameBrandCount !== 1 ? 's' : ''}</strong> {ftc.sameBrandCount !== 1 ? 'were' : 'was'} identified near {formatLocationDisplay(report.location)}
                       {sameBrandNames.length > 0 && <> ({sameBrandNames.join(', ')})</>}.
                       {' '}Nearby units indicate proven consumer demand for this brand but may also mean this territory is already claimed — protected radius rules vary by franchise agreement.
                     </p>
@@ -1537,7 +1538,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             <div className="bg-indigo-50/50 border border-indigo-100 text-indigo-900 p-4 rounded-2xl text-xs flex items-center gap-2 print:hidden">
                                 <Check className="w-4 h-4 text-indigo-500 shrink-0" />
                                 <span>
-                                    <strong>Pro+ Regional Insights Active:</strong> Market context modeled for surrounding sectors near <strong>{report.location}</strong>.
+                                    <strong>Pro+ Regional Insights Active:</strong> Market context modeled for surrounding sectors near <strong>{formatLocationDisplay(report.location)}</strong>.
                                 </span>
                             </div>
 
