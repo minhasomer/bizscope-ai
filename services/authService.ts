@@ -135,12 +135,15 @@ async function resolvePlanFromSession(
 
   console.log('[Auth] Final effective role:', profile.role, '| subscription_tier:', profile.subscription_tier, '| plan:', plan);
 
-  // Cache role + tier so the fast path returns the real role on the next page load,
-  // even when the Supabase Web Lock is held by a background token refresh and the
-  // profile DB query times out (8 s). Same caching pattern as plan above.
+  // Cache role, tier, AND the resolved effective plan so that getInitialSession's
+  // fast path returns the correct plan on the very next page load — including when
+  // betaFullAccess is true. Without caching `plan`, the fast path always fell back
+  // to 'Explorer', causing a "Pro Required" flash on Dashboard until the INITIAL_SESSION
+  // DB callback fired (500 ms – 8 s later).
   try {
     localStorage.setItem(`bizscope_user_role_${email}`, profile.role);
     localStorage.setItem(`bizscope_user_tier_${email}`, profile.subscription_tier);
+    localStorage.setItem(`bizscope_user_plan_${email}`, plan);
   } catch { /* ignore quota errors */ }
 
   return { plan, role: profile.role, subscription_tier: profile.subscription_tier };
@@ -638,6 +641,14 @@ export class AuthService {
               subscription_tier,
             });
             if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
+
+            // Strip the bare '#' that Supabase's implicit-grant OAuth flow leaves in
+            // the URL after redirecting back from the provider (e.g. Google).
+            // Supabase extracts the access_token from the hash automatically, but the
+            // '#' character itself remains and is visible in the address bar.
+            if (event === 'SIGNED_IN' && typeof window !== 'undefined' && window.location.hash === '#') {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
 
             // If INITIAL_SESSION resolved to Explorer with no cached role, the
             // profile fetch likely hit Supabase Web Lock contention during the
