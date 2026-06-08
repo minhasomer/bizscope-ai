@@ -308,29 +308,6 @@ export class AuthService {
         },
       });
 
-      // ── Diagnostics (TEMP — captures exact Supabase response shape) ──────────
-      // Remove after confirming duplicate-email detection works in production.
-      const _diag = {
-        error_message:    error?.message ?? null,
-        error_status:     (error as any)?.status ?? null,
-        user_id:          data.user?.id ?? null,
-        user_email:       data.user?.email ?? null,
-        session_present:  data.session !== null,
-        // identities — the anti-enumeration discriminator:
-        //   new signup          → Array with ≥1 entries
-        //   existing email      → [] OR undefined (project-dependent)
-        identities_raw:   data.user?.identities,          // full value, not just length
-        identities_type:  typeof data.user?.identities,   // 'object' (array) or 'undefined'
-        identities_len:   data.user?.identities?.length ?? 'FIELD_MISSING',
-        email_confirmed_at: data.user?.email_confirmed_at ?? null,
-        conf_sent_at:     (data.user as any)?.confirmation_sent_at ?? null,
-        // Is the user object itself present?
-        user_is_null:     data.user === null,
-        // All top-level keys on data.user (to reveal hidden/unexpected fields)
-        user_keys:        data.user ? Object.keys(data.user) : null,
-      };
-      console.log('[Auth:signUp] FULL DIAG', JSON.stringify(_diag, null, 2));
-
       if (error) throw new Error(error.message);
 
       const user = data.user;
@@ -355,12 +332,6 @@ export class AuthService {
         (Array.isArray(identities) && identities.length === 0) ||
         // identities field is absent — means the user object is fake/sanitized
         identities === undefined;
-
-      console.log('[Auth:signUp] duplicate check:', {
-        identitiesIsEmpty,
-        identitiesValue: identities,
-        userIsNull: !data.user,
-      });
 
       if (!data.session && identitiesIsEmpty) {
         throw new DuplicateEmailError(
