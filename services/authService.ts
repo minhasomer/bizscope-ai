@@ -19,17 +19,16 @@ export class EmailConfirmationRequiredError extends Error {
 }
 
 /**
- * Thrown by signUp when the submitted email already has an account.
+ * Thrown by signUp when the submitted email already has an account, OR when
+ * Supabase returns its anti-enumeration response for a reserved email address.
  *
- * Detection: Supabase anti-enumeration returns { user: <fake>, identities: [],
- * session: null, error: null } for existing emails (both confirmed and
- * unconfirmed). An empty identities array is the reliable signal — a genuine
- * new signup always has identities.length >= 1.
+ * Detection covers two Supabase v2 shapes:
+ *  - v2.60+: { user: null, session: null, error: null } — current behavior
+ *  - older v2: { user: <fake>, identities: [], session: null, error: null }
  *
- * Security note: the identities array is already present in the JS SDK
- * response object, so reading it does not introduce new enumeration capability
- * beyond what the API already exposes. We do NOT distinguish confirmed vs
- * unconfirmed (that would require a second API call and is unnecessary for UX).
+ * The UX message is intentionally neutral — it doesn't assert "Account exists"
+ * because user:null also fires for emails in Supabase's internal reservation
+ * state after a SQL DELETE (full cleanup requires admin.deleteUser()).
  */
 export class DuplicateEmailError extends Error {
   constructor(message: string) {
@@ -316,55 +315,34 @@ export class AuthService {
       const user = data.user;
 
       // ── Duplicate-email detection ─────────────────────────────────────────────
-      // Supabase anti-enumeration: existing email → { user: <fake>, session: null }
-      // with no real error. The discriminator is `identities`:
+      // Supabase anti-enumeration (v2.60+): when "Prevent duplicate emails" and
+      // email confirmation are both enabled, an existing/reserved email returns
+      // { user: null, session: null, error: null } — no fake user object at all.
       //
-      //   New signup (real user)      → identities is an Array with ≥1 entries
-      //   Existing email (fake user)  → identities is [] (explicitly empty array)
+      // Older v2 behavior returned { user: <fake>, identities: [], session: null }.
+      // We handle both shapes:
+      //
+      //   user: null entirely          → current v2 anti-enum response
+      //   identities: [] (empty array) → older v2 anti-enum signal
       //
       // IMPORTANT: identities === undefined is NOT treated as a duplicate.
       // A genuine new user with email confirmation pending can have the identities
-      // field absent from the signup response (depends on Supabase JS client version
-      // and project configuration). Treating undefined as a duplicate causes a
-      // false-positive "Account already exists" for real new signups, including
-      // emails that were previously deleted and re-registered.
+      // field absent from the response. Only an explicitly empty array signals a
+      // duplicate; undefined falls through to EmailConfirmationRequiredError.
       //
-      // The only reliable anti-enumeration signal is identities: [] (present and
-      // explicitly empty). undefined falls through to EmailConfirmationRequiredError.
-      //
-      // Also catches the legacy case where data.user itself is null (older Supabase
-      // behavior where the anti-enum response omitted the user object entirely).
+      // NOTE: user: null also fires for emails in Supabase's internal reservation
+      // state (e.g., after SQL DELETE without admin API cleanup, for ~24-48 h).
+      // The error message is intentionally neutral to cover both cases.
       const identities = data.user?.identities;
       const identitiesIsEmpty =
-        // user is null/undefined entirely (legacy Supabase anti-enum shape)
+        // user absent entirely — current Supabase v2 anti-enum shape
         !data.user ||
-        // identities present and explicitly empty — the real anti-enum signal
+        // identities present and explicitly empty — older v2 anti-enum signal
         (Array.isArray(identities) && identities.length === 0);
-
-      // ── Temporary signup diagnostics — remove after duplicate-signup investigation ──
-      console.group('[Auth][SignUp] Supabase response diagnostics');
-      console.log('hasUser:           ', !!data.user);
-      console.log('hasSession:        ', !!data.session);
-      console.log('identitiesValue:   ', identities);
-      console.log('identitiesIsArray: ', Array.isArray(identities));
-      console.log('identitiesLength:  ', Array.isArray(identities) ? identities.length : 'n/a (not array)');
-      console.log('identitiesIsEmpty: ', identitiesIsEmpty);
-      console.log('willThrowDuplicate:', !data.session && identitiesIsEmpty);
-      console.log('branchDetail: ',
-        !data.user
-          ? 'BRANCH: !data.user (user object absent)'
-          : (Array.isArray(identities) && identities.length === 0)
-            ? 'BRANCH: identities is [] (Supabase anti-enum signal — email exists)'
-            : !data.session
-              ? 'BRANCH: session null, identities present → EmailConfirmationRequired'
-              : 'BRANCH: session present → immediate sign-in'
-      );
-      console.groupEnd();
-      // ── End diagnostics ────────────────────────────────────────────────────────
 
       if (!data.session && identitiesIsEmpty) {
         throw new DuplicateEmailError(
-          'An account with this email already exists. Please sign in, or reset your password if you\'ve forgotten it.',
+          "If this email isn't registered yet, check your inbox for a confirmation email. Otherwise, try signing in or reset your password.",
         );
       }
 
