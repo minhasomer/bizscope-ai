@@ -460,7 +460,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           ) : (
             <>
               <span>
-                {mode === 'login' && 'Unlock My Dashboard'}
+                {mode === 'login' && 'Sign In to Continue'}
                 {mode === 'signup' && 'Create Free Account'}
                 {mode === 'forgot' && 'Send Reset Email'}
               </span>
