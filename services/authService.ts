@@ -442,6 +442,12 @@ export class AuthService {
     return { url: data.url };
   }
 
+  public static async resendConfirmationEmail(email: string): Promise<void> {
+    if (!this.isSupabaseActive()) return; // no-op in mock mode
+    const { error } = await supabase!.auth.resend({ type: 'signup', email });
+    if (error) throw new Error(error.message);
+  }
+
   public static async resetPassword(email: string): Promise<boolean> {
     if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
     if (this.isSupabaseActive()) {

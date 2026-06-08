@@ -35,6 +35,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Set to the email address when email confirmation is required after signup
+  const [signupPendingEmail, setSignupPendingEmail] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   const cleanStates = () => {
     setError(null);
@@ -88,7 +91,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
       }
     } catch (err: any) {
       if (err instanceof EmailConfirmationRequiredError) {
-        setSuccessMessage(err.message);
+        setSignupPendingEmail(email);
       } else {
         setError(err?.message || 'Something went wrong. Please check your details and try again.');
       }
@@ -109,6 +112,76 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
       setLoading(false);
     }
   };
+
+  const handleResendConfirmation = async () => {
+    if (!signupPendingEmail) return;
+    setResendStatus('sending');
+    try {
+      await AuthService.resendConfirmationEmail(signupPendingEmail);
+      setResendStatus('sent');
+    } catch {
+      setResendStatus('error');
+    }
+  };
+
+  // ── Verification-pending screen (replaces form after signup when email confirmation is required) ──
+  if (signupPendingEmail) {
+    return (
+      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-bl-full pointer-events-none -mr-4 -mt-4 opacity-50" />
+        <div className="text-center mb-8 relative z-10">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <img src="/logo.svg" alt="BizScope" className="h-9 w-9 shrink-0" />
+            <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">
+              BizScope<span className="text-[11px] font-semibold text-slate-400 ml-1 normal-case tracking-wide">AI</span>
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center text-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+            <CheckCircle className="w-7 h-7 text-emerald-500" />
+          </div>
+          <div>
+            <h3 className="text-base font-black text-gray-900 tracking-tight">Check your email</h3>
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed max-w-xs">
+              Account created. Please check your email to verify your account before signing in.
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1 font-mono">{signupPendingEmail}</p>
+          </div>
+
+          <div className="w-full space-y-2 mt-2">
+            <button
+              type="button"
+              onClick={handleResendConfirmation}
+              disabled={resendStatus === 'sending' || resendStatus === 'sent'}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-5 py-3 rounded-xl text-xs font-black uppercase text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md disabled:opacity-55 disabled:cursor-not-allowed tracking-wider"
+            >
+              {resendStatus === 'sending' && (
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
+              {resendStatus === 'sent' ? '✓ Verification email resent' : 'Resend verification email'}
+            </button>
+
+            {resendStatus === 'error' && (
+              <p className="text-[11px] text-red-600 font-medium">Failed to resend. Please try again shortly.</p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => { setSignupPendingEmail(null); setResendStatus('idle'); handleModeChange('login'); }}
+              className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-extrabold text-gray-500 hover:text-gray-800 transition-colors py-2 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative">
