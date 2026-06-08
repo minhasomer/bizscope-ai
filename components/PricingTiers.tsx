@@ -12,6 +12,8 @@ interface PricingTiersProps {
   currentPlan: SubscriptionPlan;
   onSelectPlan: (plan: SubscriptionPlan) => void;
   onCheckout?: (plan: 'Pro' | 'Pro+') => void;
+  /** True when the private-beta full-access override is active for this user. */
+  isBetaActive?: boolean;
 }
 
 // Map icon keys from plans.ts to actual React icon components.
@@ -23,7 +25,7 @@ const PLAN_ICONS: Record<PlanIconKey, React.ReactNode> = {
   building: <Building className="w-5 h-5 text-indigo-700" />,
 };
 
-export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelectPlan, onCheckout }) => {
+export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelectPlan, onCheckout, isBetaActive = false }) => {
   const isDemo = isDemoMode;
 
   const handlePlanAction = (tierId: SubscriptionPlan) => {
@@ -84,6 +86,19 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
           Current: {currentPlan}
         </span>
       </div>
+
+      {/* Private-beta banner — shown only when beta full-access is active */}
+      {isBetaActive && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-purple-50 border border-purple-200 rounded-2xl text-xs text-purple-800">
+          <Sparkles className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-black uppercase tracking-wide text-[10px] text-purple-700 mb-0.5">Private Beta — Full Access Active</p>
+            <p className="leading-relaxed text-purple-700">
+              All Pro+ features are temporarily unlocked for beta participants. Pricing reflects standard tiers that will apply when beta access ends.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tier cards — driven by PRICING_CARDS from src/config/plans.ts */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-4 items-start">

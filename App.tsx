@@ -9,7 +9,7 @@ import { OpportunityExplorer } from './components/OpportunityExplorer';
 import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
 import { generateViabilityReport } from './services/geminiService';
-import { isDemoMode, isBetaRoleEnabled, appConfig } from './src/config/appConfig';
+import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess } from './src/config/appConfig';
 import type { ViabilityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { mockSavedReports } from './src/data/mockSavedReports.js';
@@ -272,6 +272,7 @@ const App: React.FC = () => {
     const effectivePlan = getEffectivePlan(
       { role: profile.role, subscription_tier: profile.subscription_tier },
       null,
+      betaFullAccess,
     ) as SubscriptionPlan;
     setBaseUserPlan(effectivePlan);
     setPreviewRole(null);
@@ -537,7 +538,12 @@ const App: React.FC = () => {
                 Unlock deep structural data patterns and specialized local opportunities in seconds.
               </p>
             </div>
-            <PricingTiers currentPlan={userPlan} onSelectPlan={handleSelectPlan} onCheckout={handleCheckout} />
+            <PricingTiers
+              currentPlan={userPlan}
+              onSelectPlan={handleSelectPlan}
+              onCheckout={handleCheckout}
+              isBetaActive={betaFullAccess && currentUser !== null}
+            />
           </div>
         );
       case 'opportunities':

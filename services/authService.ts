@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { ProfileService } from './profileService';
 import { getEffectivePlan } from '../src/utils/planUtils';
-import { isDemoMode } from '../src/config/appConfig';
+import { isDemoMode, betaFullAccess } from '../src/config/appConfig';
 
 // ─── Custom errors ──────────────────────────────────────────────────────────
 
@@ -95,8 +95,8 @@ async function resolvePlanFromSession(
     const cachedRole = localStorage.getItem(`bizscope_user_role_${email}`) ?? 'Explorer';
     const cachedTier = localStorage.getItem(`bizscope_user_tier_${email}`) ?? 'Explorer';
     const fallbackPlan = isDemoMode
-      ? (localStorage.getItem(`bizscope_user_plan_${email}`) ?? localStorage.getItem('bizscope_user_plan') ?? getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null))
-      : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null);
+      ? (localStorage.getItem(`bizscope_user_plan_${email}`) ?? localStorage.getItem('bizscope_user_plan') ?? getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null, betaFullAccess))
+      : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null, betaFullAccess);
     console.warn('[Auth] Profile unavailable — using cached role:', cachedRole, '| plan:', fallbackPlan);
     return { plan: fallbackPlan, role: cachedRole, subscription_tier: cachedTier };
   }
@@ -108,11 +108,12 @@ async function resolvePlanFromSession(
     plan =
       localStorage.getItem(`bizscope_user_plan_${email}`) ??
       localStorage.getItem('bizscope_user_plan') ??
-      getEffectivePlan({ role: profile.role, subscription_tier: profile.subscription_tier }, null);
+      getEffectivePlan({ role: profile.role, subscription_tier: profile.subscription_tier }, null, betaFullAccess);
   } else {
     plan = getEffectivePlan(
       { role: profile.role, subscription_tier: profile.subscription_tier },
       null,
+      betaFullAccess,
     );
   }
 
@@ -508,6 +509,7 @@ export class AuthService {
               : getEffectivePlan(
                   { role: profile.role, subscription_tier: profile.subscription_tier },
                   null,
+                  betaFullAccess,
                 ),
             role: profile.role,
             subscription_tier: profile.subscription_tier,
@@ -653,8 +655,8 @@ export class AuthService {
               fullName: (meta.full_name ?? email.split('@')[0]) as string,
               avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
               plan: isDemoMode
-                ? (localStorage.getItem(`bizscope_user_plan_${email}`) ?? localStorage.getItem('bizscope_user_plan') ?? getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null))
-                : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null),
+                ? (localStorage.getItem(`bizscope_user_plan_${email}`) ?? localStorage.getItem('bizscope_user_plan') ?? getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null, betaFullAccess))
+                : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null, betaFullAccess),
               role: cachedRole,
               subscription_tier: cachedTier,
             });

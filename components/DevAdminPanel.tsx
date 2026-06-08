@@ -7,7 +7,7 @@ import {
 import { SubscriptionPlan, previewRoleToEffectivePlan } from '../src/utils/planUtils';
 import { UserProfile } from '../services/authService';
 import { AuthService } from '../services/authService';
-import { appConfig, isDemoMode } from '../src/config/appConfig';
+import { appConfig, isDemoMode, betaFullAccess } from '../src/config/appConfig';
 import { supabase } from '../services/supabaseClient';
 import { PRICING_CARDS } from '../src/config/plans';
 
@@ -363,16 +363,34 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
                 liveLabel="Supabase"
                 mockLabel="Mock seed"
               />
-              {/* Active plan row */}
-              <div className="flex items-center justify-between pt-2 mt-1 border-t border-dashed border-gray-200">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Active plan</span>
-                <span className={`text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full border ${
-                  previewActive
-                    ? 'bg-amber-50 border-amber-200 text-amber-800'
-                    : 'bg-gray-100 border-gray-200 text-gray-700'
-                }`}>
-                  {currentPlan}{previewActive ? ' (preview)' : ''}
-                </span>
+              {/* Active plan / entitlement diagnostic rows */}
+              <div className="pt-2 mt-1 border-t border-dashed border-gray-200 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Effective plan</span>
+                  <span className={`text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full border ${
+                    previewActive
+                      ? 'bg-amber-50 border-amber-200 text-amber-800'
+                      : 'bg-gray-100 border-gray-200 text-gray-700'
+                  }`}>
+                    {currentPlan}{previewActive ? ' (preview)' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Stored role</span>
+                  <span className="text-[10px] font-mono text-gray-500">
+                    {currentUser?.role ?? '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Beta override</span>
+                  <span className={`text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full border ${
+                    betaFullAccess
+                      ? 'bg-purple-50 border-purple-200 text-purple-700'
+                      : 'bg-gray-100 border-gray-200 text-gray-400'
+                  }`}>
+                    {betaFullAccess ? 'ON → Pro+' : 'off'}
+                  </span>
+                </div>
               </div>
             </div>
           )}

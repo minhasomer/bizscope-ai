@@ -148,6 +148,20 @@ export const appConfig = {
    * changing real subscription data. Admin users see it in production.
    */
   enableDeveloperTools: _isDemoMode,
+  /**
+   * Private-beta full-access override (VITE_BETA_FULL_ACCESS=true).
+   *
+   * When true, getEffectivePlan() returns 'Pro+' for every authenticated
+   * non-Admin user, regardless of their stored subscription_tier or role.
+   * Unauthenticated visitors are never affected.
+   *
+   * Toggle:    VITE_BETA_FULL_ACCESS=true  in Vercel env vars → redeploy
+   * Kill switch: set to false (or remove) → redeploy; all users revert to
+   *             their real stored plan automatically. No DB changes needed.
+   *
+   * This is a BUILD-TIME flag. Changing it requires a new Vercel deployment.
+   */
+  betaFullAccess: _betaFullAccess,
 } as const;
 
 // ─── Convenience named exports ───────────────────────────────────────────────
@@ -159,7 +173,30 @@ export const isDemoMode: boolean = appConfig.isDemoMode;
 /** True when Supabase env vars are present. @see appConfig.useRealAuth */
 export const useRealAuth: boolean = appConfig.useRealAuth;
 
+/**
+ * True when VITE_BETA_FULL_ACCESS=true.
+ *
+ * Authenticated non-Admin users receive effective Pro+ access while this is set.
+ * Unauthenticated visitors are never elevated. Admin users stay at Enterprise.
+ * Set to false (or omit) at any time to revert all users to their real plan.
+ *
+ * @see appConfig.betaFullAccess
+ */
+export const betaFullAccess: boolean = appConfig.betaFullAccess;
+
 // ─── Beta real-reports gate ──────────────────────────────────────────────────
+
+// ─── Private-beta full-access flag ──────────────────────────────────────────
+//
+// VITE_BETA_FULL_ACCESS=true → every authenticated non-Admin user is resolved
+// to effective Pro+ by getEffectivePlan(). Set to false (or omit) to revert
+// everyone to their real stored plan without any manual DB changes.
+//
+// Statically replaced at build time (like VITE_DEMO_MODE). Never set this via
+// import.meta.env at runtime — the vite.config.ts define block handles it.
+const _betaFullAccess: boolean =
+  process.env.VITE_BETA_FULL_ACCESS === 'true' ||
+  (process.env.VITE_BETA_FULL_ACCESS as unknown) === true;
 
 const _realReportsEnabled: boolean =
   process.env.VITE_REAL_REPORTS_ENABLED === 'true' ||

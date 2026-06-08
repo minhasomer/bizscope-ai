@@ -59,21 +59,36 @@ export function dbTierToSubscriptionPlan(tier: string): SubscriptionPlan {
  *   1. demoPlanOverride — pass the demo-switcher value when VITE_DEMO_MODE=true,
  *      null in live mode. This lets the sandbox UI test any plan tier without
  *      touching the real DB.
- *   2. Role-based grants — Admin unlocks Enterprise, BetaTester unlocks Pro+.
- *   3. subscription_tier from the Supabase profile row.
- *   4. 'Explorer' as the safe default when no profile is available.
+ *   2. Admin role → Enterprise (always; beta override cannot weaken admin access).
+ *   3. betaFullAccess — when true and the user is authenticated (profile non-null),
+ *      returns 'Pro+' regardless of stored role or subscription_tier.
+ *      Unauthenticated users (profile = null) are never elevated.
+ *      Pass appConfig.betaFullAccess from the call site.
+ *   4. BetaTester role → Pro+.
+ *   5. subscription_tier from the Supabase profile row.
+ *   6. 'Explorer' as the safe default when no profile is available.
  */
 export function getEffectivePlan(
   profile: { role: string; subscription_tier: string } | null,
   demoPlanOverride: SubscriptionPlan | null,
+  betaFullAccess = false,
 ): SubscriptionPlan {
   // Demo mode: the switcher wins unconditionally — this is UI-testing only.
   if (demoPlanOverride !== null) return demoPlanOverride;
 
+  // No profile → unauthenticated visitor. Beta override never applies.
   if (!profile) return 'Explorer';
 
-  // Internal role grants — cannot be set by the user from the frontend.
-  if (isAdmin(profile.role))      return 'Enterprise';
+  // Admin is never demoted by the beta flag.
+  if (isAdmin(profile.role)) return 'Enterprise';
+
+  // Private-beta full-access: elevate every authenticated non-Admin user to Pro+.
+  // Controlled by VITE_BETA_FULL_ACCESS env var; defaults to false.
+  // Removing the flag (or setting it false) reverts users to their stored plan
+  // without any DB changes.
+  if (betaFullAccess) return 'Pro+';
+
+  // Permanent role-based grants (BetaTester set manually in Supabase).
   if (isBetaTester(profile.role)) return 'Pro+';
 
   return dbTierToSubscriptionPlan(profile.subscription_tier);

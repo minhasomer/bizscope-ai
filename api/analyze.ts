@@ -260,9 +260,18 @@ const _srKeyDiag = (() => {
   return { isJwt, isSbSecret, roleClaim };
 })();
 
+// Server-side beta full-access flag. Set BETA_FULL_ACCESS=true in Vercel
+// environment variables (NOT VITE_-prefixed — this is never sent to the browser).
+// When true, any authenticated user is treated as Pro+ for report generation.
+// Admin users are unaffected (they already resolve to Enterprise).
+// Set to false or remove the var to revert all users to their stored plan.
+const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
+
 function getServerSidePlan(role: string, subscription_tier: string): string {
   const r = (role ?? '').trim().toLowerCase();
   if (r === 'admin') return 'Enterprise';
+  // Private-beta override: authenticated non-Admin users get Pro+ on the server too.
+  if (_serverBetaFullAccess) return 'Pro+';
   if (r === 'betatester' || r === 'beta_tester' || r === 'beta_vip') return 'Pro+';
   return normalizeTierToBudgetPlan(subscription_tier);
 }
@@ -413,7 +422,11 @@ export default async function handler(
     req.headers['authorization'] as string | undefined,
   );
 
-  if (!BETA_ROLES.includes(verifiedRole)) {
+  // Allow through if:
+  //   a) BETA_FULL_ACCESS=true (all authenticated users during private beta), OR
+  //   b) the user's stored role is in BETA_ROLES (Admin / BetaTester always allowed).
+  // Unauthenticated requests are rejected above (no verifiedUserId) before reaching here.
+  if (!_serverBetaFullAccess && !BETA_ROLES.includes(verifiedRole)) {
     return json(res, 403, {
       error: 'Real reports are restricted to beta users.',
       code: 'BETA_RESTRICTED',

@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => {
         'process.env.VITE_DEMO_MODE': JSON.stringify(env.VITE_DEMO_MODE ?? 'false'),
         'process.env.VITE_REAL_REPORTS_ENABLED': JSON.stringify(env.VITE_REAL_REPORTS_ENABLED ?? 'false'),
         'process.env.VITE_BETA_ROLES': JSON.stringify(env.VITE_BETA_ROLES ?? ''),
+        // Private-beta full-access override. When 'true', every authenticated
+        // non-Admin user receives effective Pro+ entitlement client-side.
+        // Defaults to 'false' so omitting the var is always the safe production state.
+        'process.env.VITE_BETA_FULL_ACCESS': JSON.stringify(env.VITE_BETA_FULL_ACCESS ?? 'false'),
       },
       resolve: {
         alias: {
