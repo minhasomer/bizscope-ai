@@ -1150,12 +1150,12 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         </p>
                       </div>
                       {/* Basic Startup Cost Range - Always visible to free tier */}
-                      <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-150 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-150 grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                               <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estimated Startup Cost</p>
                               <p className="text-2xl font-black text-gray-900 mt-1">{report.financialProjections.startupCostRange}</p>
                           </div>
-                          <div className="flex-1 md:max-w-md">
+                          <div>
                               <p className="text-xs text-gray-405 font-bold uppercase tracking-wider">Cost Breakdown</p>
                               <p className="text-xs text-gray-650 mt-1 leading-relaxed italic">{report.financialProjections.startupCostBreakdown}</p>
                           </div>
