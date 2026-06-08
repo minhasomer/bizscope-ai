@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AuthService, UserProfile, EmailConfirmationRequiredError } from '../services/authService';
+import { AuthService, UserProfile, EmailConfirmationRequiredError, DuplicateEmailError } from '../services/authService';
 import { isDemoMode } from '../src/config/appConfig';
 import {
   Lock,
@@ -35,6 +35,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Set to the email when Supabase confirms the address already has an account
+  const [duplicateEmail, setDuplicateEmail] = useState<string | null>(null);
   // Set to the email address when email confirmation is required after signup
   const [signupPendingEmail, setSignupPendingEmail] = useState<string | null>(null);
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -90,7 +92,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
         setEmail('');
       }
     } catch (err: any) {
-      if (err instanceof EmailConfirmationRequiredError) {
+      if (err instanceof DuplicateEmailError) {
+        setDuplicateEmail(email);
+      } else if (err instanceof EmailConfirmationRequiredError) {
         setSignupPendingEmail(email);
       } else {
         setError(err?.message || 'Something went wrong. Please check your details and try again.');
@@ -123,6 +127,54 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
       setResendStatus('error');
     }
   };
+
+  // ── Duplicate-account screen (existing email detected via identities.length === 0) ──
+  if (duplicateEmail) {
+    return (
+      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-bl-full pointer-events-none -mr-4 -mt-4 opacity-50" />
+        <div className="text-center mb-8 relative z-10">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <img src="/logo.svg" alt="BizScope" className="h-9 w-9 shrink-0" />
+            <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">
+              BizScope<span className="text-[11px] font-semibold text-slate-400 ml-1 normal-case tracking-wide">AI</span>
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center text-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+            <AlertCircle className="w-7 h-7 text-amber-500" />
+          </div>
+          <div>
+            <h3 className="text-base font-black text-gray-900 tracking-tight">Account already exists</h3>
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed max-w-xs">
+              An account with this email already exists. Please sign in, or reset your password if you've forgotten it.
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1 font-mono">{duplicateEmail}</p>
+          </div>
+
+          <div className="w-full space-y-2 mt-2">
+            <button
+              type="button"
+              onClick={() => { setDuplicateEmail(null); handleModeChange('login'); }}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-5 py-3 rounded-xl text-xs font-black uppercase text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md tracking-wider cursor-pointer"
+            >
+              Sign In <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setDuplicateEmail(null); handleModeChange('forgot'); }}
+              className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-extrabold text-gray-500 hover:text-gray-800 transition-colors py-2 cursor-pointer"
+            >
+              Forgot password?
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Verification-pending screen (replaces form after signup when email confirmation is required) ──
   if (signupPendingEmail) {

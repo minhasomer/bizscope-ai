@@ -7,18 +7,34 @@ import { isDemoMode, betaFullAccess } from '../src/config/appConfig';
 
 /**
  * Thrown by signUp when Supabase requires email confirmation before the account
- * is active. The UI should display this as a success/informational message and
- * NOT attempt to sign the user in.
+ * is active. The UI should show a verification-pending screen.
  *
- * Two cases both throw this:
- *  1. data.user present, data.session null → fresh signup, confirmation email sent.
- *  2. data.user null, no API error → email already registered (Supabase anti-enumeration).
- *     We cannot distinguish this from case 1 without leaking whether the email exists.
+ * Covers: fresh signup where confirmation email was sent.
  */
 export class EmailConfirmationRequiredError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'EmailConfirmationRequiredError';
+  }
+}
+
+/**
+ * Thrown by signUp when the submitted email already has an account.
+ *
+ * Detection: Supabase anti-enumeration returns { user: <fake>, identities: [],
+ * session: null, error: null } for existing emails (both confirmed and
+ * unconfirmed). An empty identities array is the reliable signal — a genuine
+ * new signup always has identities.length >= 1.
+ *
+ * Security note: the identities array is already present in the JS SDK
+ * response object, so reading it does not introduce new enumeration capability
+ * beyond what the API already exposes. We do NOT distinguish confirmed vs
+ * unconfirmed (that would require a second API call and is unnecessary for UX).
+ */
+export class DuplicateEmailError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DuplicateEmailError';
   }
 }
 
@@ -305,9 +321,23 @@ export class AuthService {
 
       const user = data.user;
 
-      // No session means email confirmation is required (or the email already exists —
-      // Supabase returns { user: null, session: null } for existing emails to prevent
-      // enumeration). Either way, the user must check their inbox before signing in.
+      // Anti-enumeration detection:
+      // Supabase returns { user: <fake random user>, identities: [], session: null }
+      // for ANY existing email (confirmed or unconfirmed) to prevent account probing.
+      // An empty identities array is the reliable discriminator — a genuine new
+      // signup always has identities.length >= 1. We treat both confirmed and
+      // unconfirmed existing accounts the same way (can't distinguish without a
+      // second API call, and the UX guidance is the same either way).
+      const identitiesCount = data.user?.identities?.length ?? -1;
+      console.log('[Auth] signUp identities count:', identitiesCount, '(0 = existing account anti-enum)');
+
+      if (!data.session && identitiesCount === 0) {
+        throw new DuplicateEmailError(
+          'An account with this email already exists. Please sign in, or reset your password if you\'ve forgotten it.',
+        );
+      }
+
+      // No session but identities present → genuine new signup, confirmation email sent.
       if (!user || !data.session) {
         throw new EmailConfirmationRequiredError(
           'Account created. Please check your email to verify your account before signing in.',
