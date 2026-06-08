@@ -1039,3 +1039,51 @@ const generateMockMockDataWithDelay = async (businessType: string, location: str
   await new Promise(resolve => setTimeout(resolve, 350));
   return generateMockRegionalData(businessType, location);
 };
+
+// ─── Anonymous preview report ─────────────────────────────────────────────────
+// Calls the dedicated /api/preview endpoint (no auth required).
+// Always live — demo mode does not apply to anonymous users.
+// UsageTrackerService.incrementAnonymousPreviewUsage() must be called by the
+// caller AFTER this resolves successfully.
+
+export const generateAnonymousPreviewReport = async (
+  businessType: string,
+  location: string,
+  userLocation: UserLocation | null,
+  setLoadingMessage: (message: string) => void,
+): Promise<ViabilityReport> => {
+  assertLiveService('generateAnonymousPreviewReport');
+
+  const _progressTimers = [
+    setTimeout(() => setLoadingMessage('Researching local competition...'), 4000),
+    setTimeout(() => setLoadingMessage('Analyzing market demand and demographics...'), 12000),
+    setTimeout(() => setLoadingMessage('Building your free viability preview...'), 22000),
+  ];
+  const _clearProgressTimers = () => _progressTimers.forEach(t => clearTimeout(t));
+
+  setLoadingMessage('Generating your free preview...');
+
+  try {
+    const response = await fetch('/api/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessType, location, userLocation }),
+    });
+
+    _clearProgressTimers();
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errField = errorData.error;
+      const message = typeof errField === 'string'
+        ? errField
+        : (errField?.message ?? `Server responded with status ${response.status}`);
+      throw new Error(message);
+    }
+
+    const result = await response.json() as ViabilityReport;
+    return result;
+  } finally {
+    _clearProgressTimers();
+  }
+};

@@ -8,7 +8,7 @@ import { PricingTiers } from './components/PricingTiers';
 import { OpportunityExplorer } from './components/OpportunityExplorer';
 import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
-import { generateViabilityReport } from './services/geminiService';
+import { generateViabilityReport, generateAnonymousPreviewReport } from './services/geminiService';
 import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess } from './src/config/appConfig';
 import type { ViabilityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
@@ -82,6 +82,10 @@ const App: React.FC = () => {
     location: string;
     forceRegenerate: boolean;
   } | null>(null);
+
+  // True when an anonymous user has already used their one free preview.
+  // Drives a signup CTA in the results area instead of an error message.
+  const [showPreviewCTA, setShowPreviewCTA] = useState(false);
 
   // Effective plan driving all feature gating — preview only active in local dev.
   const userPlan: SubscriptionPlan = (import.meta.env.DEV && previewRole !== null)
@@ -341,6 +345,47 @@ const App: React.FC = () => {
   };
 
   /**
+   * Anonymous preview generation — calls /api/preview, no auth required.
+   * Increments UsageTrackerService after a successful report so the counter
+   * only advances when the user actually received a result.
+   */
+  const runAnonymousPreview = useCallback(async (
+    businessType: string,
+    location: string,
+  ) => {
+    console.log(`[BizScope] runAnonymousPreview: biz="${businessType}" loc="${location}"`);
+    setIsLoading(true);
+    setError(null);
+    setReport(null);
+    setShowPreviewCTA(false);
+    setCurrentView('home');
+    setTimeout(() => {
+      document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+
+    try {
+      const previewReport = await generateAnonymousPreviewReport(
+        businessType,
+        location,
+        userLocation,
+        setLoadingMessage,
+      );
+      UsageTrackerService.incrementAnonymousPreviewUsage();
+      setReport(previewReport);
+      setTimeout(() => {
+        document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (err) {
+      console.error(err);
+      const rawMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
+      setError(rawMessage);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
+    }
+  }, [userLocation]);
+
+  /**
    * Core generation logic — handles the actual Gemini call (or mock in Demo Mode).
    * Extracted so both handleAnalysisRequest and the live-mode confirm modal can call it.
    */
@@ -353,6 +398,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setReport(null);
+    setShowPreviewCTA(false);
     setCurrentView('home');
     // Scroll to results immediately so the loading indicator is visible
     setTimeout(() => {
@@ -416,6 +462,26 @@ const App: React.FC = () => {
     location: string,
     forceRegenerate: boolean = false,
   ) => {
+    // ── Anonymous preview branch ───────────────────────────────────────────────
+    // Unauthenticated users get one free preview via /api/preview.
+    // Authenticated users fall through to the standard authenticated flow below.
+    if (!currentUser) {
+      if (!UsageTrackerService.canRunAnonymousPreview()) {
+        // Preview already used — show signup CTA instead of running the API.
+        setShowPreviewCTA(true);
+        setReport(null);
+        setError(null);
+        setCurrentView('home');
+        setTimeout(() => {
+          document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+        return;
+      }
+      await runAnonymousPreview(businessType, location);
+      return;
+    }
+    // ── End anonymous branch ───────────────────────────────────────────────────
+
     const role = currentUser?.role ?? '';
     // Admin and Enterprise users have unlimited quota — never hit the client-side limit modal.
     const isUnlimited = isAdmin(role) || userPlan === 'Enterprise';
@@ -447,7 +513,7 @@ const App: React.FC = () => {
 
     console.log(`[BizScope] handleAnalysisRequest: calling runAnalysis`);
     await runAnalysis(businessType, location, forceRegenerate);
-  }, [userPlan, currentUser, runAnalysis]);
+  }, [userPlan, currentUser, runAnalysis, runAnonymousPreview]);
 
   /** Admin confirms the live-mode cost prompt → proceed with generation. */
   const handleLiveConfirm = useCallback(async () => {
@@ -1054,8 +1120,30 @@ const App: React.FC = () => {
             <Hero onSubmit={handleAnalysisRequest} onNavigate={setCurrentView} isLoading={isLoading} hasResults={!!report || isLoading} currentPlan={userPlan} />
             
             {/* Results output block — compact preview; full report lives at 'report' view */}
-            {(isLoading || error || report) && (
+            {(isLoading || error || report || showPreviewCTA) && (
                 <div id="results-section" className="bg-gradient-to-b from-gray-50/50 to-white py-8">
+                    {/* Anonymous preview exhausted — show signup CTA */}
+                    {showPreviewCTA && !isLoading && (
+                      <div className="max-w-3xl mx-auto px-4">
+                        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-8 text-center shadow-sm">
+                          <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Lock className="w-7 h-7 text-indigo-600" />
+                          </div>
+                          <h3 className="text-xl font-black text-gray-900 mb-2">You've used your free preview</h3>
+                          <p className="text-sm text-gray-600 mb-6 max-w-sm mx-auto leading-relaxed">
+                            Create a free account to validate more business ideas, save your reports, and unlock detailed financial projections.
+                          </p>
+                          <button
+                            onClick={() => setCurrentView('settings')}
+                            className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Create Free Account
+                          </button>
+                          <p className="text-xs text-gray-400 mt-4">No credit card required</p>
+                        </div>
+                      </div>
+                    )}
                     {isLoading && (
                         <div className="max-w-3xl mx-auto px-4">
                             <Loader message={loadingMessage} />

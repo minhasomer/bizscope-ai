@@ -100,6 +100,19 @@ export interface ReportBudget {
 
 export const AI_BUDGET: Record<string, ReportBudget> = {
 
+  // ── Anonymous preview ─────────────────────────────────────────────────────
+  // One free preview per browser (enforced client-side by UsageTrackerService).
+  // Lower hard cap than Explorer:standard — anonymous calls are never retried.
+  'Anonymous:preview': {
+    model:                GEMINI_MODELS.standard,
+    targetCostUsd:        0.004,
+    hardCapUsd:           0.015,
+    maxInputTokens:       8_000,
+    maxOutputTokens:      6144,
+    maxRetries:           0,
+    synthesisTimeoutMs:   25_000,
+  },
+
   // ── Explorer standard ─────────────────────────────────────────────────────
   'Explorer:standard': {
     model:                GEMINI_MODELS.standard,

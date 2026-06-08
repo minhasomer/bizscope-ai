@@ -903,6 +903,23 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth">
+        {/* Anonymous preview banner — shown when report was generated without an account */}
+        {report.isPreview && (
+          <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+            <div className="text-center sm:text-left">
+              <p className="text-white font-black text-sm">You're viewing your free preview</p>
+              <p className="text-indigo-200 text-xs mt-0.5">
+                Create a free account to save this report, run more analyses, and unlock detailed projections.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate('settings')}
+              className="shrink-0 px-5 py-2.5 bg-white text-indigo-700 text-xs font-black rounded-xl hover:bg-indigo-50 transition-colors cursor-pointer shadow-sm whitespace-nowrap"
+            >
+              Create Free Account
+            </button>
+          </div>
+        )}
         {/* Location confidence warning */}
         {report.locationWarning && (
           <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 text-amber-800 text-sm">

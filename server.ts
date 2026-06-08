@@ -1328,6 +1328,12 @@ async function startServer() {
     return dossierHandler(req as any, res as any);
   });
 
+  // API 6: /api/preview (anonymous free preview — no auth required)
+  app.post("/api/preview", async (req: Request, res: Response) => {
+    const previewHandler = (await import('./api/preview.js')).default;
+    return previewHandler(req as any, res as any);
+  });
+
   // -------------------------------------------------------------
 
   // ---- Stripe Routes ----
