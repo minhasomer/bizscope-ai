@@ -593,6 +593,89 @@ if (!supabaseAdmin) {
     'Set both env vars and redeploy to enable enforcement.');
 }
 
+// ── Shared server-side report cache (Supabase report_cache table) ─────────────
+// Keyed by (business_type, location, report_type, plan_tier, analysis_version).
+// Accessed via the service-role key only — authenticated users have no direct access.
+
+const CACHE_VERSION = 'v1';
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function normalizeCacheKey(s: string): string {
+  return s.toLowerCase().trim();
+}
+
+async function getFromServerCache(
+  businessType: string,
+  location: string,
+  reportType: string,
+  planTier: string
+): Promise<any | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('report_cache')
+      .select('report, created_at')
+      .eq('business_type', normalizeCacheKey(businessType))
+      .eq('location', normalizeCacheKey(location))
+      .eq('report_type', reportType)
+      .eq('plan_tier', normalizeCacheKey(planTier))
+      .eq('analysis_version', CACHE_VERSION)
+      .single();
+
+    if (error || !data) return null;
+
+    const ageMs = Date.now() - new Date(data.created_at).getTime();
+    if (ageMs > CACHE_TTL_MS) {
+      console.log(`[ServerCache] Expired — ${businessType} / ${location} (${reportType}, ${Math.floor(ageMs / 86400000)}d old)`);
+      return null;
+    }
+
+    console.log(`[ServerCache] HIT — ${businessType} / ${location} (${reportType}) generated ${data.created_at}`);
+    return { ...data.report, _cached: true, _generatedAt: data.created_at };
+  } catch (err) {
+    console.warn('[ServerCache] get error (non-fatal):', err);
+    return null;
+  }
+}
+
+async function setInServerCache(
+  businessType: string,
+  location: string,
+  reportType: string,
+  planTier: string,
+  report: any
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const cleanReport = { ...report };
+    delete cleanReport._cached;
+    delete cleanReport._generatedAt;
+
+    const { error } = await supabaseAdmin
+      .from('report_cache')
+      .upsert(
+        {
+          business_type: normalizeCacheKey(businessType),
+          location: normalizeCacheKey(location),
+          report_type: reportType,
+          plan_tier: normalizeCacheKey(planTier),
+          analysis_version: CACHE_VERSION,
+          report: cleanReport,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'business_type,location,report_type,plan_tier,analysis_version' }
+      );
+
+    if (error) {
+      console.warn('[ServerCache] upsert error (non-fatal):', error.message);
+    } else {
+      console.log(`[ServerCache] STORED — ${businessType} / ${location} (${reportType})`);
+    }
+  } catch (err) {
+    console.warn('[ServerCache] set error (non-fatal):', err);
+  }
+}
+
 const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
 
 function getServerSidePlan(role: string, subscription_tier: string): string {
@@ -844,7 +927,7 @@ async function startServer() {
 
   // API 1: /api/analyze
   app.post("/api/analyze", async (req: Request, res: Response) => {
-    const { businessType, location, userLocation } = req.body;
+    const { businessType, location, userLocation, forceRegenerate } = req.body;
 
     const { verifiedEmail: userEmail, verifiedPlan: planTier, verifiedRole } = await verifyAndGetPlan(
       req.headers["authorization"] as string | undefined
@@ -862,21 +945,32 @@ async function startServer() {
       });
     }
 
-    // Enforce limits on the server-side to secure the live deployment
-    const limitCheck = checkServerLimit(userEmail, planTier, false);
-    if (!limitCheck.allowed) {
-      return res.status(429).json({ 
-        error: limitCheck.error, 
-        code: "USAGE_LIMIT_EXCEEDED" 
-      });
-    }
-
-    // Input Validation
+    // Input Validation (before cache check so we don't cache-lookup bad inputs)
     if (!businessType || typeof businessType !== "string" || !businessType.trim()) {
       return res.status(400).json({ error: "Missing or invalid businessType parameter.", code: "INVALID_INPUT" });
     }
     if (!location || typeof location !== "string" || !location.trim()) {
       return res.status(400).json({ error: "Missing or invalid location parameter.", code: "INVALID_INPUT" });
+    }
+
+    // Server-side shared cache check — before quota so cache hits are always free.
+    if (!forceRegenerate) {
+      const cached = await getFromServerCache(businessType, location, 'standard', planTier);
+      if (cached) {
+        console.log(`[Analyze] Cache hit — skipping Gemini and quota for ${businessType} / ${location}`);
+        return res.json(cached);
+      }
+    } else {
+      console.log(`[Analyze] forceRegenerate=true — bypassing cache for ${businessType} / ${location}`);
+    }
+
+    // Enforce limits on the server-side to secure the live deployment
+    const limitCheck = checkServerLimit(userEmail, planTier, false);
+    if (!limitCheck.allowed) {
+      return res.status(429).json({
+        error: limitCheck.error,
+        code: "USAGE_LIMIT_EXCEEDED"
+      });
     }
 
     // API Key Security check
@@ -1062,6 +1156,9 @@ async function startServer() {
         });
       }
 
+      // Store in shared server-side cache so all devices get the same report.
+      await setInServerCache(businessType, location, 'standard', planTier, parsed);
+
       incrementServerLimit(userEmail, false);
       res.json(parsed);
     } catch (err) {
@@ -1074,7 +1171,7 @@ async function startServer() {
   // Explorer and unauthenticated users are served mock data client-side and
   // must never reach this endpoint with a real Gemini call.
   app.post("/api/opportunities", async (req: Request, res: Response) => {
-    const { location } = req.body;
+    const { location, forceRegenerate } = req.body;
 
     console.log(`[Opportunities] Request received — location="${location ?? '(none)'}"`);
 
@@ -1095,6 +1192,17 @@ async function startServer() {
         error: "Market Gap analysis with real AI requires a Pro or higher plan.",
         code: "INSUFFICIENT_PLAN",
       });
+    }
+
+    // Server-side shared cache check — cache hits skip Gemini entirely.
+    if (!forceRegenerate) {
+      const cached = await getFromServerCache('market_gaps', location, 'opportunities', verifiedPlan);
+      if (cached) {
+        console.log(`[Opportunities] Cache hit — skipping Gemini for ${location}`);
+        return res.json(cached);
+      }
+    } else {
+      console.log(`[Opportunities] forceRegenerate=true — bypassing cache for ${location}`);
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -1219,6 +1327,9 @@ async function startServer() {
       parsed.location = location;
 
       console.log(`[Opportunities] Success — model=${cheaperModel} opportunityCount=${parsed.topOpportunities?.length ?? 0} groundingSources=${parsed.groundingSources?.length ?? 0}`);
+
+      // Store in shared server-side cache so all devices get the same opportunities.
+      await setInServerCache('market_gaps', location, 'opportunities', verifiedPlan, parsed);
 
       res.json(parsed);
     } catch (err) {

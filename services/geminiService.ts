@@ -645,6 +645,7 @@ export const generateViabilityReport = async (
                 location,
                 userLocation,
                 planTier,
+                forceRegenerate: !!forceRegenerate,
                 userEmail: localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai'
             })
         });
@@ -827,7 +828,7 @@ export const generateOpportunityReport = async (
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ location })
+        body: JSON.stringify({ location, forceRegenerate: false })
     });
 
     if (!response.ok) {
