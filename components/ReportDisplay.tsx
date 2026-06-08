@@ -927,6 +927,46 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <span><strong>Unverified location:</strong> {report.locationWarning}</span>
           </div>
         )}
+
+        {/* Freshness banner — generated date + cache status */}
+        {(() => {
+          const FRESHNESS_DAYS = report._freshnessDays ?? 90;
+          const rawDate = report._generatedAt ?? report.generationMeta?.generatedAt;
+          if (!rawDate) return null;
+          const genDate = new Date(rawDate);
+          const ageDays = Math.floor((Date.now() - genDate.getTime()) / 86_400_000);
+          const isOld   = ageDays > FRESHNESS_DAYS;
+          return (
+            <div className={`flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl px-5 py-3.5 border text-xs print:hidden ${
+              isOld
+                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                : report._refreshedFromStale
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : report._cached
+                ? 'bg-sky-50 border-sky-200 text-sky-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            }`}>
+              <span className="grow">
+                {isOld
+                  ? `⏳ This report was generated ${ageDays} day${ageDays !== 1 ? 's' : ''} ago. Local conditions may have changed.`
+                  : report._refreshedFromStale
+                  ? '✅ Fresh analysis generated today — previous data was outdated.'
+                  : report._cached
+                  ? `✅ Generated on ${genDate.toLocaleDateString()}. Using a recently generated analysis to keep results consistent across users.`
+                  : `✅ Fresh analysis generated on ${genDate.toLocaleDateString()}.`
+                }
+              </span>
+              {isOld && onRegenerate && (
+                <button
+                  onClick={handleRegenerateClick}
+                  className="shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  Run Fresh Analysis
+                </button>
+              )}
+            </div>
+          );
+        })()}
         {/* Header and Score Card */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-150 p-6 md:p-8 relative overflow-hidden">
             {/* Soft decorative visual gradient */}
@@ -1010,13 +1050,18 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             {/* Quick Actions Footer Section */}
             <div className="flex flex-wrap gap-2.5 justify-center md:justify-start border-t border-gray-100 pt-6 print:hidden">
                 {onRegenerate && (
-                    <button 
-                      onClick={handleRegenerateClick}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-extrabold text-xs shadow-md cursor-pointer border border-transparent"
-                    >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Regenerate Analysis</span>
-                    </button>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={handleRegenerateClick}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-extrabold text-xs shadow-md cursor-pointer border border-transparent"
+                      >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Run Fresh Analysis</span>
+                      </button>
+                      <span className="text-[10px] text-gray-400 leading-tight max-w-[200px]">
+                        Creates a new report using current data and may count against your report limit.
+                      </span>
+                    </div>
                 )}
                 <button 
                   onClick={() => setShowMapModal(true)}
@@ -1817,15 +1862,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     <AlertTriangle className="h-6 w-6" />
                   </div>
                   <h3 className="text-lg font-black text-gray-900 tracking-tight" id="regen-modal-title">
-                    Regenerate Live Analysis?
+                    Run Fresh Analysis?
                   </h3>
                 </div>
-                
+
                 <p className="text-xs text-gray-500 leading-relaxed mb-6">
-                  Regenerating this viability study will run a fresh AI analysis for this business and location.
+                  This will run a new AI analysis for this business and location using current data.
                   <br />
                   <br />
-                  This bypasses any cached result and will count towards your report quota. Do you wish to proceed?
+                  It bypasses the shared cache and will count against your report limit. Do you wish to proceed?
                 </p>
 
                 <div className="flex gap-3 justify-end">
@@ -1839,7 +1884,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     onClick={handleRegenerateConfirm}
                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
                   >
-                    Yes, Regenerate
+                    Yes, Run Fresh Analysis
                   </button>
                 </div>
               </div>

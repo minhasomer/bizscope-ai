@@ -179,6 +179,22 @@ export interface OpportunityReport {
   topOpportunities: BusinessOpportunity[];
   methodology: string;
   groundingSources: GroundingSource[];
+  // Generation / cache metadata — present on live AI reports, absent on mock
+  generationMeta?: {
+    model: string;
+    isLiveGenerated: boolean;
+    estimatedCostUsd: number | null;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    generatedAt: string;
+  };
+  // Cache freshness metadata — added by the server cache layer
+  _cached?: boolean;
+  _generatedAt?: string;
+  _cacheAgeDays?: number;
+  _freshnessDays?: number;
+  _isStale?: boolean;
+  _refreshedFromStale?: boolean;
 }
 
 export interface FranchiseTerritoryCheck {
@@ -280,6 +296,13 @@ export interface ViabilityReport {
     outputTokens: number | null;
     generatedAt: string;
   };
+  // Cache freshness metadata — added by the server cache layer
+  _cached?: boolean;
+  _generatedAt?: string;
+  _cacheAgeDays?: number;
+  _freshnessDays?: number;
+  _isStale?: boolean;
+  _refreshedFromStale?: boolean;
 }
 
 export interface NearbyRegionData {

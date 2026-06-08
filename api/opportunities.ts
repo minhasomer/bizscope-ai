@@ -173,17 +173,25 @@ const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
 
 // ── Shared server-side report cache ──────────────────────────────────────────
 const CACHE_VERSION = 'v1';
-const CACHE_TTL_MS  = 30 * 24 * 60 * 60 * 1000; // 30 days
+const MARKET_GAP_CACHE_MAX_AGE_DAYS = 45;
 
 function normalizeCacheKey(s: string): string {
   return s.toLowerCase().trim();
+}
+
+interface CacheHit {
+  report:       any;
+  isStale:      boolean;
+  cacheAgeDays: number;
+  generatedAt:  string;
 }
 
 async function getFromServerCache(
   businessType: string,
   location: string,
   reportType: string,
-): Promise<any | null> {
+  maxAgeDays: number,
+): Promise<CacheHit | null> {
   if (!supabaseAdmin) return null;
   try {
     const { data, error } = await supabaseAdmin
@@ -195,13 +203,15 @@ async function getFromServerCache(
       .eq('analysis_version', CACHE_VERSION)
       .single();
     if (error || !data) return null;
-    const ageMs = Date.now() - new Date(data.created_at).getTime();
-    if (ageMs > CACHE_TTL_MS) {
-      console.log(`[ServerCache] Expired — ${businessType} / ${location} (${reportType}, ${Math.floor(ageMs / 86400000)}d old)`);
-      return null;
+    const ageMs        = Date.now() - new Date(data.created_at).getTime();
+    const cacheAgeDays = Math.floor(ageMs / 86_400_000);
+    const isStale      = ageMs > maxAgeDays * 86_400_000;
+    if (isStale) {
+      console.log(`[ServerCache] STALE — ${businessType} / ${location} (${reportType}, ${cacheAgeDays}d old, max ${maxAgeDays}d)`);
+    } else {
+      console.log(`[ServerCache] HIT fresh — ${businessType} / ${location} (${reportType}, ${cacheAgeDays}d old)`);
     }
-    console.log(`[ServerCache] HIT — ${businessType} / ${location} (${reportType}) generated ${data.created_at}`);
-    return { ...data.report, _cached: true, _generatedAt: data.created_at };
+    return { report: data.report, isStale, cacheAgeDays, generatedAt: data.created_at };
   } catch (err) {
     console.warn('[ServerCache] get error (non-fatal):', err);
     return null;
@@ -418,12 +428,21 @@ export default async function handler(
   }
 
   // ── Shared cache check — before Gemini so cache hits skip AI entirely ────
+  let cacheWasStale = false;
   if (!forceRegenerate) {
-    const cached = await getFromServerCache('market_gaps', location, 'opportunities');
-    if (cached) {
+    const cacheHit = await getFromServerCache('market_gaps', location, 'opportunities', MARKET_GAP_CACHE_MAX_AGE_DAYS);
+    if (cacheHit && !cacheHit.isStale) {
       console.log(`[Opportunities] Cache hit — returning cached opportunities, no Gemini call for ${location}`);
-      return json(res, 200, cached);
+      return json(res, 200, {
+        ...cacheHit.report,
+        _cached:        true,
+        _generatedAt:   cacheHit.generatedAt,
+        _cacheAgeDays:  cacheHit.cacheAgeDays,
+        _freshnessDays: MARKET_GAP_CACHE_MAX_AGE_DAYS,
+        _isStale:       false,
+      });
     }
+    cacheWasStale = !!cacheHit?.isStale;
   } else {
     console.log(`[Opportunities] forceRegenerate=true — bypassing cache for ${location}`);
   }
@@ -613,6 +632,9 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     } catch (logErr: any) {
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
+
+    // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
+    if (cacheWasStale) parsed._refreshedFromStale = true;
 
     // Store in shared server-side cache — all accounts/devices get the same opportunities.
     await setInServerCache('market_gaps', location, 'opportunities', verifiedPlan, parsed);

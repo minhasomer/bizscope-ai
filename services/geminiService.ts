@@ -782,6 +782,7 @@ export const generateOpportunityReport = async (
     location: string,
     setLoadingMessage: (message: string) => void,
     userRole: string = '',
+    forceRegenerate: boolean = false,
 ): Promise<OpportunityReport> => {
     const _useLive = !(appConfig.isDemoMode && !isBetaRoleEnabled(userRole));
     console.log(`[BizScope] opportunities routing: role="${userRole}" isDemoMode=${appConfig.isDemoMode} isBetaRoleEnabled=${isBetaRoleEnabled(userRole)} → ${_useLive ? 'LIVE /api/opportunities' : 'MOCK'}`);
@@ -828,7 +829,7 @@ export const generateOpportunityReport = async (
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ location, forceRegenerate: false })
+        body: JSON.stringify({ location, forceRegenerate: !!forceRegenerate })
     });
 
     if (!response.ok) {

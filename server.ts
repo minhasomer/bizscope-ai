@@ -601,17 +601,26 @@ if (!supabaseAdmin) {
 // Accessed via the service-role key only — authenticated users have no direct access.
 
 const CACHE_VERSION = 'v1';
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const VIABILITY_CACHE_MAX_AGE_DAYS  = 90;
+const MARKET_GAP_CACHE_MAX_AGE_DAYS = 45;
 
 function normalizeCacheKey(s: string): string {
   return s.toLowerCase().trim();
 }
 
+interface CacheHit {
+  report:       any;
+  isStale:      boolean;
+  cacheAgeDays: number;
+  generatedAt:  string;
+}
+
 async function getFromServerCache(
   businessType: string,
   location: string,
-  reportType: string
-): Promise<any | null> {
+  reportType: string,
+  maxAgeDays: number,
+): Promise<CacheHit | null> {
   if (!supabaseAdmin) return null;
   try {
     const { data, error } = await supabaseAdmin
@@ -625,14 +634,15 @@ async function getFromServerCache(
 
     if (error || !data) return null;
 
-    const ageMs = Date.now() - new Date(data.created_at).getTime();
-    if (ageMs > CACHE_TTL_MS) {
-      console.log(`[ServerCache] Expired — ${businessType} / ${location} (${reportType}, ${Math.floor(ageMs / 86400000)}d old)`);
-      return null;
+    const ageMs        = Date.now() - new Date(data.created_at).getTime();
+    const cacheAgeDays = Math.floor(ageMs / 86_400_000);
+    const isStale      = ageMs > maxAgeDays * 86_400_000;
+    if (isStale) {
+      console.log(`[ServerCache] STALE — ${businessType} / ${location} (${reportType}, ${cacheAgeDays}d old, max ${maxAgeDays}d)`);
+    } else {
+      console.log(`[ServerCache] HIT fresh — ${businessType} / ${location} (${reportType}, ${cacheAgeDays}d old)`);
     }
-
-    console.log(`[ServerCache] HIT — ${businessType} / ${location} (${reportType}) generated ${data.created_at}`);
-    return { ...data.report, _cached: true, _generatedAt: data.created_at };
+    return { report: data.report, isStale, cacheAgeDays, generatedAt: data.created_at };
   } catch (err) {
     console.warn('[ServerCache] get error (non-fatal):', err);
     return null;
@@ -956,12 +966,21 @@ async function startServer() {
 
     // Server-side shared cache check — before quota so cache hits are always free.
     // Cache is global: same report is served to all plans/accounts for the same input.
+    let cacheWasStaleAnalyze = false;
     if (!forceRegenerate) {
-      const cached = await getFromServerCache(businessType, location, 'standard');
-      if (cached) {
+      const cacheHit = await getFromServerCache(businessType, location, 'standard', VIABILITY_CACHE_MAX_AGE_DAYS);
+      if (cacheHit && !cacheHit.isStale) {
         console.log(`[Analyze] Cache hit — skipping Gemini and quota for ${businessType} / ${location}`);
-        return res.json(cached);
+        return res.json({
+          ...cacheHit.report,
+          _cached:        true,
+          _generatedAt:   cacheHit.generatedAt,
+          _cacheAgeDays:  cacheHit.cacheAgeDays,
+          _freshnessDays: VIABILITY_CACHE_MAX_AGE_DAYS,
+          _isStale:       false,
+        });
       }
+      cacheWasStaleAnalyze = !!cacheHit?.isStale;
     } else {
       console.log(`[Analyze] forceRegenerate=true — bypassing cache for ${businessType} / ${location}`);
     }
@@ -1160,6 +1179,8 @@ async function startServer() {
         });
       }
 
+      if (cacheWasStaleAnalyze) parsed._refreshedFromStale = true;
+
       // Store in shared server-side cache so all accounts and devices get the same report.
       await setInServerCache(businessType, location, 'standard', planTier, parsed);
 
@@ -1200,12 +1221,21 @@ async function startServer() {
 
     // Server-side shared cache check — cache hits skip Gemini entirely.
     // Cache is global: same opportunities are served to all plans/accounts for the same location.
+    let cacheWasStaleOpps = false;
     if (!forceRegenerate) {
-      const cached = await getFromServerCache('market_gaps', location, 'opportunities');
-      if (cached) {
+      const cacheHit = await getFromServerCache('market_gaps', location, 'opportunities', MARKET_GAP_CACHE_MAX_AGE_DAYS);
+      if (cacheHit && !cacheHit.isStale) {
         console.log(`[Opportunities] Cache hit — skipping Gemini for ${location}`);
-        return res.json(cached);
+        return res.json({
+          ...cacheHit.report,
+          _cached:        true,
+          _generatedAt:   cacheHit.generatedAt,
+          _cacheAgeDays:  cacheHit.cacheAgeDays,
+          _freshnessDays: MARKET_GAP_CACHE_MAX_AGE_DAYS,
+          _isStale:       false,
+        });
       }
+      cacheWasStaleOpps = !!cacheHit?.isStale;
     } else {
       console.log(`[Opportunities] forceRegenerate=true — bypassing cache for ${location}`);
     }
@@ -1332,6 +1362,8 @@ async function startServer() {
       parsed.location = location;
 
       console.log(`[Opportunities] Success — model=${cheaperModel} opportunityCount=${parsed.topOpportunities?.length ?? 0} groundingSources=${parsed.groundingSources?.length ?? 0}`);
+
+      if (cacheWasStaleOpps) parsed._refreshedFromStale = true;
 
       // Store in shared server-side cache so all accounts and devices get the same opportunities.
       await setInServerCache('market_gaps', location, 'opportunities', verifiedPlan, parsed);

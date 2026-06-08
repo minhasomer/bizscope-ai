@@ -319,17 +319,25 @@ const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
 // cached report for the same input.
 
 const CACHE_VERSION = 'v1';
-const CACHE_TTL_MS  = 30 * 24 * 60 * 60 * 1000; // 30 days
+const VIABILITY_CACHE_MAX_AGE_DAYS = 90;
 
 function normalizeCacheKey(s: string): string {
   return s.toLowerCase().trim();
+}
+
+interface CacheHit {
+  report:       any;
+  isStale:      boolean;
+  cacheAgeDays: number;
+  generatedAt:  string;
 }
 
 async function getFromServerCache(
   businessType: string,
   location: string,
   reportType: string,
-): Promise<any | null> {
+  maxAgeDays: number,
+): Promise<CacheHit | null> {
   if (!supabaseAdmin) return null;
   try {
     const { data, error } = await supabaseAdmin
@@ -341,13 +349,15 @@ async function getFromServerCache(
       .eq('analysis_version', CACHE_VERSION)
       .single();
     if (error || !data) return null;
-    const ageMs = Date.now() - new Date(data.created_at).getTime();
-    if (ageMs > CACHE_TTL_MS) {
-      console.log(`[ServerCache] Expired — ${businessType} / ${location} (${reportType}, ${Math.floor(ageMs / 86400000)}d old)`);
-      return null;
+    const ageMs        = Date.now() - new Date(data.created_at).getTime();
+    const cacheAgeDays = Math.floor(ageMs / 86_400_000);
+    const isStale      = ageMs > maxAgeDays * 86_400_000;
+    if (isStale) {
+      console.log(`[ServerCache] STALE — ${businessType} / ${location} (${reportType}, ${cacheAgeDays}d old, max ${maxAgeDays}d)`);
+    } else {
+      console.log(`[ServerCache] HIT fresh — ${businessType} / ${location} (${reportType}, ${cacheAgeDays}d old)`);
     }
-    console.log(`[ServerCache] HIT — ${businessType} / ${location} (${reportType}) generated ${data.created_at}`);
-    return { ...data.report, _cached: true, _generatedAt: data.created_at };
+    return { report: data.report, isStale, cacheAgeDays, generatedAt: data.created_at };
   } catch (err) {
     console.warn('[ServerCache] get error (non-fatal):', err);
     return null;
@@ -603,12 +613,21 @@ export default async function handler(
   }
 
   // ── Shared cache check — before Gemini so cache hits skip AI and quota ──────
+  let cacheWasStale = false;
   if (!forceRegenerate) {
-    const cached = await getFromServerCache(businessType, location, 'standard');
-    if (cached) {
+    const cacheHit = await getFromServerCache(businessType, location, 'standard', VIABILITY_CACHE_MAX_AGE_DAYS);
+    if (cacheHit && !cacheHit.isStale) {
       console.log(`[Analyze] Cache hit — returning cached report, no Gemini call for ${businessType} / ${location}`);
-      return json(res, 200, cached);
+      return json(res, 200, {
+        ...cacheHit.report,
+        _cached:        true,
+        _generatedAt:   cacheHit.generatedAt,
+        _cacheAgeDays:  cacheHit.cacheAgeDays,
+        _freshnessDays: VIABILITY_CACHE_MAX_AGE_DAYS,
+        _isStale:       false,
+      });
     }
+    cacheWasStale = !!cacheHit?.isStale;
   } else {
     console.log(`[Analyze] forceRegenerate=true — bypassing cache for ${businessType} / ${location}`);
   }
@@ -833,6 +852,9 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     } catch (logErr: any) {
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
+
+    // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
+    if (cacheWasStale) parsed._refreshedFromStale = true;
 
     // Store in shared server-side cache — all accounts/devices get the same report.
     await setInServerCache(businessType, location, 'standard', verifiedPlan, parsed);

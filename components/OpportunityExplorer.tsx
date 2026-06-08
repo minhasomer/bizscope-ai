@@ -167,20 +167,18 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     );
   }, [report, currentPlan, visibleLimit]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runSearch = async (forceRegenerate = false) => {
     if (!location.trim()) return;
 
     setShowLocationSuggestions(false);
     setIsLoading(true);
     setError(null);
-    setReport(null);
+    if (!forceRegenerate) setReport(null);
 
     try {
       const displayLocation = await resolveLocationDisplay(location.trim());
-      // Keep input in sync so the user sees the resolved name
       if (displayLocation !== location.trim()) setLocation(displayLocation);
-      const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole);
+      const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole, forceRegenerate);
       setReport(result);
 
       // Auto-save for authenticated users — deduplicates by location, no quota consumed.
@@ -197,6 +195,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       setLoadingMessage('');
     }
   };
+
+  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); runSearch(false); };
 
   const processedOpportunities = useMemo(() => {
     if (!report) return [];
@@ -409,6 +409,46 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                   )}
                 </div>
                 <p className="text-gray-600 text-base leading-relaxed max-w-4xl">{report.summary}</p>
+                {/* Freshness banner */}
+                {(() => {
+                  const FRESHNESS_DAYS = report._freshnessDays ?? 45;
+                  const rawDate = report._generatedAt ?? report.generationMeta?.generatedAt;
+                  if (!rawDate) return null;
+                  const genDate = new Date(rawDate);
+                  const ageDays = Math.floor((Date.now() - genDate.getTime()) / 86_400_000);
+                  const isOld   = ageDays > FRESHNESS_DAYS;
+                  return (
+                    <div className={`mt-4 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 border text-xs ${
+                      isOld
+                        ? 'bg-amber-50 border-amber-200 text-amber-800'
+                        : report._refreshedFromStale
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : report._cached
+                        ? 'bg-sky-50 border-sky-200 text-sky-800'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    }`}>
+                      <span className="shrink-0">
+                        {isOld
+                          ? `⏳ This report was generated ${ageDays} day${ageDays !== 1 ? 's' : ''} ago. Local conditions may have changed.`
+                          : report._refreshedFromStale
+                          ? '✅ Fresh analysis generated today — previous data was outdated.'
+                          : report._cached
+                          ? `✅ Generated on ${genDate.toLocaleDateString()}. Using a recently generated analysis to keep results consistent across users.`
+                          : `✅ Fresh analysis generated on ${genDate.toLocaleDateString()}.`
+                        }
+                      </span>
+                      {isOld && (
+                        <button
+                          onClick={() => runSearch(true)}
+                          disabled={isLoading}
+                          className="shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                          Run Fresh Analysis
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
