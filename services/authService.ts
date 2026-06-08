@@ -341,6 +341,27 @@ export class AuthService {
         // identities present and explicitly empty — the real anti-enum signal
         (Array.isArray(identities) && identities.length === 0);
 
+      // ── Temporary signup diagnostics — remove after duplicate-signup investigation ──
+      console.group('[Auth][SignUp] Supabase response diagnostics');
+      console.log('hasUser:           ', !!data.user);
+      console.log('hasSession:        ', !!data.session);
+      console.log('identitiesValue:   ', identities);
+      console.log('identitiesIsArray: ', Array.isArray(identities));
+      console.log('identitiesLength:  ', Array.isArray(identities) ? identities.length : 'n/a (not array)');
+      console.log('identitiesIsEmpty: ', identitiesIsEmpty);
+      console.log('willThrowDuplicate:', !data.session && identitiesIsEmpty);
+      console.log('branchDetail: ',
+        !data.user
+          ? 'BRANCH: !data.user (user object absent)'
+          : (Array.isArray(identities) && identities.length === 0)
+            ? 'BRANCH: identities is [] (Supabase anti-enum signal — email exists)'
+            : !data.session
+              ? 'BRANCH: session null, identities present → EmailConfirmationRequired'
+              : 'BRANCH: session present → immediate sign-in'
+      );
+      console.groupEnd();
+      // ── End diagnostics ────────────────────────────────────────────────────────
+
       if (!data.session && identitiesIsEmpty) {
         throw new DuplicateEmailError(
           'An account with this email already exists. Please sign in, or reset your password if you\'ve forgotten it.',
