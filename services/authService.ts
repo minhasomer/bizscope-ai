@@ -320,21 +320,26 @@ export class AuthService {
       // with no real error. The discriminator is `identities`:
       //
       //   New signup (real user)      → identities is an Array with ≥1 entries
-      //   Existing email (fake user)  → identities is [] OR undefined/absent
+      //   Existing email (fake user)  → identities is [] (explicitly empty array)
       //
-      // We guard on BOTH the array-present-and-empty case AND the field-missing
-      // case so this works regardless of which shape this Supabase project returns.
+      // IMPORTANT: identities === undefined is NOT treated as a duplicate.
+      // A genuine new user with email confirmation pending can have the identities
+      // field absent from the signup response (depends on Supabase JS client version
+      // and project configuration). Treating undefined as a duplicate causes a
+      // false-positive "Account already exists" for real new signups, including
+      // emails that were previously deleted and re-registered.
       //
-      // Also catches the case where data.user itself is null (older Supabase behavior
-      // where the anti-enum response omitted the user object entirely).
+      // The only reliable anti-enumeration signal is identities: [] (present and
+      // explicitly empty). undefined falls through to EmailConfirmationRequiredError.
+      //
+      // Also catches the legacy case where data.user itself is null (older Supabase
+      // behavior where the anti-enum response omitted the user object entirely).
       const identities = data.user?.identities;
       const identitiesIsEmpty =
-        // user is null/undefined entirely
+        // user is null/undefined entirely (legacy Supabase anti-enum shape)
         !data.user ||
-        // identities field is present and explicitly empty
-        (Array.isArray(identities) && identities.length === 0) ||
-        // identities field is absent — means the user object is fake/sanitized
-        identities === undefined;
+        // identities present and explicitly empty — the real anti-enum signal
+        (Array.isArray(identities) && identities.length === 0);
 
       if (!data.session && identitiesIsEmpty) {
         throw new DuplicateEmailError(
