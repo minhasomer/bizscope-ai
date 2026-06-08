@@ -313,6 +313,83 @@ const _srKeyDiag = (() => {
 // Set to false or remove the var to revert all users to their stored plan.
 const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
 
+// ── Shared server-side report cache ──────────────────────────────────────────
+// Cache key: (business_type, location, report_type, analysis_version).
+// plan_tier is excluded from the key so all accounts/plans share the same
+// cached report for the same input.
+
+const CACHE_VERSION = 'v1';
+const CACHE_TTL_MS  = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function normalizeCacheKey(s: string): string {
+  return s.toLowerCase().trim();
+}
+
+async function getFromServerCache(
+  businessType: string,
+  location: string,
+  reportType: string,
+): Promise<any | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('report_cache')
+      .select('report, created_at')
+      .eq('business_type', normalizeCacheKey(businessType))
+      .eq('location',      normalizeCacheKey(location))
+      .eq('report_type',   reportType)
+      .eq('analysis_version', CACHE_VERSION)
+      .single();
+    if (error || !data) return null;
+    const ageMs = Date.now() - new Date(data.created_at).getTime();
+    if (ageMs > CACHE_TTL_MS) {
+      console.log(`[ServerCache] Expired — ${businessType} / ${location} (${reportType}, ${Math.floor(ageMs / 86400000)}d old)`);
+      return null;
+    }
+    console.log(`[ServerCache] HIT — ${businessType} / ${location} (${reportType}) generated ${data.created_at}`);
+    return { ...data.report, _cached: true, _generatedAt: data.created_at };
+  } catch (err) {
+    console.warn('[ServerCache] get error (non-fatal):', err);
+    return null;
+  }
+}
+
+async function setInServerCache(
+  businessType: string,
+  location: string,
+  reportType: string,
+  planTierMeta: string,
+  report: any,
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const cleanReport = { ...report };
+    delete cleanReport._cached;
+    delete cleanReport._generatedAt;
+    const { error } = await supabaseAdmin
+      .from('report_cache')
+      .upsert(
+        {
+          business_type:    normalizeCacheKey(businessType),
+          location:         normalizeCacheKey(location),
+          report_type:      reportType,
+          analysis_version: CACHE_VERSION,
+          plan_tier:        normalizeCacheKey(planTierMeta),
+          report:           cleanReport,
+          updated_at:       new Date().toISOString(),
+        },
+        { onConflict: 'business_type,location,report_type,analysis_version' },
+      );
+    if (error) {
+      console.warn('[ServerCache] upsert error (non-fatal):', error.message);
+    } else {
+      console.log(`[ServerCache] STORED — ${businessType} / ${location} (${reportType})`);
+    }
+  } catch (err) {
+    console.warn('[ServerCache] set error (non-fatal):', err);
+  }
+}
+
 function getServerSidePlan(role: string, subscription_tier: string): string {
   const r = (role ?? '').trim().toLowerCase();
   if (r === 'admin') return 'Enterprise';
@@ -488,7 +565,7 @@ export default async function handler(
   console.log(`[Analyze] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} betaFullAccess=${_serverBetaFullAccess}`);
 
   const body = req.body ?? {};
-  const { businessType, location, userLocation } = body;
+  const { businessType, location, userLocation, forceRegenerate } = body;
 
   if (!businessType?.trim()) {
     return json(res, 400, { error: 'Missing or invalid businessType.', code: 'INVALID_INPUT' });
@@ -509,6 +586,17 @@ export default async function handler(
       code: 'BLOCKED_CATEGORY',
       category: blockedCheck.category,
     });
+  }
+
+  // ── Shared cache check — before Gemini so cache hits skip AI and quota ──────
+  if (!forceRegenerate) {
+    const cached = await getFromServerCache(businessType, location, 'standard');
+    if (cached) {
+      console.log(`[Analyze] Cache hit — returning cached report, no Gemini call for ${businessType} / ${location}`);
+      return json(res, 200, cached);
+    }
+  } else {
+    console.log(`[Analyze] forceRegenerate=true — bypassing cache for ${businessType} / ${location}`);
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -731,6 +819,9 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     } catch (logErr: any) {
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
+
+    // Store in shared server-side cache — all accounts/devices get the same report.
+    await setInServerCache(businessType, location, 'standard', verifiedPlan, parsed);
 
     return json(res, 200, parsed);
   } catch (err: any) {

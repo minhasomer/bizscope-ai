@@ -171,6 +171,79 @@ const _srKeyDiag = (() => {
 // Remove or set false to revert to stored-role behaviour post-beta.
 const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
 
+// ── Shared server-side report cache ──────────────────────────────────────────
+const CACHE_VERSION = 'v1';
+const CACHE_TTL_MS  = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function normalizeCacheKey(s: string): string {
+  return s.toLowerCase().trim();
+}
+
+async function getFromServerCache(
+  businessType: string,
+  location: string,
+  reportType: string,
+): Promise<any | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('report_cache')
+      .select('report, created_at')
+      .eq('business_type', normalizeCacheKey(businessType))
+      .eq('location',      normalizeCacheKey(location))
+      .eq('report_type',   reportType)
+      .eq('analysis_version', CACHE_VERSION)
+      .single();
+    if (error || !data) return null;
+    const ageMs = Date.now() - new Date(data.created_at).getTime();
+    if (ageMs > CACHE_TTL_MS) {
+      console.log(`[ServerCache] Expired — ${businessType} / ${location} (${reportType}, ${Math.floor(ageMs / 86400000)}d old)`);
+      return null;
+    }
+    console.log(`[ServerCache] HIT — ${businessType} / ${location} (${reportType}) generated ${data.created_at}`);
+    return { ...data.report, _cached: true, _generatedAt: data.created_at };
+  } catch (err) {
+    console.warn('[ServerCache] get error (non-fatal):', err);
+    return null;
+  }
+}
+
+async function setInServerCache(
+  businessType: string,
+  location: string,
+  reportType: string,
+  planTierMeta: string,
+  report: any,
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const cleanReport = { ...report };
+    delete cleanReport._cached;
+    delete cleanReport._generatedAt;
+    const { error } = await supabaseAdmin
+      .from('report_cache')
+      .upsert(
+        {
+          business_type:    normalizeCacheKey(businessType),
+          location:         normalizeCacheKey(location),
+          report_type:      reportType,
+          analysis_version: CACHE_VERSION,
+          plan_tier:        normalizeCacheKey(planTierMeta),
+          report:           cleanReport,
+          updated_at:       new Date().toISOString(),
+        },
+        { onConflict: 'business_type,location,report_type,analysis_version' },
+      );
+    if (error) {
+      console.warn('[ServerCache] upsert error (non-fatal):', error.message);
+    } else {
+      console.log(`[ServerCache] STORED — ${businessType} / ${location} (${reportType})`);
+    }
+  } catch (err) {
+    console.warn('[ServerCache] set error (non-fatal):', err);
+  }
+}
+
 function getServerSidePlan(role: string, subscription_tier: string): string {
   const r = (role ?? '').trim().toLowerCase();
   if (r === 'admin') return 'Enterprise';
@@ -320,7 +393,7 @@ export default async function handler(
   }
 
   const body = req.body ?? {};
-  const { location } = body;
+  const { location, forceRegenerate } = body;
 
   if (!location?.trim()) {
     return json(res, 400, { error: 'Missing or invalid location.', code: 'INVALID_INPUT' });
@@ -328,6 +401,17 @@ export default async function handler(
   const locationCheck = validateUSLocation(location.trim());
   if (!locationCheck.valid) {
     return json(res, 400, { error: locationCheck.reason, code: 'UNSUPPORTED_LOCATION' });
+  }
+
+  // ── Shared cache check — before Gemini so cache hits skip AI entirely ────
+  if (!forceRegenerate) {
+    const cached = await getFromServerCache('market_gaps', location, 'opportunities');
+    if (cached) {
+      console.log(`[Opportunities] Cache hit — returning cached opportunities, no Gemini call for ${location}`);
+      return json(res, 200, cached);
+    }
+  } else {
+    console.log(`[Opportunities] forceRegenerate=true — bypassing cache for ${location}`);
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -515,6 +599,9 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     } catch (logErr: any) {
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
+
+    // Store in shared server-side cache — all accounts/devices get the same opportunities.
+    await setInServerCache('market_gaps', location, 'opportunities', verifiedPlan, parsed);
 
     return json(res, 200, parsed);
   } catch (err: any) {
