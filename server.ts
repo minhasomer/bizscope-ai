@@ -1106,11 +1106,12 @@ async function startServer() {
       // Step 1: Landscape with search grounding (Timeout: 20s)
       try {
         const searchPrompt = `Research the business landscape and local economy of '${location}'. Find specific, factual information about:
-1. Dominant industries, major employers, and key economic drivers in this area
-2. Demographic profile — income levels, age distribution, lifestyle characteristics, and any notable population growth or migration trends
-3. Consumer spending categories that are underserved, growing fastest, or where local supply clearly lags demand
-4. What makes this specific location unique — climate, cultural identity, major development projects, dominant employment sectors
-5. Any notable gaps in the local business market, recent economic news, or demographic shifts creating new opportunities`;
+1. Economic profile: dominant industries, major employers, primary employment sectors, and key economic drivers
+2. Market character: is this primarily a residential suburb, college town, tourism destination, retirement community, industrial/logistics hub, agricultural region, or professional-services center? Note multiple if they apply.
+3. Demographic profile: income levels, age distribution, household composition, and notable population trends (growth, migration, aging, student population)
+4. Underserved gaps: specific business categories — including B2B services, industrial support, and consumer services — where local supply clearly lags demand
+5. Location-specific factors: major employers by name, dominant workforce skills, infrastructure, climate, major development projects, and cultural or economic identity
+6. Any recent economic shifts, facility openings or closures, demographic changes, or emerging workforce needs creating new business opportunities`;
         const searchResponse = await withTimeout(
           ai.models.generateContent({
             model: cheaperModel,
@@ -1128,26 +1129,39 @@ async function startServer() {
 
       // Step 2: Formulate ideas + full dossier per opportunity (Timeout: 40s)
       const finalPrompt = `
-        Act as a master strategic consultant. Your goal is to identify the TOP 3-5 business opportunities in '${location}' that are least competitive and have high financial viability.
+        Act as a strategic market analyst. Identify the TOP 3-5 business opportunities in '${location}' with the strongest evidence of unmet local demand and realistic financial viability.
 
         **Location Context:** '${location}'
         **Local Research Data:**
         ${marketData}
 
-        **Your Task:**
-        1. Analyze the local data to find market "white space" — businesses that people need but aren't well-served yet.
-        2. For each recommendation, provide specific scoring (1-10) for CapEx, Overhead, Labor Intensity, and Competition.
-        3. Calculate an 'overallPotential' (0-100) for each idea.
-        4. Provide estimated financial breakdowns based on current economic benchmarks.
-        5. For EACH opportunity, populate a complete business intelligence dossier with all sections below.
+        **Selection criteria — apply in this priority order:**
+        1. Local market need: credible evidence that demand exists and current supply fails to meet it
+        2. Competitive whitespace: limited or weak existing competition for this specific offering
+        3. Economic viability: realistic path to positive unit economics within 18-24 months
 
-        **SPECIFICITY REQUIREMENTS — follow exactly, or the output is not useful:**
-        - businessType: Must be a specific, descriptive business concept — name the niche, format, and customer served. GOOD examples: "Korean-Style Fried Chicken Counter", "Senior In-Home Occupational Therapy", "Mobile Spray Tan Studio". BAD examples: "Restaurant", "Health Services", "Beauty Studio". The name must make clear what is being sold and to whom.
-        - whyItsGood: Must reference specific, verifiable characteristics of '${location}' — local industries, dominant employers, demographic groups, geographic features, or cultural factors that make this opportunity strong HERE. Do NOT write generic statements like "growing demand for this service" that could apply to any US city.
-        - bestNearbyArea: Must name a specific real neighborhood, district, street corridor, or ZIP code within or near '${location}' — not a generic description like "high-traffic area."
-        - description: Must describe the specific business concept clearly — not a generic category.
-        - SECTOR DIVERSITY: Recommend opportunities across clearly different business sectors. Do not recommend two food concepts, two fitness concepts, or two businesses serving the same customer. Include a range of capital requirements (some low-capital service businesses, some requiring moderate investment).
-        - LOCATION DNA: Every recommendation must reflect something genuinely unique about '${location}' — its industries, culture, climate, demographic profile, or growth dynamics. A person who knows '${location}' well should immediately recognize why these specific businesses were identified for THIS location and not somewhere else.
+        **Sector scope — evaluate ALL sectors relevant to this economy:**
+        - Consumer services and retail (food, personal care, entertainment)
+        - Healthcare, senior services, and home health
+        - Childcare and education
+        - Home services and property maintenance
+        - B2B services and professional services
+        - Logistics, warehousing, and supply-chain support
+        - Industrial services, equipment rental, and trade support
+        - Workforce development, staffing, and training
+        - Hospitality, tourism, and visitor services
+        - Technology services and digital support
+        Let the local research data determine which sectors are most relevant — follow the evidence, not a preset category distribution.
+
+        **LOCATION DNA — mandatory for every recommendation:**
+        Reference specific, verifiable characteristics of '${location}': named industries, major employers, demographic groups, geographic features, or confirmed economic conditions. A person who knows this location should immediately recognize why each opportunity belongs HERE.
+
+        **SPECIFICITY REQUIREMENTS:**
+        - businessType: Specific concept, niche, and customer served. GOOD: "Fleet Maintenance Dispatch Service for Regional Carriers", "Senior In-Home Occupational Therapy", "Halal Meal Prep Delivery". BAD: "Tech Services", "Health Business", "Restaurant".
+        - whyItsGood: Cite specific local factors — named employers, industries, demographic data, or infrastructure conditions.
+        - bestNearbyArea: A real neighborhood, corridor, district, or ZIP code within or near '${location}'.
+        - description: Describe the specific concept clearly.
+        - CAPITAL RANGE: Include a mix — some low-capital entries ($5k–$50k) and some requiring moderate investment ($50k–$300k) where the market justifies it.
 
         **Scoring Definitions:**
         - CapEx: 1 (Very cheap to start, <$5k) to 10 (Massive investment, >$500k).

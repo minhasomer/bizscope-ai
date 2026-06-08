@@ -357,7 +357,13 @@ export default async function handler(
     }
 
     // Phase 1: Market landscape via Search grounding
-    const phase1Prompt = `Research the business landscape in '${location}'. Identify industry gaps, growing consumer segments, and businesses that are currently underserved. Look for high-growth sectors and local economic drivers.`;
+    const phase1Prompt = `Research the business landscape and local economy of '${location}'. Find specific, factual information about:
+1. Economic profile: dominant industries, major employers, primary employment sectors, and key economic drivers
+2. Market character: is this primarily a residential suburb, college town, tourism destination, retirement community, industrial/logistics hub, agricultural region, or professional-services center? Note multiple if they apply.
+3. Demographic profile: income levels, age distribution, household composition, and any notable population trends (growth, migration, aging, student population)
+4. Underserved gaps: specific business categories — including B2B services, industrial support, and consumer services — where local supply clearly lags demand
+5. Location-specific factors: major employers by name, dominant workforce skills, infrastructure, climate, major development projects, and cultural or economic identity
+6. Any recent economic shifts, facility openings or closures, demographic changes, or emerging workforce needs creating new business opportunities`;
     console.log('[opportunities diag] phase 1 start:', { phase: 1, model, promptChars: phase1Prompt.length, tool: 'googleSearch' });
     try {
       const searchRes = await withTimeout(
@@ -378,18 +384,40 @@ export default async function handler(
 
     // Phase 2: Synthesis — compact summaries only (full dossier generated on demand)
     const phase2Prompt = `
-Act as a master strategic consultant. Your goal is to identify the TOP 3-5 business opportunities in '${location}' that are least competitive and have high financial viability.
+Act as a strategic market analyst. Identify the TOP 3-5 business opportunities in '${location}' with the strongest evidence of unmet local demand and realistic financial viability.
 
 **Location Context:** '${location}'
 **Local Research Data:**
 ${marketData}
 
-**Your Task:**
-1. Analyze the local data to find market "white space" — businesses that people need but aren't well-served yet.
-2. For each recommendation, provide specific scoring (1-10) for CapEx, Overhead, Labor Intensity, and Competition.
-3. Estimate the four viability sub-scores (0-100) for each idea (see definitions below).
-4. Set overallPotental equal to estimatedMarketDemand.
-5. Provide estimated financial breakdowns based on current economic benchmarks.
+**Selection criteria — apply in this priority order:**
+1. Local market need: credible evidence that demand for this category exists and current supply fails to meet it
+2. Competitive whitespace: limited or weak existing competition for this specific offering in this market
+3. Economic viability: realistic path to positive unit economics within 18-24 months given local costs and revenue potential
+
+**Sector scope — evaluate ALL sectors relevant to this economy, not just consumer services:**
+- Consumer services and retail (food, personal care, entertainment)
+- Healthcare, senior services, and home health
+- Childcare and education
+- Home services and property maintenance
+- B2B services and professional services
+- Logistics, warehousing, and supply-chain support
+- Industrial services, equipment rental, and trade support
+- Workforce development, staffing, and training
+- Hospitality, tourism, and visitor services
+- Technology services and digital support
+- Real estate and property services
+Let the local research data determine which sectors are most relevant. If the economy is industrial, industrial-support opportunities may rank higher than consumer services. If it is a tourism market, visitor-economy businesses may dominate. Follow the evidence.
+
+**LOCATION DNA — mandatory for every recommendation:**
+Reference specific, verifiable characteristics of '${location}': named industries, major employers, dominant demographic groups, geographic features, or confirmed economic conditions. A person who knows this location well should immediately recognize why each opportunity belongs HERE and not in a generic US city.
+
+**SPECIFICITY:**
+- businessType: Name the specific concept, niche, and customer served. GOOD: "Fleet Maintenance Dispatch Software for Regional Carriers", "Senior In-Home Occupational Therapy", "Halal Meal Prep Delivery". BAD: "Tech Company", "Health Services", "Restaurant".
+- whyItsGood: Cite specific local factors — named employers, industries, demographic data, or infrastructure conditions.
+- bestNearbyArea: Name a real neighborhood, corridor, district, or ZIP code within or near '${location}'.
+
+**CAPITAL RANGE:** Include a mix of startup cost tiers — some low-capital entries ($5k–$50k) and some requiring moderate investment ($50k–$300k) where the market justifies it.
 
 **Operational Scoring (1-10):**
 - CapEx: 1 (Very cheap to start, <$5k) to 10 (Massive investment, >$500k).
@@ -397,15 +425,16 @@ ${marketData}
 - Labor Intensity: 1 (Solopreneur/Automated) to 10 (Large staff required).
 - Competition Level: 1 (No direct local competitors) to 10 (Market saturated).
 
-**Viability Sub-Scores (0-100) — use the same evaluation dimensions as a full business viability report:**
-- estimatedMarketDemand: Consumer demand strength for this specific category in this location. 80+ = strong unmet demand with clear evidence. 60-79 = moderate demand. Below 60 = niche or uncertain.
-- estimatedCompetitionIntensity: Local competitive saturation. 0 = no competition. 100 = fully saturated. Scale proportionally to actual competitor density and market share concentration.
-- estimatedFinancialFeasibility: Probability of achieving positive unit economics within 18 months given local costs, pricing power, and revenue potential. Consider startup cost relative to expected revenue. 80+ = highly feasible. Below 50 = financially challenging.
-- estimatedRiskLevel: Combined execution and market risk. Factor in operational complexity, regulatory requirements, demand volatility, and dependency on external conditions. 0 = very low risk. 80+ = high risk.
+**Viability Sub-Scores (0-100):**
+- estimatedMarketDemand: Strength of unmet demand for this category in this specific location. Score relative to local evidence — an industrial-market B2B service with clear demand from named employers should score 80+ even if consumer visibility is low.
+- estimatedCompetitionIntensity: Local competitive saturation. 0 = no competition. 100 = fully saturated.
+- estimatedFinancialFeasibility: Probability of positive unit economics within 18 months given local costs, pricing power, and revenue potential. 80+ = highly feasible.
+- estimatedRiskLevel: Combined execution and market risk. 0 = very low risk. 80+ = high risk.
+- Set overallPotental equal to estimatedMarketDemand.
 
-**Content restrictions:** Do NOT recommend any businesses involving firearms/weapons, tobacco, vaping/e-cigarettes, alcohol retail, cannabis/marijuana dispensaries, adult entertainment, or gambling. Only recommend legal, mainstream business categories.
+**Content restrictions:** No firearms, tobacco, vaping, alcohol retail, cannabis, adult entertainment, or gambling.
 
-Generate the output in JSON format adhering to the opportunity schema. Do not output any wrapping markdown.
+Generate output in JSON adhering to the opportunity schema. No wrapping markdown.
     `.trim();
 
     console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: budget.maxOutputTokens, synthesisTimeoutMs: budget.synthesisTimeoutMs });
