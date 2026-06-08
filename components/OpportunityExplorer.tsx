@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Search, MapPin, TrendingUp, DollarSign, Users, ChevronRight, Info,
+  Search, MapPin, TrendingUp, DollarSign, Users, ChevronRight, ChevronDown, Info,
   Lock, Filter, AlertTriangle, Trophy, Medal, Award, Star, Target,
   ArrowUpDown, X, Sparkles, ArrowRight, ShieldCheck, BarChart2, Briefcase, Layers
 } from 'lucide-react';
@@ -375,6 +375,9 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
               </div>
             </div>
 
+            {/* How rankings work */}
+            <HowRankingsWork />
+
             {/* Filter & sort controls */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -407,6 +410,13 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                 </select>
               </div>
             </div>
+            {filter !== 'all' && (
+              <p className="text-[11px] text-slate-500 px-1 -mt-2">
+                {filter === 'low-capital'    && 'Showing opportunities with relatively low startup investment requirements.'}
+                {filter === 'low-competition' && 'Showing opportunities with few existing competitors in this market.'}
+                {filter === 'low-overhead'   && 'Showing opportunities with low ongoing monthly operating costs.'}
+              </p>
+            )}
 
             {/* Count summary */}
             {processedOpportunities.length === 0 ? (
@@ -550,6 +560,57 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   );
 };
 
+// ─── How Rankings Work explainer ─────────────────────────────────────────────
+
+const HowRankingsWork: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden text-left">
+      <button
+        onClick={() => setOpen(p => !p)}
+        className="w-full flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-slate-100 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <Info className="w-4 h-4 text-indigo-400 shrink-0" />
+          What is Market Gaps &amp; how are opportunities ranked?
+        </span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-5 pb-5 pt-1 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">What is a Market Gap?</p>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              A market gap exists when consumer demand in an area exceeds current supply — an underserved niche a new business can enter with less competition. BizScope identifies these by comparing demand signals against business density across 50+ categories.
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">How the Score is Calculated</p>
+            <ul className="text-xs text-slate-600 space-y-1 leading-relaxed">
+              <li><span className="font-semibold text-slate-700">Market Demand</span> — local consumer need &amp; spending signals</li>
+              <li><span className="font-semibold text-slate-700">Competition</span> — how crowded the category already is</li>
+              <li><span className="font-semibold text-slate-700">Financial Feasibility</span> — realistic startup cost vs. revenue</li>
+              <li><span className="font-semibold text-slate-700">Risk Level</span> — execution, market, and regulatory risk factors</li>
+            </ul>
+            <p className="text-[10px] text-slate-400 mt-2">Higher score = stronger opportunity. #1 ranked = best balance of all four factors.</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Confidence Level</p>
+            <p className="text-xs text-slate-600 leading-relaxed mb-2">
+              Scores are AI-estimated from live web search signals and training data. They are <span className="font-semibold text-slate-700">directional, not definitive</span> — treat them as a starting point for research, not a guarantee of success.
+            </p>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+              <span className="text-[10px] text-amber-700 font-medium">Verify before committing capital.</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Opportunity Card ────────────────────────────────────────────────────────
 
 const OpportunityCard: React.FC<{
@@ -638,19 +699,30 @@ const OpportunityCard: React.FC<{
         <h3 className="text-base font-black text-gray-900 mb-2 leading-tight">
           {opportunity.businessType}
         </h3>
-        <p className="text-gray-500 text-xs leading-relaxed mb-5 line-clamp-2">
+        <p className="text-gray-500 text-xs leading-relaxed mb-4 line-clamp-2">
           {opportunity.description}
         </p>
+
+        {/* Why #1 banner */}
+        {rank === 1 && opportunity.whyItsGood && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Trophy className="w-3 h-3 text-yellow-600 shrink-0" />
+              <span className="text-[10px] font-black text-yellow-700 uppercase tracking-wider">Why it ranks #1</span>
+            </div>
+            <p className="text-xs text-yellow-900 leading-relaxed">{opportunity.whyItsGood}</p>
+          </div>
+        )}
 
         {/* Score bars */}
         <div className="space-y-2.5 mb-5">
           <div className="flex items-center gap-1 mb-1.5">
             <Sparkles className="w-2.5 h-2.5 text-slate-300" />
-            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">AI-estimated from web signals</span>
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">AI-estimated · lower is better for each</span>
           </div>
-          <ScoreBar label="Competition" score={opportunity.scores.competitionLevel} inverse hint="Lower score = less competition (better for you)" />
-          <ScoreBar label="Startup Capital" score={opportunity.scores.capEx} hint="Lower score = less money needed to launch" />
-          <ScoreBar label="Monthly Overhead" score={opportunity.scores.overhead} hint="Lower score = lower ongoing monthly costs" />
+          <ScoreBar label="Competition" score={opportunity.scores.competitionLevel} />
+          <ScoreBar label="Startup Capital" score={opportunity.scores.capEx} dollarValue={opportunity.financials.estimatedStartupCost} />
+          <ScoreBar label="Monthly Overhead" score={opportunity.scores.overhead} />
         </div>
 
         {/* Financial quick-stats */}
@@ -701,40 +773,42 @@ const OpportunityCard: React.FC<{
 
 // ─── Score Bar ───────────────────────────────────────────────────────────────
 
-const ScoreBar: React.FC<{ label: string; score: number; inverse?: boolean; hint?: string }> = ({
+/** Maps a 1–10 score to a Low/Moderate/High label with colours. */
+function scoreToLabel(score: number): { label: string; chip: string; bar: string } {
+  if (score <= 3) return { label: 'Low',      chip: 'bg-green-100 text-green-700',  bar: 'bg-green-500'  };
+  if (score <= 6) return { label: 'Moderate', chip: 'bg-yellow-100 text-yellow-700', bar: 'bg-yellow-500' };
+  return              { label: 'High',     chip: 'bg-red-100 text-red-700',      bar: 'bg-red-500'    };
+}
+
+/**
+ * dollarValue — shown beside the label when a concrete dollar figure is available
+ *               (used for Startup Capital where financials.estimatedStartupCost exists).
+ */
+const ScoreBar: React.FC<{ label: string; score: number; dollarValue?: string }> = ({
   label,
   score,
-  inverse = false,
-  hint,
+  dollarValue,
 }) => {
   const percentage = (score / 10) * 100;
-
-  let color = 'bg-blue-500';
-  if (inverse) {
-    if (score <= 4) color = 'bg-green-500';
-    else if (score <= 7) color = 'bg-yellow-500';
-    else color = 'bg-red-500';
-  } else {
-    if (score <= 4) color = 'bg-green-500';
-    else if (score <= 7) color = 'bg-blue-500';
-    else color = 'bg-orange-500';
-  }
+  const { label: levelLabel, chip, bar } = scoreToLabel(score);
 
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-        <span>{label}</span>
-        <span className="text-gray-800">{score}/10</span>
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${chip}`}>
+          {levelLabel}
+          {dollarValue && <span className="opacity-70">· {dollarValue}</span>}
+        </span>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
-          className={`h-full ${color} rounded-full`}
+          className={`h-full ${bar} rounded-full`}
         />
       </div>
-      {hint && <p className="text-[9px] text-gray-400 leading-none mt-0.5">{hint}</p>}
     </div>
   );
 };
