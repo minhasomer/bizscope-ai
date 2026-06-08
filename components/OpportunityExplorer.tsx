@@ -368,9 +368,22 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                 <MapPin className="w-32 h-32 text-indigo-600" />
               </div>
               <div className="relative z-10">
-                <h3 className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-3 flex-wrap">
-                  Market Overview: <span className="text-indigo-600">{report.location}</span>
-                </h3>
+                <div className="flex items-center gap-3 flex-wrap mb-2">
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3 flex-wrap">
+                    Market Overview: <span className="text-indigo-600">{report.location}</span>
+                  </h3>
+                  {report.groundingSources.length > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700 uppercase tracking-wide">
+                      <ShieldCheck className="w-3 h-3" />
+                      Live Web-Grounded
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700 uppercase tracking-wide">
+                      <AlertTriangle className="w-3 h-3" />
+                      AI Model Only
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-600 text-base leading-relaxed max-w-4xl">{report.summary}</p>
               </div>
             </div>
@@ -551,6 +564,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             location={report?.location ?? ''}
             currentPlan={currentPlan}
             rank={selectedDossierRank}
+            isGrounded={(report?.groundingSources.length ?? 0) > 0}
             onClose={() => setSelectedDossier(null)}
             onUpgrade={() => { setSelectedDossier(null); onNavigate('pricing'); }}
           />
@@ -888,9 +902,10 @@ const OpportunityDossierModal: React.FC<{
   location: string;
   currentPlan: SubscriptionPlan;
   rank: number;
+  isGrounded: boolean;
   onClose: () => void;
   onUpgrade: () => void;
-}> = ({ opportunity, location, currentPlan, rank, onClose, onUpgrade }) => {
+}> = ({ opportunity, location, currentPlan, rank, isGrounded, onClose, onUpgrade }) => {
   React.useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleKey);
@@ -1371,13 +1386,17 @@ const OpportunityDossierModal: React.FC<{
             <DossierSection title="Data Sources & Confidence" icon={<Info className="w-4 h-4" />}>
               <div className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                  <div className={`rounded-xl p-3 border ${isGrounded ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Analysis Source</p>
-                    <p className="text-xs text-slate-700">AI-generated market intelligence using real-time search grounding and economic modeling</p>
+                    {isGrounded ? (
+                      <p className="text-xs text-slate-700">AI market intelligence synthesized from live web search data and economic modeling.</p>
+                    ) : (
+                      <p className="text-xs text-amber-800">AI market intelligence based on model training knowledge. Live web search was unavailable for this analysis — treat as directional.</p>
+                    )}
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Confidence Level</p>
-                    <p className="text-xs text-slate-700">Moderate — directional estimates based on available market signals. Not a substitute for primary market research.</p>
+                    <p className="text-xs text-slate-700">{isGrounded ? 'Moderate-High' : 'Moderate'} — directional estimates based on {isGrounded ? 'live market signals' : 'model knowledge'}. Not a substitute for primary market research.</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Recommended Next Step</p>

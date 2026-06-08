@@ -95,7 +95,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Data sources */}
         <div className="mb-10">
-          <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest text-center mb-5">Powered by Real Data</p>
+          <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest text-center mb-5">Data &amp; Intelligence Sources</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {dataCards.map((card, i) => (
               <div key={i} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 hover:-translate-y-0.5 transition-all duration-200">
