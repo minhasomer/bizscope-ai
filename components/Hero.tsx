@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { searchBusinessTypes, businessSuggestionsList, BusinessSuggestion } from '../src/data/businessSuggestionsData';
+import { searchBusinessTypes, DEFAULT_SUGGESTIONS, BusinessSuggestion } from '../src/data/businessSuggestionsData';
 import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSuggestions } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
@@ -81,14 +81,14 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
 
   const handleBusinessChange = (value: string) => {
     setBusinessType(value);
-    const s = value ? searchBusinessTypes(value) : businessSuggestionsList.slice(0, 6);
+    const s = value ? searchBusinessTypes(value) : DEFAULT_SUGGESTIONS;
     setCurrentBizSuggestions(s);
     setActiveBizIndex(-1);
     setShowBusinessSuggestions(true);
   };
 
   const handleBusinessFocus = () => {
-    const s = businessType ? searchBusinessTypes(businessType) : businessSuggestionsList.slice(0, 6);
+    const s = businessType ? searchBusinessTypes(businessType) : DEFAULT_SUGGESTIONS;
     setCurrentBizSuggestions(s);
     setActiveBizIndex(-1);
     setShowBusinessSuggestions(true);
@@ -224,24 +224,28 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                     required
                                 />
                                 {showBusinessSuggestions && (currentBizSuggestions.length > 0 || businessType.trim().length > 0) && (
-                                  <div className="absolute z-50 w-full bg-white rounded-xl shadow-2xl mt-1 max-h-72 overflow-y-auto text-left border border-gray-100 divide-y divide-gray-100">
+                                  <div className="absolute z-50 w-full bg-white rounded-xl shadow-2xl mt-1 max-h-80 overflow-y-auto text-left border border-gray-100 divide-y divide-gray-50">
                                     {currentBizSuggestions.length > 0 ? (
                                         currentBizSuggestions.map((s, i) => {
                                             const isSelected = i === activeBizIndex;
-                                            let badgeBg = "bg-blue-55 text-blue-700 bg-blue-50/70 border-blue-100/50";
-                                            let badgeLabel = "Generic";
-                                            if (s.type === 'franchise') {
-                                                badgeBg = "bg-purple-55 text-purple-700 bg-purple-50/70 border-purple-100/50";
-                                                badgeLabel = "Franchise";
-                                            } else if (s.type === 'common') {
-                                                badgeBg = "bg-emerald-55 text-emerald-700 bg-emerald-50/70 border-emerald-100/50";
-                                                badgeLabel = "Common Brand";
-                                            }
+                                            // Badge style per business type
+                                            const badgeStyles: Record<string, string> = {
+                                              franchise:   'text-purple-700 bg-purple-50 border-purple-100',
+                                              startup:     'text-blue-700 bg-blue-50 border-blue-100',
+                                              independent: 'text-emerald-700 bg-emerald-50 border-emerald-100',
+                                            };
+                                            const badgeLabels: Record<string, string> = {
+                                              franchise:   'Franchise',
+                                              startup:     'Startup',
+                                              independent: 'Independent',
+                                            };
+                                            const badgeBg    = badgeStyles[s.type]  ?? badgeStyles.independent;
+                                            const badgeLabel = badgeLabels[s.type]  ?? 'Independent';
 
                                             return (
                                                 <div
                                                     key={i}
-                                                    className={`px-4 py-2.5 cursor-pointer border-l-4 transition-all duration-150 flex items-center justify-between ${
+                                                    className={`px-4 py-2.5 cursor-pointer border-l-4 transition-all duration-150 flex items-center justify-between gap-2 ${
                                                         isSelected
                                                           ? 'bg-blue-50/70 border-blue-500 pl-3 font-semibold text-blue-900'
                                                           : 'border-transparent pl-4 hover:bg-blue-50/30 hover:pl-3 hover:border-blue-400 text-gray-800'
@@ -258,13 +262,9 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                                     }}
                                                     onMouseEnter={() => setActiveBizIndex(i)}
                                                 >
-                                                    <div className="flex flex-col text-left">
-                                                        <span className="text-sm font-medium text-gray-900">{s.name}</span>
-                                                        {s.keywords && s.keywords.length > 0 && (
-                                                            <span className="text-[10px] text-gray-400 mt-0.5">
-                                                                tags: {s.keywords.slice(0, 3).join(', ')}
-                                                            </span>
-                                                        )}
+                                                    <div className="flex flex-col text-left min-w-0">
+                                                        <span className="text-sm font-medium text-gray-900 truncate">{s.name}</span>
+                                                        <span className="text-[10px] text-gray-400 mt-0.5 truncate">{s.category}</span>
                                                     </div>
                                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeBg} tracking-wide shrink-0`}>
                                                         {badgeLabel}
@@ -354,7 +354,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                         <div className="mb-4">
                             <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-2 text-left">Try an example</p>
                             <div className="flex flex-wrap gap-1.5">
-                                {['Chick-fil-A', 'Jersey Mike\'s', 'Anytime Fitness', 'Coffee Shop', 'Auto Detailing', 'SERVPRO', 'Great Clips', 'Cleaning Service', 'Senior Home Care', 'HVAC Company'].map((ex) => (
+                                {['Coffee Shop', 'Auto Detailing Business', 'HVAC Company', 'Daycare Center', 'House Cleaning Service', 'SaaS Startup', 'AI Consulting Firm', 'Pet Grooming Business', 'Roofing Company', 'Physical Therapy Clinic'].map((ex) => (
                                     <button
                                         key={ex}
                                         type="button"
