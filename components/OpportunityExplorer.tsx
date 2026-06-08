@@ -74,6 +74,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   const [selectedDossier, setSelectedDossier] = useState<BusinessOpportunity | null>(null);
   const [selectedDossierRank, setSelectedDossierRank] = useState<number>(1);
   const [dossierLoading, setDossierLoading] = useState<string | null>(null);
+  const [dossierError, setDossierError] = useState<string | null>(null);
   const dossierCacheRef = useRef<Map<string, BusinessOpportunity>>(new Map());
 
   // Close location dropdown on outside click
@@ -91,6 +92,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
 
   const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity, rank: number) => {
     setSelectedDossierRank(rank);
+    setDossierError(null);
 
     // Blocked category guard
     const blockedCheck = checkBlockedCategory(opportunity.businessType);
@@ -125,9 +127,11 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       const enriched: BusinessOpportunity = { ...opportunity, ...dossierFields };
       dossierCacheRef.current.set(cacheKey, enriched);
       setSelectedDossier(enriched);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Dossier] Generation failed:', err);
-      // Open modal with basic card data so the user isn't left with nothing
+      const message: string = typeof err?.message === 'string' ? err.message : 'Analysis generation failed. Please try again.';
+      setDossierError(message);
+      // Still open modal with basic card data so the user sees what we have
       setSelectedDossier(opportunity);
     } finally {
       setDossierLoading(null);
@@ -565,6 +569,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             currentPlan={currentPlan}
             rank={selectedDossierRank}
             isGrounded={(report?.groundingSources.length ?? 0) > 0}
+            generationError={dossierError}
             onClose={() => setSelectedDossier(null)}
             onUpgrade={() => { setSelectedDossier(null); onNavigate('pricing'); }}
           />
@@ -903,9 +908,10 @@ const OpportunityDossierModal: React.FC<{
   currentPlan: SubscriptionPlan;
   rank: number;
   isGrounded: boolean;
+  generationError?: string | null;
   onClose: () => void;
   onUpgrade: () => void;
-}> = ({ opportunity, location, currentPlan, rank, isGrounded, onClose, onUpgrade }) => {
+}> = ({ opportunity, location, currentPlan, rank, isGrounded, generationError, onClose, onUpgrade }) => {
   React.useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleKey);
@@ -1080,9 +1086,15 @@ const OpportunityDossierModal: React.FC<{
             <div className="bg-slate-100 border border-slate-200 rounded-2xl p-8 text-center">
               <Info className="w-8 h-8 text-slate-300 mx-auto mb-3" />
               <h4 className="text-sm font-bold text-slate-600 mb-1">Full Analysis Not Available</h4>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Detailed analysis wasn't included. Run a new search to get the full breakdown.
-              </p>
+              {generationError ? (
+                <p className="text-xs text-red-500 max-w-sm mx-auto leading-relaxed">
+                  {generationError}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Detailed analysis wasn't included. Run a new search to get the full breakdown.
+                </p>
+              )}
             </div>
           ) : (
             <>

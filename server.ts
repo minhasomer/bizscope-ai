@@ -1310,6 +1310,12 @@ async function startServer() {
     return contactHandler(req as any, res as any);
   });
 
+  // API 5: /api/opportunity-dossier (on-demand full dossier for Market Gaps)
+  app.post("/api/opportunity-dossier", async (req: Request, res: Response) => {
+    const dossierHandler = (await import('./api/opportunity-dossier.js')).default;
+    return dossierHandler(req as any, res as any);
+  });
+
   // -------------------------------------------------------------
 
   // ---- Stripe Routes ----

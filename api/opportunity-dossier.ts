@@ -270,6 +270,7 @@ const _srKeyDiag = (() => {
 function getServerSidePlan(role: string, subscription_tier: string): string {
   const r = (role ?? '').trim().toLowerCase();
   if (r === 'admin') return 'Enterprise';
+  if (_serverBetaFullAccess) return 'Pro+';
   if (r === 'betatester' || r === 'beta_tester' || r === 'beta_vip') return 'Pro+';
   return normalizeTierToBudgetPlan(subscription_tier);
 }
@@ -357,9 +358,12 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   }
 }
 
-// ─── Allowed beta roles ───────────────────────────────────────────────────────
+// ─── Beta full-access override ────────────────────────────────────────────────
+// REAL_REPORTS_ENABLED=true must be set to activate this endpoint.
+// BETA_FULL_ACCESS=true promotes all authenticated non-admin users to Pro+
+// so they pass the plan gate below without needing a specific role.
 
-const BETA_ROLES = ['Admin', 'BetaTester'];
+const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -384,6 +388,7 @@ export default async function handler(
     hasServiceRoleKey:       !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     hasRealReportsEnabled:   !!process.env.REAL_REPORTS_ENABLED,
     hasGeminiApiKey:         !!process.env.GEMINI_API_KEY,
+    betaFullAccess:          _serverBetaFullAccess,
     supabaseAdminInitialized: !!supabaseAdmin,
   });
 
@@ -391,10 +396,18 @@ export default async function handler(
     req.headers['authorization'] as string | undefined,
   );
 
-  if (!BETA_ROLES.includes(verifiedRole)) {
+  // Plan-based gate: unauthenticated and Explorer users are blocked.
+  // Admin always passes. BETA_FULL_ACCESS=true promotes all authenticated users to Pro+.
+  if (!verifiedUserId) {
+    return json(res, 401, {
+      error: 'Authentication required for dossier generation.',
+      code: 'UNAUTHENTICATED',
+    });
+  }
+  if (verifiedPlan === 'Explorer') {
     return json(res, 403, {
-      error: 'Dossier generation requires Admin or BetaTester role.',
-      code: 'BETA_RESTRICTED',
+      error: 'Full opportunity dossiers require a Pro or higher plan.',
+      code: 'INSUFFICIENT_PLAN',
     });
   }
 
