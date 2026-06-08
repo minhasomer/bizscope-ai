@@ -308,36 +308,67 @@ export class AuthService {
         },
       });
 
-      // Diagnostics — intentionally not logging password
-      console.log('[Auth] signUp email          :', email);
-      console.log('[Auth] signUp error          :', error ? `${error.message} (status ${(error as any).status})` : 'none');
-      console.log('[Auth] signUp data.user      :', data.user ? data.user.id : 'null');
-      console.log('[Auth] signUp data.session   :', data.session ? 'present' : 'null');
-      console.log('[Auth] signUp identities     :', data.user?.identities?.length ?? 'n/a');
-      console.log('[Auth] signUp confirmed_at   :', data.user?.email_confirmed_at ?? 'null');
-      console.log('[Auth] signUp conf_sent_at   :', (data.user as any)?.confirmation_sent_at ?? 'null');
+      // ── Diagnostics (TEMP — captures exact Supabase response shape) ──────────
+      // Remove after confirming duplicate-email detection works in production.
+      const _diag = {
+        error_message:    error?.message ?? null,
+        error_status:     (error as any)?.status ?? null,
+        user_id:          data.user?.id ?? null,
+        user_email:       data.user?.email ?? null,
+        session_present:  data.session !== null,
+        // identities — the anti-enumeration discriminator:
+        //   new signup          → Array with ≥1 entries
+        //   existing email      → [] OR undefined (project-dependent)
+        identities_raw:   data.user?.identities,          // full value, not just length
+        identities_type:  typeof data.user?.identities,   // 'object' (array) or 'undefined'
+        identities_len:   data.user?.identities?.length ?? 'FIELD_MISSING',
+        email_confirmed_at: data.user?.email_confirmed_at ?? null,
+        conf_sent_at:     (data.user as any)?.confirmation_sent_at ?? null,
+        // Is the user object itself present?
+        user_is_null:     data.user === null,
+        // All top-level keys on data.user (to reveal hidden/unexpected fields)
+        user_keys:        data.user ? Object.keys(data.user) : null,
+      };
+      console.log('[Auth:signUp] FULL DIAG', JSON.stringify(_diag, null, 2));
 
       if (error) throw new Error(error.message);
 
       const user = data.user;
 
-      // Anti-enumeration detection:
-      // Supabase returns { user: <fake random user>, identities: [], session: null }
-      // for ANY existing email (confirmed or unconfirmed) to prevent account probing.
-      // An empty identities array is the reliable discriminator — a genuine new
-      // signup always has identities.length >= 1. We treat both confirmed and
-      // unconfirmed existing accounts the same way (can't distinguish without a
-      // second API call, and the UX guidance is the same either way).
-      const identitiesCount = data.user?.identities?.length ?? -1;
-      console.log('[Auth] signUp identities count:', identitiesCount, '(0 = existing account anti-enum)');
+      // ── Duplicate-email detection ─────────────────────────────────────────────
+      // Supabase anti-enumeration: existing email → { user: <fake>, session: null }
+      // with no real error. The discriminator is `identities`:
+      //
+      //   New signup (real user)      → identities is an Array with ≥1 entries
+      //   Existing email (fake user)  → identities is [] OR undefined/absent
+      //
+      // We guard on BOTH the array-present-and-empty case AND the field-missing
+      // case so this works regardless of which shape this Supabase project returns.
+      //
+      // Also catches the case where data.user itself is null (older Supabase behavior
+      // where the anti-enum response omitted the user object entirely).
+      const identities = data.user?.identities;
+      const identitiesIsEmpty =
+        // user is null/undefined entirely
+        !data.user ||
+        // identities field is present and explicitly empty
+        (Array.isArray(identities) && identities.length === 0) ||
+        // identities field is absent — means the user object is fake/sanitized
+        identities === undefined;
 
-      if (!data.session && identitiesCount === 0) {
+      console.log('[Auth:signUp] duplicate check:', {
+        identitiesIsEmpty,
+        identitiesValue: identities,
+        userIsNull: !data.user,
+      });
+
+      if (!data.session && identitiesIsEmpty) {
         throw new DuplicateEmailError(
           'An account with this email already exists. Please sign in, or reset your password if you\'ve forgotten it.',
         );
       }
 
-      // No session but identities present → genuine new signup, confirmation email sent.
+      // No session, identities present → genuine new signup, confirmation email sent.
       if (!user || !data.session) {
         throw new EmailConfirmationRequiredError(
           'Account created. Please check your email to verify your account before signing in.',
