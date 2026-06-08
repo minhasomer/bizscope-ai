@@ -380,12 +380,10 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   }
 }
 
-// ─── Allowed beta roles (Admin + BetaTester hardcoded server-side) ────────────
-// Initial deploy uses VITE_BETA_ROLES=Admin on the frontend (only Admin browsers
-// reach this endpoint). Expanding to BetaTester requires only a frontend env
-// var change — no server code change needed.
-
-const BETA_ROLES = ['Admin', 'BetaTester'];
+// ─── Plan-based gate constants ────────────────────────────────────────────────
+// Gate uses verifiedPlan (resolved by getServerSidePlan) rather than raw role
+// strings. This ensures BETA_FULL_ACCESS=true and real paid subscribers both
+// pass, while Explorer and unauthenticated requests are rejected consistently.
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -413,25 +411,35 @@ export default async function handler(
     hasRealReportsEnabled:    !!process.env.REAL_REPORTS_ENABLED,
     realReportsEnabledValue:  process.env.REAL_REPORTS_ENABLED,
     hasGeminiApiKey:          !!process.env.GEMINI_API_KEY,
+    betaFullAccess:           _serverBetaFullAccess,
     supabaseAdminInitialized: !!supabaseAdmin,
   });
 
-  // Auth + role gate: only Admin and BetaTester proceed.
+  // Auth + plan gate.
   // [3]-[7] are logged inside verifyAndGetPlan at every exit point.
   const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
 
-  // Allow through if:
-  //   a) BETA_FULL_ACCESS=true (all authenticated users during private beta), OR
-  //   b) the user's stored role is in BETA_ROLES (Admin / BetaTester always allowed).
-  // Unauthenticated requests are rejected above (no verifiedUserId) before reaching here.
-  if (!_serverBetaFullAccess && !BETA_ROLES.includes(verifiedRole)) {
-    return json(res, 403, {
-      error: 'Real reports are restricted to beta users.',
-      code: 'BETA_RESTRICTED',
+  // Block unauthenticated requests unconditionally — BETA_FULL_ACCESS never
+  // extends to anonymous visitors.
+  if (!verifiedUserId) {
+    return json(res, 401, {
+      error: 'Authentication required for report generation.',
+      code: 'UNAUTHENTICATED',
     });
   }
+  // Block Explorer-plan users. When BETA_FULL_ACCESS=true, getServerSidePlan()
+  // already resolved the plan to Pro+, so Explorer only appears for users whose
+  // stored tier is genuinely Explorer (no active subscription).
+  if (verifiedPlan === 'Explorer') {
+    console.warn(`[Analyze] Rejected — plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
+    return json(res, 403, {
+      error: 'Real reports require a Pro or higher plan.',
+      code: 'INSUFFICIENT_PLAN',
+    });
+  }
+  console.log(`[Analyze] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} betaFullAccess=${_serverBetaFullAccess}`);
 
   const body = req.body ?? {};
   const { businessType, location, userLocation } = body;

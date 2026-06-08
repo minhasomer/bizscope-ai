@@ -846,9 +846,21 @@ async function startServer() {
   app.post("/api/analyze", async (req: Request, res: Response) => {
     const { businessType, location, userLocation } = req.body;
 
-    const { verifiedEmail: userEmail, verifiedPlan: planTier } = await verifyAndGetPlan(
+    const { verifiedEmail: userEmail, verifiedPlan: planTier, verifiedRole } = await verifyAndGetPlan(
       req.headers["authorization"] as string | undefined
     );
+
+    // Plan gate — mirrors api/analyze.ts production behaviour.
+    // FALLBACK plan is 'Explorer', which covers both unauthenticated users and
+    // users without an active subscription. When BETA_FULL_ACCESS=true,
+    // getServerSidePlan() already promotes authenticated users to Pro+.
+    if (planTier === 'Explorer') {
+      console.warn(`[Analyze] Rejected — plan="${planTier}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
+      return res.status(403).json({
+        error: "Real reports require a Pro or higher plan.",
+        code: "INSUFFICIENT_PLAN",
+      });
+    }
 
     // Enforce limits on the server-side to secure the live deployment
     const limitCheck = checkServerLimit(userEmail, planTier, false);
