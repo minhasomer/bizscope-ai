@@ -19,21 +19,25 @@ export class EmailConfirmationRequiredError extends Error {
 }
 
 /**
- * Thrown by signUp when the submitted email already has an account, OR when
- * Supabase returns its anti-enumeration response for a reserved email address.
+ * Thrown by signUp when Supabase returns its anti-enumeration response:
+ * { user: null, session: null, error: null } (v2.60+) or
+ * { user: <fake>, identities: [], session: null, error: null } (older v2).
  *
- * Detection covers two Supabase v2 shapes:
- *  - v2.60+: { user: null, session: null, error: null } — current behavior
- *  - older v2: { user: <fake>, identities: [], session: null, error: null }
+ * This state is AMBIGUOUS — it can mean:
+ *  1. The email already has a confirmed account (genuine duplicate), OR
+ *  2. A prior signup is awaiting email confirmation (confirmation pending), OR
+ *  3. The email is in Supabase's internal reservation state after a SQL DELETE
+ *     without admin.deleteUser() cleanup (~24-48 h window).
  *
- * The UX message is intentionally neutral — it doesn't assert "Account exists"
- * because user:null also fires for emails in Supabase's internal reservation
- * state after a SQL DELETE (full cleanup requires admin.deleteUser()).
+ * We deliberately do NOT assert "Account already exists" in the UX because
+ * Supabase's anti-enumeration design intentionally prevents us from knowing.
+ * The UI should offer both "check your inbox" and "sign in / reset password"
+ * so the user can self-resolve regardless of which case applies.
  */
-export class DuplicateEmailError extends Error {
+export class AmbiguousSignupStateError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'DuplicateEmailError';
+    this.name = 'AmbiguousSignupStateError';
   }
 }
 
@@ -341,8 +345,8 @@ export class AuthService {
         (Array.isArray(identities) && identities.length === 0);
 
       if (!data.session && identitiesIsEmpty) {
-        throw new DuplicateEmailError(
-          "If this email isn't registered yet, check your inbox for a confirmation email. Otherwise, try signing in or reset your password.",
+        throw new AmbiguousSignupStateError(
+          "Check your inbox for a confirmation email. If you already have an account, sign in or reset your password.",
         );
       }
 
