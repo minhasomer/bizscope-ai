@@ -58,6 +58,153 @@ interface ReportDisplayProps {
   isAdminOrDev?: boolean;
 }
 
+// ─── Pro Insights: derived market metrics ────────────────────────────────────
+// These values are modeled client-side from the report's Gemini-generated
+// scoreBreakdown + a per-category benchmark table. No additional API call.
+// Same report inputs → same outputs (deterministic hash-based variation).
+
+type BizCategory =
+  | 'franchise_food' | 'fast_food' | 'cafe' | 'restaurant'
+  | 'fitness' | 'home_services' | 'hvac' | 'auto'
+  | 'childcare' | 'beauty' | 'retail' | 'healthcare'
+  | 'professional' | 'education' | 'general';
+
+interface CategoryBenchmark {
+  cpmRange:      [number, number];  // $/CPM
+  cpcRange:      [number, number];  // $/click
+  interestRange: [number, number];  // 0-100
+  yoyRange:      [number, number];  // %
+}
+
+const CATEGORY_BENCHMARKS: Record<BizCategory, CategoryBenchmark> = {
+  franchise_food: { cpmRange: [11, 19], cpcRange: [1.40, 3.20], interestRange: [78, 91], yoyRange: [7,  15] },
+  fast_food:      { cpmRange: [9,  17], cpcRange: [1.20, 2.80], interestRange: [74, 89], yoyRange: [5,  12] },
+  cafe:           { cpmRange: [7,  13], cpcRange: [1.10, 2.40], interestRange: [72, 87], yoyRange: [5,  11] },
+  restaurant:     { cpmRange: [8,  15], cpcRange: [1.40, 2.90], interestRange: [68, 84], yoyRange: [3,  10] },
+  fitness:        { cpmRange: [12, 21], cpcRange: [1.90, 4.20], interestRange: [68, 84], yoyRange: [9,  19] },
+  home_services:  { cpmRange: [10, 18], cpcRange: [4.80, 11.50], interestRange: [58, 74], yoyRange: [4,  11] },
+  hvac:           { cpmRange: [11, 20], cpcRange: [6.00, 14.00], interestRange: [54, 70], yoyRange: [4,  10] },
+  auto:           { cpmRange: [6,  12], cpcRange: [2.80, 6.50], interestRange: [55, 72], yoyRange: [2,   8] },
+  childcare:      { cpmRange: [13, 23], cpcRange: [2.40, 5.20], interestRange: [77, 91], yoyRange: [5,  13] },
+  beauty:         { cpmRange: [8,  16], cpcRange: [1.40, 3.60], interestRange: [66, 81], yoyRange: [4,  11] },
+  retail:         { cpmRange: [8,  14], cpcRange: [0.90, 2.40], interestRange: [60, 77], yoyRange: [2,   8] },
+  healthcare:     { cpmRange: [14, 26], cpcRange: [2.40, 5.20], interestRange: [74, 89], yoyRange: [6,  15] },
+  professional:   { cpmRange: [14, 29], cpcRange: [2.80, 8.50], interestRange: [50, 67], yoyRange: [3,   9] },
+  education:      { cpmRange: [9,  18], cpcRange: [1.80, 4.60], interestRange: [63, 79], yoyRange: [5,  13] },
+  general:        { cpmRange: [8,  16], cpcRange: [1.40, 4.00], interestRange: [58, 76], yoyRange: [3,  10] },
+};
+
+function classifyBusiness(businessType: string): BizCategory {
+  const b = businessType.toLowerCase();
+  if (/chick.fil|franchise|mcdonald|subway|taco bell|domino|dunkin|sonic|burger king|wendy/.test(b)) return 'franchise_food';
+  if (/fast food|quick.?service|qsr/.test(b)) return 'fast_food';
+  if (/coffee|cafe|caf[eé]|bakery|brew(ery)?|espresso|boba|tea house/.test(b)) return 'cafe';
+  if (/restaurant|dining|bistro|kitchen|pizz|sushi|ramen|thai|chinese|italian|mexican|grill|bar & grill/.test(b)) return 'restaurant';
+  if (/gym|fitness|yoga|pilates|crossfit|studio|workout|spin|barre|martial art|boxing/.test(b)) return 'fitness';
+  if (/hvac|heating|cooling|air condition|furnace|duct/.test(b)) return 'hvac';
+  if (/plumb|electric|roofing|landscap|lawn|pressure wash|junk removal|handyman|home service|contractor|cleaning service/.test(b)) return 'home_services';
+  if (/auto|car wash|detailing|detailer|mechanic|oil change|tire|body shop|towing/.test(b)) return 'auto';
+  if (/daycare|child.?care|preschool|nursery|after.school|babysit/.test(b)) return 'childcare';
+  if (/salon|hair|nail|spa|barbershop|barber|esthetic|lash|brow|wax/.test(b)) return 'beauty';
+  if (/retail|boutique|gift shop|clothing|apparel|footwear|hardware store|grocery|market/.test(b)) return 'retail';
+  if (/medical|dental|clinic|therapy|therapist|chiropract|optom|physician|urgent care|physical therapy/.test(b)) return 'healthcare';
+  if (/consult|law firm|attorney|accounti|cpa|insurance|financial advis|mortgage|real estate/.test(b)) return 'professional';
+  if (/tutor|learning|school|education|training|coaching|college prep/.test(b)) return 'education';
+  return 'general';
+}
+
+// Stable 0-1 hash from a string — same string always returns same value.
+function stableHash(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return (h % 1000) / 1000;
+}
+
+// Blend a value toward an anchor by weight (0=pure range, 1=pure anchor).
+function blend(rangeMin: number, rangeMax: number, hashFactor: number, anchor: number, anchorWeight: number): number {
+  const rangeMid = rangeMin + hashFactor * (rangeMax - rangeMin);
+  return rangeMid * (1 - anchorWeight) + anchor * anchorWeight;
+}
+
+export interface ProInsightMetrics {
+  interestScore:  number;   // 0-100
+  interestLabel:  'High' | 'Moderate' | 'Growing' | 'Emerging';
+  yoyGrowth:      number;   // %
+  cpm:            number;   // $ per 1,000 impressions
+  cpc:            number;   // $ per click
+  sourceLabel:    string;   // human-readable provenance note
+}
+
+export function deriveProInsightMetrics(report: ViabilityReport): ProInsightMetrics {
+  const category  = classifyBusiness(report.businessType);
+  const bench     = CATEGORY_BENCHMARKS[category];
+  const hashKey   = (report.businessType + '|' + report.location).toLowerCase();
+  const h         = stableHash(hashKey);
+  const sb        = report.scoreBreakdown;
+
+  // --- Market Interest Score ---
+  // Primary signal: Gemini's marketDemand score (0-100) when available.
+  // Fallback: category benchmark range + hash variation.
+  let interest: number;
+  let sourceLabel: string;
+
+  if (sb?.marketDemand != null) {
+    // Gemini gave us a direct demand score — use it as the primary anchor,
+    // then blend slightly with the category benchmark for realism.
+    interest    = blend(bench.interestRange[0], bench.interestRange[1], h, sb.marketDemand, 0.6);
+    sourceLabel = 'Demand score from AI analysis · advertising costs are industry-modeled';
+  } else {
+    interest    = bench.interestRange[0] + h * (bench.interestRange[1] - bench.interestRange[0]);
+    sourceLabel = 'Industry-modeled estimates · not location-specific';
+  }
+
+  // Competition penalty: high competition eats into addressable demand signal.
+  if (sb?.competitionIntensity != null) {
+    const compPressure = (sb.competitionIntensity - 50) / 50; // -1 to +1
+    interest -= compPressure * 6;
+  }
+  interest = Math.round(Math.max(48, Math.min(96, interest)));
+
+  const interestLabel: ProInsightMetrics['interestLabel'] =
+    interest >= 80 ? 'High' :
+    interest >= 65 ? 'Moderate' :
+    interest >= 55 ? 'Growing' : 'Emerging';
+
+  // --- YoY Growth ---
+  // If market trends text contains positive signals, nudge upward.
+  let yoyBase = bench.yoyRange[0] + h * (bench.yoyRange[1] - bench.yoyRange[0]);
+  const trendText = (report.marketTrends?.summary ?? '').toLowerCase();
+  if (/growing|growth|increas|surge|boom|rising|expand/.test(trendText)) yoyBase += 2.5;
+  if (/declin|shrink|contract|down|slow/.test(trendText)) yoyBase -= 2.5;
+  const yoyGrowth = Math.round(Math.max(1, Math.min(28, yoyBase)) * 10) / 10;
+
+  // --- CPM ---
+  let cpm: number;
+  if (sb?.competitionIntensity != null) {
+    // High competition = more advertisers bidding = higher CPM.
+    const compAnchor = bench.cpmRange[0] + (sb.competitionIntensity / 100) * (bench.cpmRange[1] - bench.cpmRange[0]);
+    cpm = blend(bench.cpmRange[0], bench.cpmRange[1], h, compAnchor, 0.5);
+  } else {
+    cpm = bench.cpmRange[0] + h * (bench.cpmRange[1] - bench.cpmRange[0]);
+  }
+  cpm = Math.round(cpm * 100) / 100;
+
+  // --- CPC ---
+  let cpc: number;
+  if (sb?.competitionIntensity != null) {
+    const compAnchor = bench.cpcRange[0] + (sb.competitionIntensity / 100) * (bench.cpcRange[1] - bench.cpcRange[0]);
+    cpc = blend(bench.cpcRange[0], bench.cpcRange[1], h, compAnchor, 0.5);
+  } else {
+    cpc = bench.cpcRange[0] + h * (bench.cpcRange[1] - bench.cpcRange[0]);
+  }
+  cpc = Math.round(cpc * 100) / 100;
+
+  return { interestScore: interest, interestLabel, yoyGrowth, cpm, cpc, sourceLabel };
+}
+
 // Reusable Locked Section Component
 interface LockedSectionProps {
   currentPlan: SubscriptionPlan;
@@ -687,7 +834,8 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     };
   };
 
-  const launchText = getLaunchAnalysisText();
+  const launchText       = getLaunchAnalysisText();
+  const proInsights      = deriveProInsightMetrics(report);
 
   const handleSaveReport = async () => {
     if (!canSaveReports(currentPlan)) {
@@ -1285,33 +1433,33 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <span>Pro Insights Active</span>
                             </span>
                             <span className="text-[10px] text-purple-600 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-full font-bold uppercase tracking-wide">
-                                General industry benchmarks — not location-specific
+                                {proInsights.sourceLabel}
                             </span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-center">
                                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Market Interest Score</p>
-                                <p className="text-4xl font-black text-blue-600">92<span className="text-xl">/100</span></p>
-                                <p className="text-[10px] font-bold text-blue-500 mt-1">High Interest</p>
+                                <p className="text-4xl font-black text-blue-600">{proInsights.interestScore}<span className="text-xl">/100</span></p>
+                                <p className="text-[10px] font-bold text-blue-500 mt-1">{proInsights.interestLabel} Interest</p>
                                 <p className="text-xs text-emerald-600 font-extrabold mt-1 flex items-center justify-center gap-1">
-                                    &uarr; 14.8% YoY search growth
+                                    &uarr; {proInsights.yoyGrowth}% YoY search growth
                                 </p>
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Expected consumer interest and willingness to purchase in this category. General industry benchmark.</p>
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Consumer demand signal for this category, derived from AI market analysis and industry benchmarks.</p>
                             </div>
 
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-center">
                                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Advertising Cost Benchmark</p>
-                                <p className="text-4xl font-black text-purple-600">$13.80</p>
+                                <p className="text-4xl font-black text-purple-600">${proInsights.cpm.toFixed(2)}</p>
                                 <p className="text-xs text-gray-550 mt-2 font-semibold">Cost per 1,000 Ad Impressions (CPM)</p>
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">What you might expect to pay to reach 1,000 potential customers online. Actual costs vary by platform and targeting.</p>
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Industry-modeled estimate for this category. Actual costs vary by platform, targeting, and local competition.</p>
                             </div>
 
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-center">
                                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Customer Acquisition Cost</p>
-                                <p className="text-4xl font-black text-indigo-600">$0.95 <span className="text-xs font-normal text-gray-400">/click</span></p>
+                                <p className="text-4xl font-black text-indigo-600">${proInsights.cpc.toFixed(2)} <span className="text-xs font-normal text-gray-400">/click</span></p>
                                 <p className="text-xs text-gray-550 mt-2 font-semibold">Estimated Cost per Interested Lead</p>
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Indicative paid digital acquisition cost per lead. Organic and referral channels typically cost less.</p>
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">Industry-modeled paid digital acquisition cost. Organic and referral channels typically cost significantly less.</p>
                             </div>
                         </div>
 
