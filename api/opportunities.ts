@@ -215,6 +215,15 @@ async function setInServerCache(
   planTierMeta: string,
   report: any,
 ): Promise<void> {
+  console.log('[ServerCache] cache write attempt:', {
+    hasSupabaseUrl:             !!process.env.SUPABASE_URL,
+    hasServiceRoleKey:          !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    usingServiceRoleClientForCache: !!supabaseAdmin,
+    keyRoleClaim:               _srKeyDiag.roleClaim,
+    businessType,
+    location,
+    reportType,
+  });
   if (!supabaseAdmin) return;
   try {
     const cleanReport = { ...report };
@@ -235,7 +244,12 @@ async function setInServerCache(
         { onConflict: 'business_type,location,report_type,analysis_version' },
       );
     if (error) {
-      console.warn('[ServerCache] upsert error (non-fatal):', error.message);
+      console.warn('[ServerCache] upsert error (non-fatal):', {
+        code:    error.code,
+        message: error.message,
+        details: (error as any).details,
+        hint:    (error as any).hint,
+      });
     } else {
       console.log(`[ServerCache] STORED — ${businessType} / ${location} (${reportType})`);
     }
