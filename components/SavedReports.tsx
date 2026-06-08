@@ -31,9 +31,10 @@ interface SavedReportsProps {
   currentPlan: string;
   onViewReport: (report: any) => void;
   onDeleteReport?: (indexOrId: number | string) => void; // Optional fallback
+  onNavigateHome?: () => void;
 }
 
-export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan, onViewReport }) => {
+export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan, onViewReport, onNavigateHome }) => {
   const [localReports, setLocalReports] = useState<SavedReport[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -387,10 +388,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                   Run a business viability analysis for any spot, and click "Save to Dashboard" within the report to add it here.
                 </p>
                 <button
-                  onClick={() => {
-                    const el = document.getElementById('businessType');
-                    if (el) el.focus();
-                  }}
+                  onClick={() => onNavigateHome?.()}
                   className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 py-1.5 px-3.5 rounded-xl transition-all"
                 >
                   Analyze First Idea

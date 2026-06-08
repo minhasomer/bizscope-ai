@@ -721,14 +721,15 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <SavedReports 
-              reports={savedReports} 
+            <SavedReports
+              reports={savedReports}
               currentPlan={userPlan}
               onViewReport={(rep) => {
                 setReport(rep);
                 setCurrentView('report');
               }}
               onDeleteReport={handleDeleteReport}
+              onNavigateHome={() => setCurrentView('home')}
             />
           </div>
         );
