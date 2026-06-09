@@ -61,6 +61,41 @@ const App: React.FC = () => {
     const param = new URLSearchParams(window.location.search).get('view');
     return param || 'home';
   });
+
+  /**
+   * navigate(view) — the single navigation primitive for the whole app.
+   *
+   * Wraps setCurrentView with history.pushState so the browser Back button
+   * (and Android Chrome's hardware Back) moves between BizScope pages instead
+   * of exiting the site. A duplicate-push guard prevents redundant entries
+   * when internal handlers reset to the current view (e.g. runAnalysis → 'home'
+   * while already on 'home').
+   */
+  const navigate = useCallback((view: string) => {
+    const currentParam = new URLSearchParams(window.location.search).get('view') ?? 'home';
+    if (view !== currentParam) {
+      history.pushState({ view }, '', `?view=${view}`);
+    }
+    setCurrentView(view);
+  }, []);
+
+  // Stamp the initial history entry with view state so popstate always has
+  // e.state.view, then listen for Back/Forward to restore the correct view.
+  useEffect(() => {
+    const initialView = new URLSearchParams(window.location.search).get('view') ?? 'home';
+    history.replaceState({ view: initialView }, '');
+
+    const onPopState = (e: PopStateEvent) => {
+      const view =
+        (e.state as { view?: string } | null)?.view ??
+        new URLSearchParams(window.location.search).get('view') ??
+        'home';
+      setCurrentView(view);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   const { location: userLocation } = useGeolocation();
 
   // User Authentication States
@@ -124,11 +159,11 @@ const App: React.FC = () => {
           setError(null);
           setBaseUserPlan('Explorer');
           setPreviewRole(null);
-          setCurrentView('home');
+          navigate('home');
         }
         setAuthLoading(false);
       },
-      () => setCurrentView('reset-password'),
+      () => navigate('reset-password'),
     );
 
     // 2. Load the existing session (page refresh / direct visit).
@@ -301,7 +336,7 @@ const App: React.FC = () => {
     setCurrentUser(null);
     setReport(null);
     setError(null);
-    setCurrentView('home');
+    navigate('home');
     setBaseUserPlan('Explorer');
     setPreviewRole(null);
   };
@@ -361,7 +396,7 @@ const App: React.FC = () => {
     setError(null);
     setReport(null);
     setShowPreviewCTA(false);
-    setCurrentView('home');
+    navigate('home');
     setTimeout(() => {
       document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
@@ -402,7 +437,7 @@ const App: React.FC = () => {
     setError(null);
     setReport(null);
     setShowPreviewCTA(false);
-    setCurrentView('home');
+    navigate('home');
     // Scroll to results immediately so the loading indicator is visible
     setTimeout(() => {
       document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -474,7 +509,7 @@ const App: React.FC = () => {
         setShowPreviewCTA(true);
         setReport(null);
         setError(null);
-        setCurrentView('home');
+        navigate('home');
         setTimeout(() => {
           document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 50);
@@ -533,7 +568,7 @@ const App: React.FC = () => {
 
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
-      setCurrentView('settings'); // redirect to auth if not signed in
+      navigate('settings'); // redirect to auth if not signed in
       return;
     }
     try {
@@ -545,7 +580,6 @@ const App: React.FC = () => {
 
   const renderSEOTemplate = () => {
     if (!seoRoute) return null;
-    const navigate = (page: string) => setCurrentView(page);
     switch (seoRoute.type) {
       case 'best-businesses':
         return <BestBusinessesTemplate citySlug={seoRoute.citySlug} onNavigate={navigate} />;
@@ -589,7 +623,7 @@ const App: React.FC = () => {
               setBaseUserPlan(user.plan as SubscriptionPlan);
               localStorage.setItem('bizscope_user_email', user.email);
             }}
-            onNavigate={setCurrentView}
+            onNavigate={navigate}
           />
         </div>
       );
@@ -620,7 +654,7 @@ const App: React.FC = () => {
           <div className="print:hidden">
             <OpportunityExplorer
               currentPlan={userPlan}
-              onNavigate={setCurrentView}
+              onNavigate={navigate}
               userRole={currentUser?.role ?? ''}
               isAuthenticated={!!currentUser}
               initialReport={marketGapInitialReport}
@@ -645,13 +679,13 @@ const App: React.FC = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={() => setCurrentView('pricing')}
+                  onClick={() => navigate('pricing')}
                   className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
                 >
                   View Plans
                 </button>
-                <button 
-                  onClick={() => setCurrentView('home')}
+                <button
+                  onClick={() => navigate('home')}
                   className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-250 font-bold text-xs rounded-xl transition-all cursor-pointer"
                 >
                   Return Home
@@ -676,13 +710,13 @@ const App: React.FC = () => {
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setCurrentView('home')}
+                  onClick={() => navigate('home')}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-md cursor-pointer transition-colors"
                 >
                   New Report
                 </button>
                 <button
-                   onClick={() => setCurrentView('opportunities')}
+                   onClick={() => navigate('opportunities')}
                   className="px-5 py-2.5 bg-gray-150 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-xl cursor-pointer border border-gray-200 transition-colors"
                 >
                   🔍 Explore Market Gaps
@@ -735,13 +769,13 @@ const App: React.FC = () => {
               currentPlan={userPlan}
               onViewReport={(rep) => {
                 setReport(rep);
-                setCurrentView('report');
+                navigate('report');
               }}
               onDeleteReport={handleDeleteReport}
-              onNavigateHome={() => setCurrentView('home')}
+              onNavigateHome={() => navigate('home')}
               onViewMarketGapReport={(reportData) => {
                 setMarketGapInitialReport(reportData);
-                setCurrentView('opportunities');
+                navigate('opportunities');
                 // Clear after one render so the prop doesn't persist on re-mounts.
                 setTimeout(() => setMarketGapInitialReport(null), 0);
               }}
@@ -750,14 +784,14 @@ const App: React.FC = () => {
         );
       case 'reset-password':
         return (
-          <ResetPasswordPage onSuccess={() => setCurrentView('dashboard')} />
+          <ResetPasswordPage onSuccess={() => navigate('dashboard')} />
         );
       case 'billing':
         return (
           <BillingPage
             currentPlan={userPlan}
             user={currentUser!}
-            onNavigate={setCurrentView}
+            onNavigate={navigate}
           />
         );
       case 'settings':
@@ -766,7 +800,7 @@ const App: React.FC = () => {
             user={currentUser!}
             onUpdateProfile={handleUpdateProfile}
             onSignOut={handleSignOut}
-            onNavigate={setCurrentView}
+            onNavigate={navigate}
           />
         );
       case 'about':
@@ -1016,7 +1050,7 @@ const App: React.FC = () => {
               </section>
               <section>
                 <h2 className="text-base font-black text-gray-900 mb-2">7. Contact</h2>
-                <p className="text-sm">Questions about this policy? Use the <button onClick={() => setCurrentView('contact')} className="text-indigo-600 hover:underline cursor-pointer">Contact page</button> to reach our team.</p>
+                <p className="text-sm">Questions about this policy? Use the <button onClick={() => navigate('contact')} className="text-indigo-600 hover:underline cursor-pointer">Contact page</button> to reach our team.</p>
               </section>
             </div>
           </div>
@@ -1089,7 +1123,7 @@ const App: React.FC = () => {
               </section>
               <section>
                 <h2 className="text-base font-black text-gray-900 mb-2">10. Contact</h2>
-                <p className="text-sm">Questions? Use the <button onClick={() => setCurrentView('contact')} className="text-indigo-600 hover:underline cursor-pointer">Contact page</button>.</p>
+                <p className="text-sm">Questions? Use the <button onClick={() => navigate('contact')} className="text-indigo-600 hover:underline cursor-pointer">Contact page</button>.</p>
               </section>
             </div>
           </div>
@@ -1099,8 +1133,8 @@ const App: React.FC = () => {
         return (
           <div className="print:hidden">
             <SampleReports
-              onNavigate={setCurrentView}
-              onRunSample={(bt, loc) => { handleAnalysisRequest(bt, loc); setCurrentView('home'); }}
+              onNavigate={navigate}
+              onRunSample={(bt, loc) => { handleAnalysisRequest(bt, loc); navigate('home'); }}
             />
           </div>
         );
@@ -1110,7 +1144,7 @@ const App: React.FC = () => {
           return (
             <div className="max-w-xl mx-auto py-16 px-4 text-center min-h-[50vh] flex flex-col items-center justify-center gap-4">
               <p className="text-gray-500 text-sm">No report loaded. Run a viability analysis first.</p>
-              <button onClick={() => setCurrentView('home')} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors">
+              <button onClick={() => navigate('home')} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors">
                 Go to Home
               </button>
             </div>
@@ -1122,8 +1156,8 @@ const App: React.FC = () => {
               <ReportDisplay
                 report={report}
                 currentPlan={userPlan}
-                onNavigate={setCurrentView}
-                onRegenerate={() => { setCurrentView('home'); handleAnalysisRequest(report.businessType, report.location, true); }}
+                onNavigate={navigate}
+                onRegenerate={() => { navigate('home'); handleAnalysisRequest(report.businessType, report.location, true); }}
                 isAdminOrDev={!isDemoMode && isAdmin(currentUser?.role ?? '')}
               />
             </div>
@@ -1133,7 +1167,7 @@ const App: React.FC = () => {
       default: // Home
         return (
           <>
-            <Hero onSubmit={handleAnalysisRequest} onNavigate={setCurrentView} isLoading={isLoading} hasResults={!!report || isLoading} currentPlan={userPlan} />
+            <Hero onSubmit={handleAnalysisRequest} onNavigate={navigate} isLoading={isLoading} hasResults={!!report || isLoading} currentPlan={userPlan} />
             
             {/* Results output block — compact preview; full report lives at 'report' view */}
             {(isLoading || error || report || showPreviewCTA) && (
@@ -1150,7 +1184,7 @@ const App: React.FC = () => {
                             Create a free account to validate more business ideas, save your reports, and unlock detailed financial projections.
                           </p>
                           <button
-                            onClick={() => setCurrentView('settings')}
+                            onClick={() => navigate('settings')}
                             className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
                           >
                             <Sparkles className="w-4 h-4" />
@@ -1184,7 +1218,7 @@ const App: React.FC = () => {
                         <div className="px-4">
                             <ReportSummaryCard
                               report={report}
-                              onViewFull={() => setCurrentView('report')}
+                              onViewFull={() => navigate('report')}
                               onRegenerate={() => handleAnalysisRequest(report.businessType, report.location, true)}
                             />
                         </div>
@@ -1199,7 +1233,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 font-sans print:bg-white print:text-black">
       <div className="print:hidden">
-        <Navbar onNavigate={setCurrentView} currentPage={currentView} currentPlan={userPlan} user={currentUser} onSignOut={handleSignOut} authLoading={authLoading} />
+        <Navbar onNavigate={navigate} currentPage={currentView} currentPlan={userPlan} user={currentUser} onSignOut={handleSignOut} authLoading={authLoading} />
       </div>
       
       {import.meta.env.DEV && isDemoMode && (() => {
@@ -1234,7 +1268,7 @@ const App: React.FC = () => {
       </main>
 
       <div className="print:hidden">
-        <Footer onNavigate={setCurrentView} />
+        <Footer onNavigate={navigate} />
       </div>
 
       <DevAdminPanel
@@ -1292,7 +1326,7 @@ const App: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowLimitModal(false);
-                    setCurrentView('pricing');
+                    navigate('pricing');
                   }}
                   className="w-full inline-flex justify-center rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
