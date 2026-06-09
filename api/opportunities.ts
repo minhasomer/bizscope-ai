@@ -89,19 +89,57 @@ function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T
   });
 }
 
-function cleanAndParseJSON(text: string, fallback?: any): any {
+function repairTruncatedJSON(s: string): string {
+  const closes: string[] = [];
+  let inString = false;
+  let escaped  = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escaped)                   { escaped = false; continue; }
+    if (ch === '\\' && inString)   { escaped = true;  continue; }
+    if (ch === '"')                { inString = !inString; continue; }
+    if (inString)                  continue;
+    if      (ch === '{')           closes.push('}');
+    else if (ch === '[')           closes.push(']');
+    else if (ch === '}' || ch === ']') closes.pop();
+  }
+  if (closes.length === 0) return s;
+  let repaired = s.trimEnd().replace(/,\s*$/, '').replace(/:\s*$/, ': null');
+  for (let i = closes.length - 1; i >= 0; i--) repaired += closes[i];
+  return repaired;
+}
+
+function cleanAndParseJSON(text: string, fallback?: any, context?: string): any {
   let s = text.trim()
     .replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
   try { return JSON.parse(s); } catch { /* fall through */ }
   const oi = s.indexOf('{'), ai = s.indexOf('[');
   let start = -1, end = -1;
   if (oi !== -1 && (ai === -1 || oi < ai)) { start = oi; end = s.lastIndexOf('}'); }
-  else if (ai !== -1) { start = ai; end = s.lastIndexOf(']'); }
+  else if (ai !== -1)                       { start = ai; end = s.lastIndexOf(']'); }
   if (start !== -1 && end > start) {
     try { return JSON.parse(s.substring(start, end + 1)); } catch { /* fall through */ }
   }
-  if (fallback) return fallback;
+  if (start !== -1) {
+    try { return JSON.parse(repairTruncatedJSON(s.substring(start))); } catch { /* fall through */ }
+  }
+  console.error('[cleanAndParseJSON] all parse attempts failed:', {
+    context:   context ?? 'unknown',
+    rawLength: text.length,
+    rawPrefix: text.slice(0, 500),
+  });
+  if (fallback !== undefined) return fallback;
   throw new Error('malformed_response');
+}
+
+function isCachedReportValid(report: any): boolean {
+  return (
+    report !== null &&
+    typeof report === 'object' &&
+    !Array.isArray(report) &&
+    typeof report.location === 'string' &&
+    Array.isArray(report.topOpportunities)
+  );
 }
 
 function getGroundingSources(response: any): { title: string; uri: string }[] {
@@ -203,6 +241,10 @@ async function getFromServerCache(
       .eq('analysis_version', CACHE_VERSION)
       .single();
     if (error || !data) return null;
+    if (!isCachedReportValid(data.report)) {
+      console.warn(`[ServerCache] INVALID cached report for ${businessType} / ${location} (${reportType}) — treating as miss to force regeneration`);
+      return null;
+    }
     const ageMs        = Date.now() - new Date(data.created_at).getTime();
     const cacheAgeDays = Math.floor(ageMs / 86_400_000);
     const isStale      = ageMs > maxAgeDays * 86_400_000;
@@ -237,8 +279,8 @@ async function setInServerCache(
   if (!supabaseAdmin) return;
   try {
     const cleanReport = { ...report };
-    delete cleanReport._cached;
-    delete cleanReport._generatedAt;
+    const CACHE_META_KEYS = ['_cached', '_generatedAt', '_cacheAgeDays', '_freshnessDays', '_isStale', '_refreshedFromStale'];
+    for (const key of CACHE_META_KEYS) delete cleanReport[key];
     const { error } = await supabaseAdmin
       .from('report_cache')
       .upsert(
@@ -596,7 +638,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       phase2ElapsedMs,
     });
 
-    const parsed = cleanAndParseJSON(rawText || '');
+    const parsed = cleanAndParseJSON(rawText || '', undefined, location);
     parsed.groundingSources = sources;
     parsed.location = location;
 
@@ -665,6 +707,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     else if (msgLower.includes('timeout'))      { httpStatus = 504; resCode = 'TIMEOUT'; resMessage = 'Analysis timed out. Please try again.'; }
     else if (msgLower.includes('malformed_response')) {
       httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
+      resMessage = 'The AI returned an unexpected response format. Please try again — this is usually transient.';
       console.error('[opportunities] Gemini returned unparseable JSON — no opportunities generated.', { location: location?.slice(0, 60) });
     }
 

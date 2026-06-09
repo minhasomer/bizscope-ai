@@ -199,19 +199,74 @@ function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T
   });
 }
 
-function cleanAndParseJSON(text: string, fallback?: any): any {
+/**
+ * Walk a JSON string that may be truncated (e.g. hit maxOutputTokens) and
+ * close any unclosed braces/brackets so JSON.parse has a chance to succeed.
+ * Returns the repaired string — the caller still needs to JSON.parse it.
+ */
+function repairTruncatedJSON(s: string): string {
+  const closes: string[] = [];
+  let inString = false;
+  let escaped  = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escaped)                   { escaped = false; continue; }
+    if (ch === '\\' && inString)   { escaped = true;  continue; }
+    if (ch === '"')                { inString = !inString; continue; }
+    if (inString)                  continue;
+    if      (ch === '{')           closes.push('}');
+    else if (ch === '[')           closes.push(']');
+    else if (ch === '}' || ch === ']') closes.pop();
+  }
+  if (closes.length === 0) return s; // already balanced — nothing to repair
+  // Strip trailing comma or dangling colon before closing open structures
+  let repaired = s.trimEnd().replace(/,\s*$/, '').replace(/:\s*$/, ': null');
+  for (let i = closes.length - 1; i >= 0; i--) repaired += closes[i];
+  return repaired;
+}
+
+function cleanAndParseJSON(text: string, fallback?: any, context?: string): any {
   let s = text.trim()
     .replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+  // 1. Direct parse (expected fast path for well-formed responses)
   try { return JSON.parse(s); } catch { /* fall through */ }
+  // 2. Bracket-extraction: find the outermost { } or [ ] pair
   const oi = s.indexOf('{'), ai = s.indexOf('[');
   let start = -1, end = -1;
   if (oi !== -1 && (ai === -1 || oi < ai)) { start = oi; end = s.lastIndexOf('}'); }
-  else if (ai !== -1) { start = ai; end = s.lastIndexOf(']'); }
+  else if (ai !== -1)                       { start = ai; end = s.lastIndexOf(']'); }
   if (start !== -1 && end > start) {
     try { return JSON.parse(s.substring(start, end + 1)); } catch { /* fall through */ }
   }
-  if (fallback) return fallback;
+  // 3. Truncation repair: close any unclosed braces/brackets (handles MAX_TOKENS cutoff)
+  if (start !== -1) {
+    try { return JSON.parse(repairTruncatedJSON(s.substring(start))); } catch { /* fall through */ }
+  }
+  // All attempts failed — log diagnostics before giving up
+  console.error('[cleanAndParseJSON] all parse attempts failed:', {
+    context:   context ?? 'unknown',
+    rawLength: text.length,
+    rawPrefix: text.slice(0, 500),
+  });
+  if (fallback !== undefined) return fallback;
   throw new Error('malformed_response');
+}
+
+/**
+ * Validates that a report object retrieved from report_cache has the minimum
+ * fields required to render correctly. Returns false for truncated/corrupted
+ * entries so the caller can treat them as a cache miss and regenerate.
+ */
+function isCachedReportValid(report: any): boolean {
+  return (
+    report !== null &&
+    typeof report === 'object' &&
+    !Array.isArray(report) &&
+    typeof report.viabilityScore === 'number' &&
+    typeof report.recommendation === 'object' &&
+    report.recommendation !== null &&
+    typeof report.executiveSummary === 'string'
+  );
 }
 
 /**
@@ -349,6 +404,10 @@ async function getFromServerCache(
       .eq('analysis_version', CACHE_VERSION)
       .single();
     if (error || !data) return null;
+    if (!isCachedReportValid(data.report)) {
+      console.warn(`[ServerCache] INVALID cached report for ${businessType} / ${location} (${reportType}) — treating as miss to force regeneration`);
+      return null;
+    }
     const ageMs        = Date.now() - new Date(data.created_at).getTime();
     const cacheAgeDays = Math.floor(ageMs / 86_400_000);
     const isStale      = ageMs > maxAgeDays * 86_400_000;
@@ -383,8 +442,8 @@ async function setInServerCache(
   if (!supabaseAdmin) return;
   try {
     const cleanReport = { ...report };
-    delete cleanReport._cached;
-    delete cleanReport._generatedAt;
+    const CACHE_META_KEYS = ['_cached', '_generatedAt', '_cacheAgeDays', '_freshnessDays', '_isStale', '_refreshedFromStale'];
+    for (const key of CACHE_META_KEYS) delete cleanReport[key];
     const { error } = await supabaseAdmin
       .from('report_cache')
       .upsert(
@@ -797,7 +856,14 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.warn(`[AICost] OVER_HARD_CAP role=${verifiedRole} plan=${normalizedPlan} cap=$${budget.hardCapUsd} actual=$${cost.estimatedCostUsd.toFixed(5)}`);
     }
 
-    const parsed = cleanAndParseJSON(synthesis.text || '');
+    const synthesisFinishReason = synthesis.candidates?.[0]?.finishReason ?? 'unknown';
+    const synthesisText = synthesis.text || '';
+    console.log('[analyze] Phase 3 synthesis result:', {
+      finishReason: synthesisFinishReason,
+      rawLength:    synthesisText.length,
+      rawPrefix:    synthesisText.slice(0, 200),
+    });
+    const parsed = cleanAndParseJSON(synthesisText, undefined, `${businessType} / ${location}`);
     parsed.groundingSources = sources;
 
     if (!parsed.targetCoordinates) {
@@ -890,6 +956,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     else if (msgLower.includes('timeout')) { httpStatus = 504; resCode = 'TIMEOUT'; resMessage = 'Analysis timed out. Please try again.'; }
     else if (msgLower.includes('malformed_response')) {
       httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
+      resMessage = 'The AI returned an unexpected response format. Please try again — this is usually transient.';
       console.error('[analyze] Gemini returned unparseable JSON — no report generated.', { businessType: businessType?.slice(0, 60) });
     }
 

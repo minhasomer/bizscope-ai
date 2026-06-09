@@ -368,47 +368,56 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Prom
 }
 
 // JSON Text cleaning helper
-function cleanAndParseJSON(text: string, schemaFallback?: any): any {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.replace(/^```json\s*/, "").replace(/\s*```$/, "");
-  } else if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```\s*/, "").replace(/\s*```$/, "");
+function repairTruncatedJSON(s: string): string {
+  const closes: string[] = [];
+  let inString = false;
+  let escaped  = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escaped)                   { escaped = false; continue; }
+    if (ch === '\\' && inString)   { escaped = true;  continue; }
+    if (ch === '"')                { inString = !inString; continue; }
+    if (inString)                  continue;
+    if      (ch === '{')           closes.push('}');
+    else if (ch === '[')           closes.push(']');
+    else if (ch === '}' || ch === ']') closes.pop();
   }
-  
-  try {
-    return JSON.parse(cleaned);
-  } catch (err) {
-    console.error("Malformed JSON detected. Raw response text was:", text);
-    
-    // RegEx extraction helper
-    const objectStartIndex = cleaned.indexOf("{");
-    const arrayStartIndex = cleaned.indexOf("[");
-    let startIndex = -1;
-    let endIndex = -1;
-    
-    if (objectStartIndex !== -1 && (arrayStartIndex === -1 || objectStartIndex < arrayStartIndex)) {
-      startIndex = objectStartIndex;
-      endIndex = cleaned.lastIndexOf("}");
-    } else if (arrayStartIndex !== -1) {
-      startIndex = arrayStartIndex;
-      endIndex = cleaned.lastIndexOf("]");
-    }
-    
-    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-      try {
-        return JSON.parse(cleaned.substring(startIndex, endIndex + 1));
-      } catch (subErr) {
-        console.error("Regex JSON extract failed:", subErr);
-      }
-    }
-    
-    if (schemaFallback) {
-      console.warn("Parsing completely failed. Applying high-fidelity custom fallback.");
-      return schemaFallback;
-    }
-    throw new Error("malformed_response: Gemini returned invalid JSON that could not be parsed.");
+  if (closes.length === 0) return s;
+  let repaired = s.trimEnd().replace(/,\s*$/, '').replace(/:\s*$/, ': null');
+  for (let i = closes.length - 1; i >= 0; i--) repaired += closes[i];
+  return repaired;
+}
+
+function cleanAndParseJSON(text: string, schemaFallback?: any, context?: string): any {
+  let s = text.trim()
+    .replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+  try { return JSON.parse(s); } catch { /* fall through */ }
+  const oi = s.indexOf('{'), ai = s.indexOf('[');
+  let start = -1, end = -1;
+  if (oi !== -1 && (ai === -1 || oi < ai)) { start = oi; end = s.lastIndexOf('}'); }
+  else if (ai !== -1)                       { start = ai; end = s.lastIndexOf(']'); }
+  if (start !== -1 && end > start) {
+    try { return JSON.parse(s.substring(start, end + 1)); } catch { /* fall through */ }
   }
+  if (start !== -1) {
+    try { return JSON.parse(repairTruncatedJSON(s.substring(start))); } catch { /* fall through */ }
+  }
+  console.error('[cleanAndParseJSON] all parse attempts failed:', {
+    context:   context ?? 'unknown',
+    rawLength: text.length,
+    rawPrefix: text.slice(0, 500),
+  });
+  if (schemaFallback !== undefined) return schemaFallback;
+  throw new Error('malformed_response: Gemini returned invalid JSON that could not be parsed.');
+}
+
+function isCachedReportValid(report: any): boolean {
+  return (
+    report !== null &&
+    typeof report === 'object' &&
+    !Array.isArray(report) &&
+    (typeof report.viabilityScore === 'number' || (typeof report.location === 'string' && Array.isArray(report.topOpportunities)))
+  );
 }
 
 // Coordinate Seeder helper
@@ -633,6 +642,10 @@ async function getFromServerCache(
       .single();
 
     if (error || !data) return null;
+    if (!isCachedReportValid(data.report)) {
+      console.warn(`[ServerCache] INVALID cached report for ${businessType} / ${location} (${reportType}) — treating as miss to force regeneration`);
+      return null;
+    }
 
     const ageMs        = Date.now() - new Date(data.created_at).getTime();
     const cacheAgeDays = Math.floor(ageMs / 86_400_000);
@@ -659,8 +672,8 @@ async function setInServerCache(
   if (!supabaseAdmin) return;
   try {
     const cleanReport = { ...report };
-    delete cleanReport._cached;
-    delete cleanReport._generatedAt;
+    const CACHE_META_KEYS = ['_cached', '_generatedAt', '_cacheAgeDays', '_freshnessDays', '_isStale', '_refreshedFromStale'];
+    for (const key of CACHE_META_KEYS) delete cleanReport[key];
 
     const { error } = await supabaseAdmin
       .from('report_cache')
@@ -843,6 +856,7 @@ async function startServer() {
     } else if (message.includes("malformed_response")) {
       statusCode = 502;
       code = "MALFORMED_RESPONSE";
+      message = 'The AI returned an unexpected response format. Please try again — this is usually transient.';
     } else {
       statusCode = 502;
       code = "MODEL_ERROR";
