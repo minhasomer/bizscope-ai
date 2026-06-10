@@ -13,14 +13,49 @@ interface NavbarProps {
   authLoading?: boolean;
 }
 
+// Snapshot of raw browser viewport values — captured once and updated on
+// resize. Displayed in the on-screen diagnostic panel below.
+interface ViewportDiag {
+  innerWidth: number;
+  clientWidth: number;
+  scrollWidth: number;
+  visualVP: number | string;
+  dpr: number;
+  ua: string;
+  hasMobileInUA: boolean;
+  isMobileComputed: boolean;
+  desktopNavVisible: boolean | string;
+  hamburgerVisible: boolean | string;
+}
+
+function captureViewport(isMobile: boolean): ViewportDiag {
+  const desktopNavEl = document.querySelector('[data-diag="desktop-nav"]');
+  const hamburgerEl  = document.querySelector('[data-diag="hamburger"]');
+  return {
+    innerWidth:        window.innerWidth,
+    clientWidth:       document.documentElement.clientWidth,
+    scrollWidth:       document.documentElement.scrollWidth,
+    visualVP:          window.visualViewport?.width ?? 'n/a',
+    dpr:               window.devicePixelRatio,
+    ua:                navigator.userAgent,
+    hasMobileInUA:     /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent),
+    isMobileComputed:  isMobile,
+    desktopNavVisible: desktopNavEl
+      ? getComputedStyle(desktopNavEl).display !== 'none'
+      : 'element not found',
+    hamburgerVisible:  hamburgerEl
+      ? getComputedStyle(hamburgerEl).display !== 'none'
+      : 'element not found',
+  };
+}
+
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, currentPlan, user, onSignOut, authLoading = false }) => {
   const [demoActive, setDemoActive] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-  // True when the viewport is below the xl breakpoint (1280px).
-  // Computed once and updated on resize so we can drive nav visibility
-  // via React state rather than relying solely on Tailwind CDN class scanning.
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1280);
+  const [diag, setDiag] = useState<ViewportDiag | null>(null);
+  const [diagDismissed, setDiagDismissed] = useState(false);
 
   useEffect(() => {
     setDemoActive(isDemoMode);
@@ -32,18 +67,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Diagnostic: log viewport dimensions whenever auth state changes so we can
-  // confirm what the browser reports on device.
+  // Capture and display diagnostics whenever auth state resolves (user set or cleared).
+  // The panel is visible on-screen so no DevTools are needed on the phone.
   useEffect(() => {
-    console.log('[Navbar] auth state changed — viewport diagnostics', {
-      user: user ? user.email : null,
-      innerWidth: window.innerWidth,
-      clientWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-      visualViewportWidth: window.visualViewport?.width ?? 'n/a',
-      isMobileComputed: window.innerWidth < 1280,
-    });
-  }, [user]);
+    // Small delay so React has finished rendering and data-diag elements exist in DOM.
+    const t = setTimeout(() => {
+      const snapshot = captureViewport(isMobile);
+      setDiag(snapshot);
+      setDiagDismissed(false);
+      console.log('[Navbar diag]', snapshot);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [user]); // re-capture whenever auth state changes
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -113,7 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
           </div>
 
           {/* Desktop nav — hidden on mobile via both Tailwind class and React isMobile state */}
-          <div className="hidden xl:flex flex-1 min-w-0 items-center gap-2 h-full ml-6 overflow-x-hidden" style={isMobile ? { display: 'none' } : {}}>
+          <div data-diag="desktop-nav" className="hidden xl:flex flex-1 min-w-0 items-center gap-2 h-full ml-6 overflow-x-hidden" style={isMobile ? { display: 'none' } : {}}>
             {navLinks.map(({ page, label }) => (
               <a key={page} onClick={() => onNavigate(page)} className={getLinkClass(page)}>
                 {label}
@@ -176,6 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
 
           {/* Mobile hamburger — visible on mobile via both Tailwind class and React isMobile state */}
           <button
+            data-diag="hamburger"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="xl:hidden p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             style={isMobile ? {} : { display: 'none' }}
@@ -246,6 +282,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
           )}
         </div>
       </div>
+      {/* ── ON-SCREEN DIAGNOSTIC PANEL ─────────────────────────────────────────
+           Shown after auth resolves so the user can photograph the raw values
+           without needing DevTools. Dismissed with a tap. ───────────────── */}
+      {diag && !diagDismissed && (
+        <div
+          style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+            background: '#0f172a', color: '#e2e8f0', fontSize: '11px',
+            fontFamily: 'monospace', padding: '10px 12px', lineHeight: '1.6',
+            borderTop: '2px solid #6366f1',
+          }}
+          onClick={() => setDiagDismissed(true)}
+        >
+          <div style={{ fontWeight: 'bold', color: '#818cf8', marginBottom: 4 }}>
+            📐 BizScope Viewport Diag — tap to dismiss
+          </div>
+          <div>innerWidth: <b style={{color:'#34d399'}}>{diag.innerWidth}</b></div>
+          <div>clientWidth: <b style={{color:'#34d399'}}>{diag.clientWidth}</b></div>
+          <div>scrollWidth: <b style={{color:'#fbbf24'}}>{diag.scrollWidth}</b></div>
+          <div>visualVP.width: <b style={{color:'#34d399'}}>{String(diag.visualVP)}</b></div>
+          <div>devicePixelRatio: <b>{diag.dpr}</b></div>
+          <div>hasMobileInUA: <b style={{color: diag.hasMobileInUA ? '#34d399' : '#f87171'}}>{String(diag.hasMobileInUA)}</b></div>
+          <div>isMobile (React): <b style={{color: diag.isMobileComputed ? '#34d399' : '#f87171'}}>{String(diag.isMobileComputed)}</b></div>
+          <div>desktopNav visible: <b style={{color: diag.desktopNavVisible === true ? '#f87171' : '#34d399'}}>{String(diag.desktopNavVisible)}</b></div>
+          <div>hamburger visible: <b style={{color: diag.hamburgerVisible === true ? '#34d399' : '#f87171'}}>{String(diag.hamburgerVisible)}</b></div>
+          <div style={{marginTop:4, color:'#64748b', wordBreak:'break-all'}}>UA: {diag.ua}</div>
+          <div style={{marginTop:4, color:'#475569', fontSize:'10px'}}>user: {user ? user.email : 'null'}</div>
+        </div>
+      )}
     </nav>
   );
 };
