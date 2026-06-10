@@ -64,9 +64,20 @@ const formatResetTime = (date: Date | null): string => {
   return `${diffDays} day${diffDays > 1 ? 's' : ''} left`;
 };
 
+// sessionStorage key mirroring the in-memory report so browser Back/Forward
+// across a document reload (OAuth/Stripe redirects, refresh) can restore it.
+const ACTIVE_REPORT_KEY = 'bizscope_active_report';
+
 const App: React.FC = () => {
   const [seoRoute] = useState<SEORouteMatch | null>(() => parseSEORoute(window.location.pathname));
-  const [report, setReport] = useState<ViabilityReport | null>(null);
+  const [report, setReport] = useState<ViabilityReport | null>(() => {
+    try {
+      const cached = sessionStorage.getItem(ACTIVE_REPORT_KEY);
+      return cached ? (JSON.parse(cached) as ViabilityReport) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +121,17 @@ const App: React.FC = () => {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  // Keep the sessionStorage mirror in sync with the in-memory report.
+  // Cleared on sign-out / new analysis via the existing setReport(null) calls.
+  useEffect(() => {
+    try {
+      if (report) sessionStorage.setItem(ACTIVE_REPORT_KEY, JSON.stringify(report));
+      else sessionStorage.removeItem(ACTIVE_REPORT_KEY);
+    } catch {
+      // Quota exceeded or storage unavailable — non-fatal, report stays in memory.
+    }
+  }, [report]);
 
   const { location: userLocation } = useGeolocation();
 
