@@ -17,10 +17,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
   const [demoActive, setDemoActive] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  // True when the viewport is below the xl breakpoint (1280px).
+  // Computed once and updated on resize so we can drive nav visibility
+  // via React state rather than relying solely on Tailwind CDN class scanning.
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1280);
 
   useEffect(() => {
     setDemoActive(isDemoMode);
   }, []);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1280);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Diagnostic: log viewport dimensions whenever auth state changes so we can
+  // confirm what the browser reports on device.
+  useEffect(() => {
+    console.log('[Navbar] auth state changed — viewport diagnostics', {
+      user: user ? user.email : null,
+      innerWidth: window.innerWidth,
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      visualViewportWidth: window.visualViewport?.width ?? 'n/a',
+      isMobileComputed: window.innerWidth < 1280,
+    });
+  }, [user]);
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -89,8 +112,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
             )}
           </div>
 
-          {/* Desktop nav */}
-          <div className="hidden xl:flex flex-1 min-w-0 items-center gap-2 h-full ml-6 overflow-x-hidden">
+          {/* Desktop nav — hidden on mobile via both Tailwind class and React isMobile state */}
+          <div className="hidden xl:flex flex-1 min-w-0 items-center gap-2 h-full ml-6 overflow-x-hidden" style={isMobile ? { display: 'none' } : {}}>
             {navLinks.map(({ page, label }) => (
               <a key={page} onClick={() => onNavigate(page)} className={getLinkClass(page)}>
                 {label}
@@ -98,8 +121,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
             ))}
           </div>
 
-          {/* Desktop right side */}
-          <div className="hidden xl:flex items-center gap-2.5 shrink-0 ml-4">
+          {/* Desktop right side — hidden on mobile via both Tailwind class and React isMobile state */}
+          <div className="hidden xl:flex items-center gap-2.5 shrink-0 ml-4" style={isMobile ? { display: 'none' } : {}}>
             {authLoading ? (
               // Skeleton placeholder — prevents Sign In flash during auth resolution
               <div className="flex items-center gap-2.5">
@@ -151,10 +174,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
             )}
           </div>
 
-          {/* Mobile hamburger */}
+          {/* Mobile hamburger — visible on mobile via both Tailwind class and React isMobile state */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="xl:hidden p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            style={isMobile ? {} : { display: 'none' }}
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -162,10 +186,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
         </div>
       </div>
 
-      {/* Mobile menu — smooth max-h transition */}
-      <div className={`xl:hidden overflow-hidden transition-all duration-300 ease-in-out bg-white border-t border-gray-100 ${
-        mobileMenuOpen ? 'max-h-[600px] shadow-xl' : 'max-h-0'
-      }`}>
+      {/* Mobile menu — smooth max-h transition; also hidden on desktop via React isMobile state */}
+      <div
+        className={`xl:hidden overflow-hidden transition-all duration-300 ease-in-out bg-white border-t border-gray-100 ${
+          mobileMenuOpen ? 'max-h-[600px] shadow-xl' : 'max-h-0'
+        }`}
+        style={isMobile ? {} : { display: 'none' }}
+      >
         <div className="pt-2 pb-3 space-y-0.5 px-2">
           {navLinks.map(({ page, label }) => (
             <a
