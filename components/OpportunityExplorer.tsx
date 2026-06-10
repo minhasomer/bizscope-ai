@@ -72,6 +72,12 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Mobile interruption recovery — same pattern as viability reports in App.tsx.
+  // showRecoveryBanner: shown when a pending record is found on mount (tab discard).
+  // pendingLocation: the location to retry when the user taps Recover Analysis.
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [sort, setSort] = useState<SortType>('score');
   const [selectedDossier, setSelectedDossier] = useState<BusinessOpportunity | null>(null);
@@ -100,6 +106,32 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       setLocation(initialReport.location);
     }
   }, [initialReport]);
+
+  // On mount: check for a pending market gap analysis written before the tab
+  // was discarded. sessionStorage survives Android Chrome tab discard/reload
+  // (cleared only on explicit tab close). If a recent record exists, show the
+  // amber recovery banner so the user can fetch the result from report_cache.
+  useEffect(() => {
+    const PENDING_KEY = 'bizscope_pending_market_gap';
+    const MAX_AGE_MS  = 10 * 60 * 1000; // 10 minutes
+    try {
+      const raw = sessionStorage.getItem(PENDING_KEY);
+      if (!raw) return;
+      const pending = JSON.parse(raw) as {
+        location: string;
+        startedAt: number;
+      };
+      const ageMs = Date.now() - (pending.startedAt ?? 0);
+      if (ageMs < MAX_AGE_MS && typeof pending.location === 'string' && pending.location.trim()) {
+        setPendingLocation(pending.location);
+        setShowRecoveryBanner(true);
+      } else {
+        sessionStorage.removeItem(PENDING_KEY);
+      }
+    } catch {
+      sessionStorage.removeItem('bizscope_pending_market_gap');
+    }
+  }, []);
 
   const locationDropdownItems = filterLocationSuggestions(location);
 
@@ -167,19 +199,66 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     );
   }, [report, currentPlan, visibleLimit]);
 
+  // runSearchForLocation: shared core used by both the normal search form and the
+  // recovery banner. Accepts an explicit locationOverride so recovery can pass the
+  // saved location without waiting for setLocation() state to settle.
+  const runSearchForLocation = async (locationStr: string, forceRegenerate: boolean) => {
+    setLocation(locationStr);
+    setShowLocationSuggestions(false);
+    setShowRecoveryBanner(false);
+    setIsLoading(true);
+    setError(null);
+    if (!forceRegenerate) setReport(null);
+
+    sessionStorage.setItem('bizscope_pending_market_gap', JSON.stringify({
+      location: locationStr,
+      startedAt: Date.now(),
+    }));
+
+    try {
+      const displayLocation = await resolveLocationDisplay(locationStr);
+      if (displayLocation !== locationStr) setLocation(displayLocation);
+      const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole, forceRegenerate);
+      setReport(result);
+      sessionStorage.removeItem('bizscope_pending_market_gap');
+
+      if (isAuthenticated && result) {
+        SavedReportsService.saveMarketGapReport(result).catch((err) =>
+          console.warn('[OpportunityExplorer] Auto-save market gap report failed:', err),
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze opportunities');
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
+    }
+  };
+
   const runSearch = async (forceRegenerate = false) => {
     if (!location.trim()) return;
 
     setShowLocationSuggestions(false);
+    setShowRecoveryBanner(false);
     setIsLoading(true);
     setError(null);
     if (!forceRegenerate) setReport(null);
+
+    // Persist params so they survive a tab discard / page reload on Android Chrome.
+    // Cleared on successful report display below. The mount effect reads this on
+    // reload and shows the recovery banner if the record is < 10 minutes old.
+    sessionStorage.setItem('bizscope_pending_market_gap', JSON.stringify({
+      location: location.trim(),
+      startedAt: Date.now(),
+    }));
 
     try {
       const displayLocation = await resolveLocationDisplay(location.trim());
       if (displayLocation !== location.trim()) setLocation(displayLocation);
       const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole, forceRegenerate);
       setReport(result);
+      sessionStorage.removeItem('bizscope_pending_market_gap');
 
       // Auto-save for authenticated users — deduplicates by location, no quota consumed.
       if (isAuthenticated && result) {
@@ -361,6 +440,31 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             className="py-12"
           >
             <Loader message={loadingMessage || 'Scanning market opportunities...'} />
+          </motion.div>
+        )}
+
+        {showRecoveryBanner && pendingLocation && (
+          <motion.div
+            key="recovery"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-amber-50 border border-amber-200 text-amber-900 p-8 rounded-2xl shadow-sm max-w-2xl mx-auto"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold mb-1">Analysis Interrupted</h3>
+                <p className="text-sm text-amber-800/90 mb-4">Your market gap analysis may have completed in the background.</p>
+                <button
+                  onClick={() => runSearchForLocation(pendingLocation, false)}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl transition-colors"
+                >
+                  Recover Analysis
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
 
