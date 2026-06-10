@@ -13,19 +13,18 @@ interface NavbarProps {
   authLoading?: boolean;
 }
 
-// Snapshot of raw browser viewport values — captured once and updated on
-// resize. Displayed in the on-screen diagnostic panel below.
+// Snapshot of raw browser viewport values — polled every second.
 interface ViewportDiag {
   innerWidth: number;
   clientWidth: number;
   scrollWidth: number;
   visualVP: number | string;
   dpr: number;
-  ua: string;
   hasMobileInUA: boolean;
   isMobileComputed: boolean;
   desktopNavVisible: boolean | string;
   hamburgerVisible: boolean | string;
+  ua: string;
 }
 
 function captureViewport(isMobile: boolean): ViewportDiag {
@@ -37,15 +36,15 @@ function captureViewport(isMobile: boolean): ViewportDiag {
     scrollWidth:       document.documentElement.scrollWidth,
     visualVP:          window.visualViewport?.width ?? 'n/a',
     dpr:               window.devicePixelRatio,
-    ua:                navigator.userAgent,
     hasMobileInUA:     /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent),
     isMobileComputed:  isMobile,
     desktopNavVisible: desktopNavEl
       ? getComputedStyle(desktopNavEl).display !== 'none'
-      : 'element not found',
+      : 'not found',
     hamburgerVisible:  hamburgerEl
       ? getComputedStyle(hamburgerEl).display !== 'none'
-      : 'element not found',
+      : 'not found',
+    ua: navigator.userAgent,
   };
 }
 
@@ -54,8 +53,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1280);
-  const [diag, setDiag] = useState<ViewportDiag | null>(null);
-  const [diagDismissed, setDiagDismissed] = useState(false);
+  // Diagnostic panel — always visible, polled every second, never auto-dismissed.
+  const [diag, setDiag] = useState<ViewportDiag>(() => captureViewport(window.innerWidth < 1280));
 
   useEffect(() => {
     setDemoActive(isDemoMode);
@@ -67,18 +66,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Capture and display diagnostics whenever auth state resolves (user set or cleared).
-  // The panel is visible on-screen so no DevTools are needed on the phone.
+  // Poll viewport every second so the panel always reflects current state
+  // — survives login transitions, navigations, and layout shifts.
   useEffect(() => {
-    // Small delay so React has finished rendering and data-diag elements exist in DOM.
-    const t = setTimeout(() => {
-      const snapshot = captureViewport(isMobile);
-      setDiag(snapshot);
-      setDiagDismissed(false);
-      console.log('[Navbar diag]', snapshot);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [user]); // re-capture whenever auth state changes
+    const interval = setInterval(() => {
+      setDiag(captureViewport(window.innerWidth < 1280));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -283,34 +278,32 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
         </div>
       </div>
       {/* ── ON-SCREEN DIAGNOSTIC PANEL ─────────────────────────────────────────
-           Shown after auth resolves so the user can photograph the raw values
-           without needing DevTools. Dismissed with a tap. ───────────────── */}
-      {diag && !diagDismissed && (
-        <div
-          style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-            background: '#0f172a', color: '#e2e8f0', fontSize: '11px',
-            fontFamily: 'monospace', padding: '10px 12px', lineHeight: '1.6',
-            borderTop: '2px solid #6366f1',
-          }}
-          onClick={() => setDiagDismissed(true)}
-        >
-          <div style={{ fontWeight: 'bold', color: '#818cf8', marginBottom: 4 }}>
-            📐 BizScope Viewport Diag — tap to dismiss
-          </div>
-          <div>innerWidth: <b style={{color:'#34d399'}}>{diag.innerWidth}</b></div>
-          <div>clientWidth: <b style={{color:'#34d399'}}>{diag.clientWidth}</b></div>
-          <div>scrollWidth: <b style={{color:'#fbbf24'}}>{diag.scrollWidth}</b></div>
-          <div>visualVP.width: <b style={{color:'#34d399'}}>{String(diag.visualVP)}</b></div>
-          <div>devicePixelRatio: <b>{diag.dpr}</b></div>
-          <div>hasMobileInUA: <b style={{color: diag.hasMobileInUA ? '#34d399' : '#f87171'}}>{String(diag.hasMobileInUA)}</b></div>
-          <div>isMobile (React): <b style={{color: diag.isMobileComputed ? '#34d399' : '#f87171'}}>{String(diag.isMobileComputed)}</b></div>
-          <div>desktopNav visible: <b style={{color: diag.desktopNavVisible === true ? '#f87171' : '#34d399'}}>{String(diag.desktopNavVisible)}</b></div>
-          <div>hamburger visible: <b style={{color: diag.hamburgerVisible === true ? '#34d399' : '#f87171'}}>{String(diag.hamburgerVisible)}</b></div>
-          <div style={{marginTop:4, color:'#64748b', wordBreak:'break-all'}}>UA: {diag.ua}</div>
-          <div style={{marginTop:4, color:'#475569', fontSize:'10px'}}>user: {user ? user.email : 'null'}</div>
+           Always visible. Polls every second. No dismiss — survives login.
+           Screenshot this panel while logged IN to diagnose the issue. ──── */}
+      <div
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+          background: '#0f172a', color: '#e2e8f0', fontSize: '11px',
+          fontFamily: 'monospace', padding: '10px 12px', lineHeight: '1.7',
+          borderTop: '2px solid #6366f1',
+        }}
+      >
+        <div style={{ fontWeight: 'bold', color: '#818cf8', marginBottom: 4 }}>
+          📐 BizScope Diag (live — sign in then screenshot)
         </div>
-      )}
+        <div>user: <b style={{color: user ? '#34d399' : '#94a3b8'}}>{user ? user.email : 'null (logged out)'}</b></div>
+        <div>role: <b style={{color:'#fbbf24'}}>{user ? (user.role ?? 'no role') : '—'}</b></div>
+        <div>innerWidth: <b style={{color:'#34d399'}}>{diag.innerWidth}</b></div>
+        <div>clientWidth: <b style={{color:'#34d399'}}>{diag.clientWidth}</b></div>
+        <div>scrollWidth: <b style={{color: diag.scrollWidth > diag.innerWidth ? '#f87171' : '#34d399'}}>{diag.scrollWidth}</b></div>
+        <div>visualVP.width: <b style={{color:'#34d399'}}>{String(diag.visualVP)}</b></div>
+        <div>dpr: <b>{diag.dpr}</b></div>
+        <div>hasMobileInUA: <b style={{color: diag.hasMobileInUA ? '#34d399' : '#f87171'}}>{String(diag.hasMobileInUA)}</b></div>
+        <div>isMobile (React): <b style={{color: diag.isMobileComputed ? '#34d399' : '#f87171'}}>{String(diag.isMobileComputed)}</b></div>
+        <div>desktopNav visible: <b style={{color: diag.desktopNavVisible === true ? '#f87171' : '#34d399'}}>{String(diag.desktopNavVisible)}</b></div>
+        <div>hamburger visible: <b style={{color: diag.hamburgerVisible === true ? '#34d399' : '#f87171'}}>{String(diag.hamburgerVisible)}</b></div>
+        <div style={{marginTop:4, color:'#64748b', fontSize:'10px', wordBreak:'break-all'}}>UA: {diag.ua}</div>
+      </div>
     </nav>
   );
 };
