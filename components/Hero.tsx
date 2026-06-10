@@ -23,6 +23,30 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
   const [showBusinessSuggestions, setShowBusinessSuggestions] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
 
+  // Tap-vs-scroll tracking for the business suggestion dropdown on touch
+  // devices. Selecting on touchstart breaks scrolling: the moment a finger
+  // lands on an item to scroll the list, it selects. Instead we record the
+  // start position, mark the touch as a scroll once it moves > 10px, and only
+  // select on touchend for stationary taps.
+  const bizTouchRef = useRef<{ y: number; moved: boolean } | null>(null);
+  const handleBizTouchStart = (e: React.TouchEvent) => {
+    bizTouchRef.current = { y: e.touches[0].clientY, moved: false };
+  };
+  const handleBizTouchMove = (e: React.TouchEvent) => {
+    const t = bizTouchRef.current;
+    if (t && Math.abs(e.touches[0].clientY - t.y) > 10) t.moved = true;
+  };
+  /** Returns true (and suppresses the synthetic mouse events) when the touch was a tap, not a scroll. */
+  const isBizTouchTap = (e: React.TouchEvent): boolean => {
+    const t = bizTouchRef.current;
+    bizTouchRef.current = null;
+    if (t && !t.moved) {
+      e.preventDefault();
+      return true;
+    }
+    return false;
+  };
+
   // Plan-aware label shown next to the submit button.
   // Reads the resolved effective plan passed down from App.tsx — this already
   // reflects Admin, BetaTester, DevAdminPanel preview roles, and Supabase auth.
@@ -255,10 +279,13 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                                         setBusinessType(s.name);
                                                         setShowBusinessSuggestions(false);
                                                     }}
-                                                    onTouchStart={(e) => {
-                                                        e.preventDefault();
-                                                        setBusinessType(s.name);
-                                                        setShowBusinessSuggestions(false);
+                                                    onTouchStart={handleBizTouchStart}
+                                                    onTouchMove={handleBizTouchMove}
+                                                    onTouchEnd={(e) => {
+                                                        if (isBizTouchTap(e)) {
+                                                            setBusinessType(s.name);
+                                                            setShowBusinessSuggestions(false);
+                                                        }
                                                     }}
                                                     onMouseEnter={() => setActiveBizIndex(i)}
                                                 >
@@ -283,8 +310,10 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                                   onSubmit(businessType.trim(), displayLocation);
                                                 }
                                             }}
-                                            onTouchStart={async (e) => {
-                                                e.preventDefault();
+                                            onTouchStart={handleBizTouchStart}
+                                            onTouchMove={handleBizTouchMove}
+                                            onTouchEnd={async (e) => {
+                                                if (!isBizTouchTap(e)) return;
                                                 setShowBusinessSuggestions(false);
                                                 if (businessType.trim() && location.trim()) {
                                                   const displayLocation = await resolveLocationDisplay(location.trim());
