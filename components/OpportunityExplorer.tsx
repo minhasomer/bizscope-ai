@@ -901,9 +901,9 @@ const OpportunityCard: React.FC<{
 
         {/* Score bars */}
         <div className="space-y-2.5 mb-5">
-          <div className="flex items-center gap-1 mb-1.5">
-            <Sparkles className="w-2.5 h-2.5 text-slate-300" />
-            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">AI-estimated · lower is better for each</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg mb-1.5">
+            <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+            <span className="text-[10px] text-amber-700 font-medium leading-snug">AI-estimated — lower competition, startup capital & overhead are better</span>
           </div>
           <ScoreBar label="Competition" score={opportunity.scores.competitionLevel} />
           <ScoreBar label="Startup Capital" score={opportunity.scores.capEx} dollarValue={opportunity.financials.estimatedStartupCost} />

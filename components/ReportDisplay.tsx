@@ -571,7 +571,7 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
         {renderBar("Market Demand", animatedBreakdowns.marketDemand, false, "30%", <TrendingUp className="w-3.5 h-3.5 text-blue-500" />, "Consumer need, search volume, and spending power in your target market area. Higher is better.")}
         {renderBar("Competition Intensity", animatedBreakdowns.competitionIntensity, true, "25%", <MapPin className="w-3.5 h-3.5 text-emerald-500" />, "How crowded the market is with existing competitors. Very Low means plenty of room for a new entrant; Very High means a saturated market.")}
         {renderBar("Financial Feasibility", animatedBreakdowns.financialFeasibility, false, "25%", <DollarSign className="w-3.5 h-3.5 text-purple-500" />, "Projected profitability relative to startup capital required and ongoing operational costs. Higher is better.")}
-        {renderBar("Risk Sensitivity", animatedBreakdowns.riskLevel, true, "20%", <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />, "Exposure to market volatility, regulatory change, and execution challenges. Very Low Risk means a stable environment; Very High Risk means significant uncertainties.", " Risk")}
+        {renderBar("Risk Level", animatedBreakdowns.riskLevel, true, "20%", <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />, "Exposure to market volatility, regulatory change, and execution challenges. Very Low Risk means a stable environment; Very High Risk means significant uncertainties.", " Risk")}
       </div>
       <div className="mt-4 pt-3 border-t border-gray-100">
         <p className="text-[10px] text-gray-350 leading-relaxed">

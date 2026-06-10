@@ -217,7 +217,7 @@ export class PDFService {
       doc.text(`Market Demand:          ${report.scoreBreakdown.marketDemand}/100  (consumer need & spending power)`, 95, 128);
       doc.text(`Financial Feasibility:  ${report.scoreBreakdown.financialFeasibility}/100  (profitability vs. startup cost)`, 95, 135);
       doc.text(`Competition Intensity:  ${report.scoreBreakdown.competitionIntensity}/100  (lower = less competition)`, 95, 142);
-      doc.text(`Risk Sensitivity:       ${report.scoreBreakdown.riskLevel}/100  (lower = less risk)`, 95, 149);
+      doc.text(`Risk Level:             ${report.scoreBreakdown.riskLevel}/100  (lower = less risk)`, 95, 149);
     }
 
     // Corporate meta info block bottom
