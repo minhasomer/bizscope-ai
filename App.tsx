@@ -157,6 +157,44 @@ const App: React.FC = () => {
   // Log active service configuration once on mount (collapsed console group).
   useEffect(() => { bootstrapGuardrails(); }, []);
 
+  // On mount: check for a pending analysis written before the tab was discarded.
+  // sessionStorage survives Android Chrome tab discard/reload (cleared only on
+  // explicit tab close), so if the user's tab reloaded mid-analysis this record
+  // will still exist. Show the amber recovery banner so they can fetch the result
+  // from report_cache without re-running the full 30-40s pipeline.
+  useEffect(() => {
+    const PENDING_KEY = 'bizscope_pending_analysis';
+    const MAX_AGE_MS  = 10 * 60 * 1000; // 10 minutes
+    try {
+      const raw = sessionStorage.getItem(PENDING_KEY);
+      if (!raw) return;
+      const pending = JSON.parse(raw) as {
+        businessType: string;
+        location: string;
+        forceRegenerate: boolean;
+        startedAt: number;
+      };
+      const ageMs = Date.now() - (pending.startedAt ?? 0);
+      if (
+        ageMs < MAX_AGE_MS &&
+        typeof pending.businessType === 'string' &&
+        typeof pending.location    === 'string'
+      ) {
+        lastAnalysisParams.current = {
+          businessType:    pending.businessType,
+          location:        pending.location,
+          forceRegenerate: false, // always false on recovery — we want cache hit
+        };
+        setShowRecoveryBanner(true);
+      } else {
+        // Stale or malformed — discard.
+        sessionStorage.removeItem(PENDING_KEY);
+      }
+    } catch {
+      sessionStorage.removeItem('bizscope_pending_analysis');
+    }
+  }, []);
+
   // ── Temporary beta diagnostics — remove after panel visibility is confirmed ──
   // Logs every time auth state changes so we can verify the panel guard in prod.
   useEffect(() => {
@@ -462,6 +500,15 @@ const App: React.FC = () => {
     console.log(`[BizScope] runAnalysis: biz="${businessType}" loc="${location}" forceRegen=${forceRegenerate} role="${currentUser?.role ?? ''}" plan="${userPlan}"`);
     lastAnalysisParams.current = { businessType, location, forceRegenerate };
     setShowRecoveryBanner(false);
+    // Persist params so they survive a tab discard / page reload on Android Chrome.
+    // Cleared on successful report display (below). The mount effect reads this on
+    // reload and shows the recovery banner if the record is < 10 minutes old.
+    sessionStorage.setItem('bizscope_pending_analysis', JSON.stringify({
+      businessType,
+      location,
+      forceRegenerate: false, // recovery always uses cache, never force-regen
+      startedAt: Date.now(),
+    }));
     setIsLoading(true);
     setError(null);
     setReport(null);
@@ -488,6 +535,7 @@ const App: React.FC = () => {
         currentUser?.role ?? '',
       );
       setReport(fullReport);
+      sessionStorage.removeItem('bizscope_pending_analysis');
       setTimeout(() => {
         const resultsElement = document.getElementById('results-section');
         if (resultsElement) resultsElement.scrollIntoView({ behavior: 'smooth' });
