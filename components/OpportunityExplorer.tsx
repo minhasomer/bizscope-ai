@@ -228,6 +228,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
         );
       }
     } catch (err) {
+      sessionStorage.removeItem('bizscope_pending_market_gap');
       console.error(err);
       setError(err instanceof Error ? err.message : 'Failed to analyze opportunities');
     } finally {
@@ -267,6 +268,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
         );
       }
     } catch (err) {
+      sessionStorage.removeItem('bizscope_pending_market_gap');
       console.error(err);
       setError(err instanceof Error ? err.message : 'Failed to analyze opportunities');
     } finally {
