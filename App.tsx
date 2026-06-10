@@ -117,6 +117,20 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
+  // Desktop-site-mode detection banner.
+  // Fires when Chrome's "Request Desktop Site" is active for this domain:
+  // visualViewport.width is phone-sized but innerWidth is the 980px desktop fallback.
+  const DESKTOP_BANNER_KEY = 'bizscope_desktop_banner_dismissed';
+  const [showDesktopBanner, setShowDesktopBanner] = useState<boolean>(() => {
+    if (localStorage.getItem(DESKTOP_BANNER_KEY)) return false;
+    const vvw = window.visualViewport?.width ?? window.innerWidth;
+    return vvw < 500 && window.innerWidth / vvw > 1.5;
+  });
+  const dismissDesktopBanner = () => {
+    localStorage.setItem(DESKTOP_BANNER_KEY, '1');
+    setShowDesktopBanner(false);
+  };
+
   // Real plan from Supabase/Stripe. Never overwritten by the preview panel.
   const [baseUserPlan, setBaseUserPlan] = useState<SubscriptionPlan>(() => {
     const stored = localStorage.getItem('bizscope_user_plan');
@@ -1342,7 +1356,24 @@ const App: React.FC = () => {
       <div className="print:hidden">
         <Navbar onNavigate={navigate} currentPage={currentView} currentPlan={userPlan} user={currentUser} onSignOut={handleSignOut} authLoading={authLoading} />
       </div>
-      
+
+      {/* Desktop-site-mode warning banner — shown when Chrome "Request Desktop Site"
+          is active (visualViewport << innerWidth). Dismissed and stored in localStorage. */}
+      {showDesktopBanner && (
+        <div className="print:hidden bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between gap-3">
+          <p className="text-xs text-amber-800 leading-snug">
+            <strong>Desktop mode detected.</strong> In Chrome, tap <strong>⋮</strong> and uncheck <strong>Desktop site</strong> for the best mobile experience.
+          </p>
+          <button
+            onClick={dismissDesktopBanner}
+            className="shrink-0 text-amber-600 hover:text-amber-800 text-lg leading-none cursor-pointer"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {import.meta.env.DEV && isDemoMode && (() => {
         const role = currentUser?.role ?? '';
         const isLiveCapable = isBetaRoleEnabled(role);

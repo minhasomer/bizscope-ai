@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-
 import { isDemoMode } from '../src/config/appConfig';
 import { Sparkles, Menu, X, CreditCard, ChevronDown, LogOut, User } from 'lucide-react';
 import { SubscriptionPlan } from '../src/utils/planUtils';
@@ -15,48 +13,13 @@ interface NavbarProps {
   authLoading?: boolean;
 }
 
-// Snapshot of raw browser viewport values — polled every second.
-interface ViewportDiag {
-  innerWidth: number;
-  clientWidth: number;
-  scrollWidth: number;
-  visualVP: number | string;
-  dpr: number;
-  hasMobileInUA: boolean;
-  isMobileComputed: boolean;
-  desktopNavVisible: boolean | string;
-  hamburgerVisible: boolean | string;
-  ua: string;
-}
-
-function captureViewport(isMobile: boolean): ViewportDiag {
-  const desktopNavEl = document.querySelector('[data-diag="desktop-nav"]');
-  const hamburgerEl  = document.querySelector('[data-diag="hamburger"]');
-  return {
-    innerWidth:        window.innerWidth,
-    clientWidth:       document.documentElement.clientWidth,
-    scrollWidth:       document.documentElement.scrollWidth,
-    visualVP:          window.visualViewport?.width ?? 'n/a',
-    dpr:               window.devicePixelRatio,
-    hasMobileInUA:     /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent),
-    isMobileComputed:  isMobile,
-    desktopNavVisible: desktopNavEl
-      ? getComputedStyle(desktopNavEl).display !== 'none'
-      : 'not found',
-    hamburgerVisible:  hamburgerEl
-      ? getComputedStyle(hamburgerEl).display !== 'none'
-      : 'not found',
-    ua: navigator.userAgent,
-  };
-}
-
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, currentPlan, user, onSignOut, authLoading = false }) => {
   const [demoActive, setDemoActive] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  // Drive nav visibility via React state as well as Tailwind classes — belt-and-suspenders
+  // against Tailwind Play CDN timing issues on auth re-renders.
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1280);
-  const [diag, setDiag] = useState<ViewportDiag>(() => captureViewport(window.innerWidth < 1280));
-  const [diagOpen, setDiagOpen] = useState(false);
 
   useEffect(() => {
     setDemoActive(isDemoMode);
@@ -66,15 +29,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
     const onResize = () => setIsMobile(window.innerWidth < 1280);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  // Poll viewport every second so the panel always reflects current state
-  // — survives login transitions, navigations, and layout shifts.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDiag(captureViewport(window.innerWidth < 1280));
-    }, 1000);
-    return () => clearInterval(interval);
   }, []);
 
   // Close mobile menu on outside click
@@ -123,7 +77,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
   };
 
   return (
-    <>
     <nav className="bg-white/95 backdrop-blur-sm border-b border-slate-200/80 shadow-sm sticky top-0 z-40 overflow-x-hidden" ref={mobileMenuRef}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -145,8 +98,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
             )}
           </div>
 
-          {/* Desktop nav — hidden on mobile via both Tailwind class and React isMobile state */}
-          <div data-diag="desktop-nav" className="hidden xl:flex flex-1 min-w-0 items-center gap-2 h-full ml-6 overflow-x-hidden" style={isMobile ? { display: 'none' } : {}}>
+          {/* Desktop nav — hidden on mobile via Tailwind + React isMobile state */}
+          <div
+            className="hidden xl:flex flex-1 min-w-0 items-center gap-2 h-full ml-6 overflow-x-hidden"
+            style={isMobile ? { display: 'none' } : {}}
+          >
             {navLinks.map(({ page, label }) => (
               <a key={page} onClick={() => onNavigate(page)} className={getLinkClass(page)}>
                 {label}
@@ -154,10 +110,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
             ))}
           </div>
 
-          {/* Desktop right side — hidden on mobile via both Tailwind class and React isMobile state */}
-          <div className="hidden xl:flex items-center gap-2.5 shrink-0 ml-4" style={isMobile ? { display: 'none' } : {}}>
+          {/* Desktop right side — hidden on mobile via Tailwind + React isMobile state */}
+          <div
+            className="hidden xl:flex items-center gap-2.5 shrink-0 ml-4"
+            style={isMobile ? { display: 'none' } : {}}
+          >
             {authLoading ? (
-              // Skeleton placeholder — prevents Sign In flash during auth resolution
               <div className="flex items-center gap-2.5">
                 <div className="h-7 w-24 rounded-lg bg-slate-100 animate-pulse" />
                 <div className="h-7 w-20 rounded-xl bg-slate-100 animate-pulse" />
@@ -207,9 +165,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
             )}
           </div>
 
-          {/* Mobile hamburger — visible on mobile via both Tailwind class and React isMobile state */}
+          {/* Mobile hamburger — visible on mobile via Tailwind + React isMobile state */}
           <button
-            data-diag="hamburger"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="xl:hidden p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             style={isMobile ? {} : { display: 'none' }}
@@ -220,7 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
         </div>
       </div>
 
-      {/* Mobile menu — smooth max-h transition; also hidden on desktop via React isMobile state */}
+      {/* Mobile menu dropdown */}
       <div
         className={`xl:hidden overflow-hidden transition-all duration-300 ease-in-out bg-white border-t border-gray-100 ${
           mobileMenuOpen ? 'max-h-[600px] shadow-xl' : 'max-h-0'
@@ -240,7 +197,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
         </div>
 
         <div className="px-4 pb-5 pt-3 border-t border-gray-100 space-y-3">
-          {/* Plan badge */}
           <button
             onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
             className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold uppercase tracking-wide transition-all cursor-pointer ${planBadgeClass()}`}
@@ -281,55 +237,5 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
         </div>
       </div>
     </nav>
-
-    {/* Portal: renders to document.body, escaping <nav>'s backdrop-filter stacking context
-        so position:fixed works relative to the viewport, not the navbar. */}
-    {createPortal(
-      <div>
-        {/* Floating "Diag" button — bottom-right corner, never blocks nav or content */}
-        <button
-          onClick={() => setDiagOpen(o => !o)}
-          style={{
-            position: 'fixed', bottom: 20, right: 12, zIndex: 9998,
-            background: '#4f46e5', color: '#fff', fontSize: '11px',
-            fontFamily: 'monospace', fontWeight: 'bold',
-            padding: '6px 10px', borderRadius: '8px',
-            border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-          }}
-        >
-          {diagOpen ? '✕' : '📐'}
-        </button>
-
-        {/* Expanded panel — only rendered when diagOpen */}
-        {diagOpen && (
-          <div style={{
-            position: 'fixed', bottom: 56, right: 8, left: 8, zIndex: 9997,
-            background: '#0f172a', color: '#e2e8f0', fontSize: '11px',
-            fontFamily: 'monospace', padding: '10px 12px', lineHeight: '1.7',
-            borderRadius: '12px', border: '1px solid #6366f1',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-            maxHeight: '60vh', overflowY: 'auto',
-          }}>
-            <div style={{ fontWeight: 'bold', color: '#818cf8', marginBottom: 4 }}>
-              📐 Viewport Diag — sign in then screenshot
-            </div>
-            <div>user: <b style={{color: user ? '#34d399' : '#94a3b8'}}>{user ? user.email : 'null (logged out)'}</b></div>
-            <div>role: <b style={{color:'#fbbf24'}}>{user ? (user.role ?? 'no role') : '—'}</b></div>
-            <div>innerWidth: <b style={{color:'#34d399'}}>{diag.innerWidth}</b></div>
-            <div>clientWidth: <b style={{color:'#34d399'}}>{diag.clientWidth}</b></div>
-            <div>scrollWidth: <b style={{color: diag.scrollWidth > diag.innerWidth ? '#f87171' : '#34d399'}}>{diag.scrollWidth}</b></div>
-            <div>visualVP.width: <b style={{color:'#34d399'}}>{String(diag.visualVP)}</b></div>
-            <div>dpr: <b>{diag.dpr}</b></div>
-            <div>hasMobileInUA: <b style={{color: diag.hasMobileInUA ? '#34d399' : '#f87171'}}>{String(diag.hasMobileInUA)}</b></div>
-            <div>isMobile (React): <b style={{color: diag.isMobileComputed ? '#34d399' : '#f87171'}}>{String(diag.isMobileComputed)}</b></div>
-            <div>desktopNav visible: <b style={{color: diag.desktopNavVisible === true ? '#f87171' : '#34d399'}}>{String(diag.desktopNavVisible)}</b></div>
-            <div>hamburger visible: <b style={{color: diag.hamburgerVisible === true ? '#34d399' : '#f87171'}}>{String(diag.hamburgerVisible)}</b></div>
-            <div style={{marginTop:4, color:'#64748b', fontSize:'10px', wordBreak:'break-all'}}>UA: {diag.ua}</div>
-          </div>
-        )}
-      </div>,
-      document.body
-    )}
-    </>
   );
 };
