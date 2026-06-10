@@ -23,11 +23,11 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
   const [showBusinessSuggestions, setShowBusinessSuggestions] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
 
-  // Tap-vs-scroll tracking for the business suggestion dropdown on touch
-  // devices. Selecting on touchstart breaks scrolling: the moment a finger
-  // lands on an item to scroll the list, it selects. Instead we record the
-  // start position, mark the touch as a scroll once it moves > 10px, and only
-  // select on touchend for stationary taps.
+  // Tap-vs-scroll tracking for suggestion dropdowns on touch devices.
+  // Selecting on touchstart breaks scrolling — the moment a finger lands on an
+  // item to scroll, it selects instead. Record Y on touchstart, flag the gesture
+  // as a scroll once it moves > 10px, and select only on touchend for taps.
+  // preventDefault on touchend (not passive) suppresses synthetic mouse events.
   const bizTouchRef = useRef<{ y: number; moved: boolean } | null>(null);
   const handleBizTouchStart = (e: React.TouchEvent) => {
     bizTouchRef.current = { y: e.touches[0].clientY, moved: false };
@@ -36,14 +36,25 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
     const t = bizTouchRef.current;
     if (t && Math.abs(e.touches[0].clientY - t.y) > 10) t.moved = true;
   };
-  /** Returns true (and suppresses the synthetic mouse events) when the touch was a tap, not a scroll. */
   const isBizTouchTap = (e: React.TouchEvent): boolean => {
     const t = bizTouchRef.current;
     bizTouchRef.current = null;
-    if (t && !t.moved) {
-      e.preventDefault();
-      return true;
-    }
+    if (t && !t.moved) { e.preventDefault(); return true; }
+    return false;
+  };
+
+  const locTouchRef = useRef<{ y: number; moved: boolean } | null>(null);
+  const handleLocTouchStart = (e: React.TouchEvent) => {
+    locTouchRef.current = { y: e.touches[0].clientY, moved: false };
+  };
+  const handleLocTouchMove = (e: React.TouchEvent) => {
+    const t = locTouchRef.current;
+    if (t && Math.abs(e.touches[0].clientY - t.y) > 10) t.moved = true;
+  };
+  const isLocTouchTap = (e: React.TouchEvent): boolean => {
+    const t = locTouchRef.current;
+    locTouchRef.current = null;
+    if (t && !t.moved) { e.preventDefault(); return true; }
     return false;
   };
 
@@ -357,7 +368,9 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                                 isActive ? 'bg-blue-50 font-semibold text-blue-900' : 'hover:bg-blue-50'
                                               }`}
                                               onMouseDown={(e) => { e.preventDefault(); handleLocationSelect(s); }}
-                                              onTouchStart={(e) => { e.preventDefault(); handleLocationSelect(s); }}
+                                              onTouchStart={handleLocTouchStart}
+                                              onTouchMove={handleLocTouchMove}
+                                              onTouchEnd={(e) => { if (isLocTouchTap(e)) handleLocationSelect(s); }}
                                               onMouseEnter={() => setActiveLocationIndex(i)}
                                           >
                                               {s}
@@ -368,7 +381,9 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                       <div
                                           className="px-4 py-3.5 cursor-pointer flex items-center gap-3 hover:bg-indigo-50 transition-colors"
                                           onMouseDown={(e) => { e.preventDefault(); handleLocationSelect(location.trim()); }}
-                                          onTouchStart={(e) => { e.preventDefault(); handleLocationSelect(location.trim()); }}
+                                          onTouchStart={handleLocTouchStart}
+                                          onTouchMove={handleLocTouchMove}
+                                          onTouchEnd={(e) => { if (isLocTouchTap(e)) handleLocationSelect(location.trim()); }}
                                       >
                                           <span className="text-indigo-500 text-base">📍</span>
                                           <span className="text-sm text-gray-700">Use <span className="text-indigo-600 font-semibold">"{location}"</span> as location</span>
