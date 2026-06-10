@@ -807,7 +807,7 @@ const App: React.FC = () => {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {/* Reports Ledger */}
               <div className="bg-gradient-to-br from-white to-indigo-50/40 border border-indigo-100/80 p-5 rounded-2xl flex flex-col gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-widest">Reports Saved</p>
@@ -1338,7 +1338,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 font-sans print:bg-white print:text-black">
+    <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 font-sans print:bg-white print:text-black overflow-x-hidden">
       <div className="print:hidden">
         <Navbar onNavigate={navigate} currentPage={currentView} currentPlan={userPlan} user={currentUser} onSignOut={handleSignOut} authLoading={authLoading} />
       </div>
