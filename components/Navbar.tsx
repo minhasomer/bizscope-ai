@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+
 import { isDemoMode } from '../src/config/appConfig';
 import { Sparkles, Menu, X, CreditCard, ChevronDown, LogOut, User } from 'lucide-react';
 import { SubscriptionPlan } from '../src/utils/planUtils';
@@ -53,8 +55,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1280);
-  // Diagnostic panel — always visible, polled every second, never auto-dismissed.
   const [diag, setDiag] = useState<ViewportDiag>(() => captureViewport(window.innerWidth < 1280));
+  const [diagOpen, setDiagOpen] = useState(false);
 
   useEffect(() => {
     setDemoActive(isDemoMode);
@@ -121,6 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
   };
 
   return (
+    <>
     <nav className="bg-white/95 backdrop-blur-sm border-b border-slate-200/80 shadow-sm sticky top-0 z-40 overflow-x-hidden" ref={mobileMenuRef}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -277,33 +280,56 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
           )}
         </div>
       </div>
-      {/* ── ON-SCREEN DIAGNOSTIC PANEL ─────────────────────────────────────────
-           Always visible. Polls every second. No dismiss — survives login.
-           Screenshot this panel while logged IN to diagnose the issue. ──── */}
-      <div
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-          background: '#0f172a', color: '#e2e8f0', fontSize: '11px',
-          fontFamily: 'monospace', padding: '10px 12px', lineHeight: '1.7',
-          borderTop: '2px solid #6366f1',
-        }}
-      >
-        <div style={{ fontWeight: 'bold', color: '#818cf8', marginBottom: 4 }}>
-          📐 BizScope Diag (live — sign in then screenshot)
-        </div>
-        <div>user: <b style={{color: user ? '#34d399' : '#94a3b8'}}>{user ? user.email : 'null (logged out)'}</b></div>
-        <div>role: <b style={{color:'#fbbf24'}}>{user ? (user.role ?? 'no role') : '—'}</b></div>
-        <div>innerWidth: <b style={{color:'#34d399'}}>{diag.innerWidth}</b></div>
-        <div>clientWidth: <b style={{color:'#34d399'}}>{diag.clientWidth}</b></div>
-        <div>scrollWidth: <b style={{color: diag.scrollWidth > diag.innerWidth ? '#f87171' : '#34d399'}}>{diag.scrollWidth}</b></div>
-        <div>visualVP.width: <b style={{color:'#34d399'}}>{String(diag.visualVP)}</b></div>
-        <div>dpr: <b>{diag.dpr}</b></div>
-        <div>hasMobileInUA: <b style={{color: diag.hasMobileInUA ? '#34d399' : '#f87171'}}>{String(diag.hasMobileInUA)}</b></div>
-        <div>isMobile (React): <b style={{color: diag.isMobileComputed ? '#34d399' : '#f87171'}}>{String(diag.isMobileComputed)}</b></div>
-        <div>desktopNav visible: <b style={{color: diag.desktopNavVisible === true ? '#f87171' : '#34d399'}}>{String(diag.desktopNavVisible)}</b></div>
-        <div>hamburger visible: <b style={{color: diag.hamburgerVisible === true ? '#34d399' : '#f87171'}}>{String(diag.hamburgerVisible)}</b></div>
-        <div style={{marginTop:4, color:'#64748b', fontSize:'10px', wordBreak:'break-all'}}>UA: {diag.ua}</div>
-      </div>
     </nav>
+
+    {/* Portal: renders to document.body, escaping <nav>'s backdrop-filter stacking context
+        so position:fixed works relative to the viewport, not the navbar. */}
+    {createPortal(
+      <div>
+        {/* Floating "Diag" button — bottom-right corner, never blocks nav or content */}
+        <button
+          onClick={() => setDiagOpen(o => !o)}
+          style={{
+            position: 'fixed', bottom: 20, right: 12, zIndex: 9998,
+            background: '#4f46e5', color: '#fff', fontSize: '11px',
+            fontFamily: 'monospace', fontWeight: 'bold',
+            padding: '6px 10px', borderRadius: '8px',
+            border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+          }}
+        >
+          {diagOpen ? '✕' : '📐'}
+        </button>
+
+        {/* Expanded panel — only rendered when diagOpen */}
+        {diagOpen && (
+          <div style={{
+            position: 'fixed', bottom: 56, right: 8, left: 8, zIndex: 9997,
+            background: '#0f172a', color: '#e2e8f0', fontSize: '11px',
+            fontFamily: 'monospace', padding: '10px 12px', lineHeight: '1.7',
+            borderRadius: '12px', border: '1px solid #6366f1',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+            maxHeight: '60vh', overflowY: 'auto',
+          }}>
+            <div style={{ fontWeight: 'bold', color: '#818cf8', marginBottom: 4 }}>
+              📐 Viewport Diag — sign in then screenshot
+            </div>
+            <div>user: <b style={{color: user ? '#34d399' : '#94a3b8'}}>{user ? user.email : 'null (logged out)'}</b></div>
+            <div>role: <b style={{color:'#fbbf24'}}>{user ? (user.role ?? 'no role') : '—'}</b></div>
+            <div>innerWidth: <b style={{color:'#34d399'}}>{diag.innerWidth}</b></div>
+            <div>clientWidth: <b style={{color:'#34d399'}}>{diag.clientWidth}</b></div>
+            <div>scrollWidth: <b style={{color: diag.scrollWidth > diag.innerWidth ? '#f87171' : '#34d399'}}>{diag.scrollWidth}</b></div>
+            <div>visualVP.width: <b style={{color:'#34d399'}}>{String(diag.visualVP)}</b></div>
+            <div>dpr: <b>{diag.dpr}</b></div>
+            <div>hasMobileInUA: <b style={{color: diag.hasMobileInUA ? '#34d399' : '#f87171'}}>{String(diag.hasMobileInUA)}</b></div>
+            <div>isMobile (React): <b style={{color: diag.isMobileComputed ? '#34d399' : '#f87171'}}>{String(diag.isMobileComputed)}</b></div>
+            <div>desktopNav visible: <b style={{color: diag.desktopNavVisible === true ? '#f87171' : '#34d399'}}>{String(diag.desktopNavVisible)}</b></div>
+            <div>hamburger visible: <b style={{color: diag.hamburgerVisible === true ? '#34d399' : '#f87171'}}>{String(diag.hamburgerVisible)}</b></div>
+            <div style={{marginTop:4, color:'#64748b', fontSize:'10px', wordBreak:'break-all'}}>UA: {diag.ua}</div>
+          </div>
+        )}
+      </div>,
+      document.body
+    )}
+    </>
   );
 };
