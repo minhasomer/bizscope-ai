@@ -723,10 +723,23 @@ export const generateViabilityReport = async (
             ? `This market shows viable demand for ${brand}, but existing same-brand locations have been identified nearby. Franchise territory agreements may already restrict or prohibit a new unit at this location — this is a contractual risk the viability score cannot fully reflect. Confirm territory availability with ${brand}'s franchise development team before proceeding.`
             : `Market conditions for ${brand} in this area are favorable, but franchise territory availability has not been confirmed. ${brand} assigns protected territories and pending agreements may already restrict this location. This analysis reflects general market viability only — franchisor approval is a required prerequisite, not an assumption.`;
 
-        // Prepend a franchise context sentence to the executive summary
+        // Prepend a franchise context sentence to the executive summary,
+        // stating the final adjusted score so the summary always agrees with
+        // the displayed header score.
         const franchiseSummaryPrefix = sameBrandFound
-            ? `⚠️ Franchise territory conflict risk: existing ${brand} presence detected near this location — territory may already be claimed. `
-            : `⚠️ Franchise verification required: this analysis reflects market conditions only. ${brand} territory availability must be confirmed directly with the franchisor before any investment decision. `;
+            ? `⚠️ Franchise territory conflict risk: existing ${brand} presence detected near this location — territory may already be claimed. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for territory risk). `
+            : `⚠️ Franchise verification required: this analysis reflects market conditions only. ${brand} territory availability must be confirmed directly with the franchisor before any investment decision. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for unverified territory). `;
+
+        // The AI generates prose around the pre-adjustment score (e.g. "scores
+        // 66/100"), which goes stale once the adjustment is applied. Rewrite
+        // score-context citations of the old number; leave all other numbers
+        // (costs, percentages, sub-scores) untouched.
+        const normalizeScoreMentions = (text: string): string =>
+            text
+                .replace(new RegExp(`\\b${originalScore}\\s*/\\s*100\\b`, 'g'), `${finalScore}/100`)
+                .replace(new RegExp(`\\b${originalScore}\\s+out\\s+of\\s+100\\b`, 'gi'), `${finalScore} out of 100`)
+                .replace(new RegExp(`(viability\\s+score\\s*(?:of|is|at|:)?\\s*)${originalScore}\\b`, 'gi'), `$1${finalScore}`)
+                .replace(new RegExp(`(?<![\\w-])(score\\s+of\\s+)${originalScore}\\b`, 'gi'), `$1${finalScore}`);
 
         result = {
             ...result,
@@ -742,7 +755,8 @@ export const generateViabilityReport = async (
                 decision: cappedDecision,
                 reasoning: franchiseReasoning,
             },
-            executiveSummary: franchiseSummaryPrefix + result.executiveSummary,
+            executiveSummary: franchiseSummaryPrefix + normalizeScoreMentions(result.executiveSummary),
+            methodology: normalizeScoreMentions(result.methodology),
         };
     }
 
