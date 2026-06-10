@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Hero } from './components/Hero';
 import { ReportDisplay } from './components/ReportDisplay';
 import { Loader } from './components/Loader';
@@ -35,6 +35,21 @@ import { MarketGapsTemplate } from './components/seo/MarketGapsTemplate';
 import { SampleReports } from './components/SampleReports';
 import { ReportSummaryCard } from './components/ReportSummaryCard';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
+
+/** Returns true when an error message is a browser-level network interruption
+ *  (e.g. Android Chrome killed the TCP connection when the tab was backgrounded)
+ *  rather than an API or model error. */
+function isNetworkInterruption(msg: string): boolean {
+  const m = msg.toLowerCase();
+  return (
+    m.includes('failed to fetch') ||
+    m.includes('networkerror') ||
+    m.includes('network error') ||
+    m.includes('aborterror') ||
+    m.includes('the user aborted') ||
+    m.includes('aborted a request')
+  );
+}
 
 const formatResetTime = (date: Date | null): string => {
   if (!date) return 'No reset cycle required';
@@ -121,6 +136,18 @@ const App: React.FC = () => {
   // True when an anonymous user has already used their one free preview.
   // Drives a signup CTA in the results area instead of an error message.
   const [showPreviewCTA, setShowPreviewCTA] = useState(false);
+
+  // Mobile interruption recovery.
+  // showRecoveryBanner: true when a network-interruption error occurred and we
+  //   have params to retry (cache hit likely since backend usually completes).
+  // lastAnalysisParams: saved at the start of every runAnalysis call so the
+  //   recovery button can replay the exact same request.
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+  const lastAnalysisParams = useRef<{
+    businessType: string;
+    location: string;
+    forceRegenerate: boolean;
+  } | null>(null);
 
   // Effective plan driving all feature gating — preview only active in local dev.
   const userPlan: SubscriptionPlan = (import.meta.env.DEV && previewRole !== null)
@@ -433,6 +460,8 @@ const App: React.FC = () => {
     forceRegenerate: boolean,
   ) => {
     console.log(`[BizScope] runAnalysis: biz="${businessType}" loc="${location}" forceRegen=${forceRegenerate} role="${currentUser?.role ?? ''}" plan="${userPlan}"`);
+    lastAnalysisParams.current = { businessType, location, forceRegenerate };
+    setShowRecoveryBanner(false);
     setIsLoading(true);
     setError(null);
     setReport(null);
@@ -473,6 +502,13 @@ const App: React.FC = () => {
     } catch (err) {
       console.error(err);
       const rawMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
+      // Network interruption (e.g. Android Chrome killed the fetch when the tab
+      // was backgrounded): show the amber recovery banner so the user can retry
+      // and pick up the result from report_cache if the backend finished.
+      if (isNetworkInterruption(rawMessage) && lastAnalysisParams.current) {
+        setShowRecoveryBanner(true);
+        return;
+      }
       // Surface a targeted hint when the server reports a missing Gemini API key.
       const isMissingKey =
         rawMessage.includes('GEMINI_API_KEY') ||
@@ -1198,6 +1234,29 @@ const App: React.FC = () => {
                         <div className="max-w-3xl mx-auto px-4">
                             <Loader message={loadingMessage} />
                         </div>
+                    )}
+
+                    {showRecoveryBanner && lastAnalysisParams.current && (
+                      <div className="max-w-3xl mx-auto px-4">
+                        <div className="bg-amber-50 text-amber-900 p-6 rounded-2xl border border-amber-200 flex items-start gap-4">
+                          <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                            <AlertTriangle className="w-5 h-5 text-amber-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-black text-sm uppercase tracking-wide mb-1">Analysis Interrupted</h3>
+                            <p className="text-sm text-amber-800/90 mb-3">Your analysis may have completed in the background.</p>
+                            <button
+                              onClick={() => {
+                                const p = lastAnalysisParams.current!;
+                                runAnalysis(p.businessType, p.location, p.forceRegenerate);
+                              }}
+                              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl transition-colors"
+                            >
+                              Recover Analysis
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {error && (
