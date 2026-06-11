@@ -126,8 +126,8 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
               )}
 
               <div className={`p-6 flex-1 flex flex-col ${!card.accent ? 'pt-6' : 'pt-5'}`}>
-                {/* Icon + badge row */}
-                <div className="flex items-start justify-between gap-2 mb-4">
+                {/* Icon + badge row — pr-16 when Active badge is present to prevent overlap */}
+                <div className={`flex items-start justify-between gap-2 mb-4${isActive ? ' pr-16' : ''}`}>
                   <div className={`p-2.5 rounded-xl border ${
                     card.accent === 'blue'
                       ? 'bg-blue-50 border-blue-100'
