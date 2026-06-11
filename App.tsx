@@ -864,7 +864,7 @@ const App: React.FC = () => {
 
               {/* Regional Quota */}
               <div className="bg-gradient-to-br from-white to-slate-50/60 border border-slate-100/80 p-5 rounded-2xl flex flex-col gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Regional Analyses</p>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Market Gap Reports</p>
                 <p className="text-3xl font-bold text-slate-900">
                   {usage.regionalLimit === 0 ? '—' : usage.regionalLimit === null ? '∞' : `${usage.regionalUsed}/${usage.regionalLimit}`}
                 </p>

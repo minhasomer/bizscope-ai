@@ -240,7 +240,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                 <span className="text-[10px] text-gray-400 mt-0.5 block">{usage.standardLimitDescription}</span>
               </div>
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/50">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Regional Analyses Used</span>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Market Gap Reports Used</span>
                 <span className="text-lg font-black text-gray-900 mt-1 block">
                   {usage.regionalLimit === 0 ? 'Locked' : usage.regionalLimit === null ? 'Unlimited' : `${usage.regionalUsed} / ${usage.regionalLimit}`}
                 </span>
