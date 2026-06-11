@@ -1,11 +1,35 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface LoaderProps {
   message?: string;
+  messages?: string[];
+  durationCopy?: string;
 }
 
-export const Loader: React.FC<LoaderProps> = ({ message }) => {
+export const REPORT_LOADING_MESSAGES = [
+  "Looking for opportunities before everyone else finds them.",
+  "Digging into the numbers so you don't have to dig deeper into your pockets.",
+  "Good business decisions take a little longer than bad ones.",
+  "Checking market signals, competition, and local data.",
+  "Turning research into something you can actually use.",
+];
+
+export const Loader: React.FC<LoaderProps> = ({ message, messages, durationCopy }) => {
+  const [msgIndex, setMsgIndex] = useState(0);
+
+  useEffect(() => {
+    if (!messages?.length) return;
+    const id = setInterval(() => {
+      setMsgIndex(i => (i + 1) % messages.length);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [messages]);
+
+  const displayMessage = messages?.length
+    ? messages[msgIndex]
+    : (message || 'Evaluating demand, competition & revenue potential...');
+
   return (
     <div className="flex flex-col items-center justify-center py-16 px-8 animate-fade-in">
       {/* Spinner ring */}
@@ -20,9 +44,17 @@ export const Loader: React.FC<LoaderProps> = ({ message }) => {
       <h3 className="text-sm font-black text-gray-900 tracking-tight mb-1.5 uppercase">
         Analyzing Market Conditions
       </h3>
-      <p className="text-xs text-gray-400 font-medium text-center max-w-xs leading-relaxed min-h-[32px] animate-pulse">
-        {message || 'Evaluating demand, competition & revenue potential...'}
+      <p
+        key={messages?.length ? msgIndex : 'static'}
+        className={`text-xs text-gray-400 font-medium text-center max-w-xs leading-relaxed min-h-[32px] ${messages?.length ? 'animate-fade-in' : 'animate-pulse'}`}
+      >
+        {displayMessage}
       </p>
+      {durationCopy && (
+        <p className="mt-1.5 text-xs text-gray-300 text-center font-medium">
+          {durationCopy}
+        </p>
+      )}
 
       {/* Skeleton preview */}
       <div className="mt-10 w-full max-w-md space-y-4">

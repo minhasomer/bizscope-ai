@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Hero } from './components/Hero';
 import { ReportDisplay } from './components/ReportDisplay';
-import { Loader } from './components/Loader';
+import { Loader, REPORT_LOADING_MESSAGES } from './components/Loader';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { PricingTiers } from './components/PricingTiers';
@@ -1316,7 +1316,7 @@ const App: React.FC = () => {
                     )}
                     {isLoading && (
                         <div className="max-w-3xl mx-auto px-4">
-                            <Loader message={loadingMessage} />
+                            <Loader messages={REPORT_LOADING_MESSAGES} durationCopy="This usually takes 20–60 seconds." />
                         </div>
                     )}
 

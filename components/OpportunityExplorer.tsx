@@ -9,7 +9,7 @@ import {
 import type { OpportunityReport, BusinessOpportunity } from '../types';
 import { generateOpportunityReport, generateOpportunityDossier } from '../services/geminiService';
 import { SavedReportsService } from '../services/savedReportsService';
-import { Loader } from './Loader';
+import { Loader, REPORT_LOADING_MESSAGES } from './Loader';
 import { SubscriptionPlan } from '../src/utils/planUtils';
 import { filterLocationSuggestions, fetchLocationAutocomplete } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
@@ -460,7 +460,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             exit={{ opacity: 0 }}
             className="py-12"
           >
-            <Loader message={loadingMessage || 'Scanning market opportunities...'} />
+            <Loader messages={REPORT_LOADING_MESSAGES} durationCopy="Market Gap reports may take up to 2 minutes." />
           </motion.div>
         )}
 
