@@ -58,6 +58,28 @@ const reportSchema = {
         summary: { type: Type.STRING },
         startupCostRange: { type: Type.STRING },
         startupCostBreakdown: { type: Type.STRING },
+        startupCostItems: {
+          type: Type.ARRAY,
+          description: 'Itemized startup cost breakdown. Include all applicable categories with estimated dollar ranges.',
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              category: { type: Type.STRING, description: 'e.g. "Build-out / Tenant Improvements", "Equipment & Technology", "Working Capital Reserve"' },
+              amount: { type: Type.STRING, description: 'Dollar range, e.g. "$80,000–$120,000"' },
+              notes: { type: Type.STRING, description: 'Optional one-line clarification' },
+            },
+            required: ['category', 'amount'],
+          },
+        },
+        startupSpaceContext: {
+          type: Type.OBJECT,
+          description: 'Physical space details for brick-and-mortar businesses. Omit for home-based or online businesses.',
+          properties: {
+            sqft: { type: Type.STRING, description: 'e.g. "1,500–2,500 sq ft"' },
+            monthlyRent: { type: Type.STRING, description: 'e.g. "$3,500–$5,000/month"' },
+            buildOutIntensity: { type: Type.STRING, enum: ['Low', 'Moderate', 'High'], description: 'Low = paint/fixtures; Moderate = partial renovation; High = full build-out' },
+          },
+        },
         revenueYear1: { type: Type.STRING },
         revenueYear3: { type: Type.STRING },
         breakEvenTime: { type: Type.STRING },
@@ -76,7 +98,7 @@ const reportSchema = {
           },
         },
       },
-      required: ['summary', 'startupCostRange', 'startupCostBreakdown', 'revenueYear1', 'revenueYear3', 'breakEvenTime', 'roiTime', 'profitMargin', 'scalability', 'keyStats'],
+      required: ['summary', 'startupCostRange', 'startupCostBreakdown', 'startupCostItems', 'revenueYear1', 'revenueYear3', 'breakEvenTime', 'roiTime', 'profitMargin', 'scalability', 'keyStats'],
     },
     competitionAnalysis: {
       type: Type.OBJECT,
@@ -378,6 +400,50 @@ const VIABILITY_CACHE_MAX_AGE_DAYS = 90;
 
 function normalizeCacheKey(s: string): string {
   return s.toLowerCase().trim();
+}
+
+// ── Startup cost fallback synthesis ──────────────────────────────────────────
+// Used when Gemini doesn't return startupCostItems (old cached reports, schema
+// miss). Parses the total range and splits it using generic allocation ratios.
+// Results are labeled as estimates.
+function parseRangeLow(range: string): number | null {
+  // Matches patterns like "$800,000", "$800k", "$1M", "$1.2M"
+  const m = range.match(/\$?([\d,.]+)\s*([kKmM]?)/);
+  if (!m) return null;
+  const num = parseFloat(m[1].replace(/,/g, ''));
+  const mul = /[kK]/.test(m[2]) ? 1000 : /[mM]/.test(m[2]) ? 1_000_000 : 1;
+  return isNaN(num) ? null : num * mul;
+}
+
+function fmtDollars(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1000) return `$${Math.round(n / 1000)}k`;
+  return `$${Math.round(n)}`;
+}
+
+function synthesizeStartupCostItems(
+  range: string,
+): Array<{ category: string; amount: string }> {
+  const low = parseRangeLow(range);
+  if (!low || low < 5000) return [];
+
+  // Generic allocation ratios summing to 100%
+  const slices: Array<{ category: string; pct: number }> = [
+    { category: 'Build-out / Tenant Improvements', pct: 0.32 },
+    { category: 'Equipment & Technology',           pct: 0.22 },
+    { category: 'Working Capital Reserve',          pct: 0.18 },
+    { category: 'Lease Deposits & Setup',           pct: 0.10 },
+    { category: 'Marketing & Launch',               pct: 0.08 },
+    { category: 'Licensing, Legal & Permits',       pct: 0.05 },
+    { category: 'Initial Inventory or Supplies',    pct: 0.03 },
+    { category: 'Other Startup Costs',              pct: 0.02 },
+  ];
+
+  return slices.map(({ category, pct }) => {
+    const lo = Math.round(low * pct);
+    const hi = Math.round(low * pct * 1.3);
+    return { category, amount: `${fmtDollars(lo)}–${fmtDollars(hi)}` };
+  });
 }
 
 interface CacheHit {
@@ -865,6 +931,16 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     });
     const parsed = cleanAndParseJSON(synthesisText, undefined, `${businessType} / ${location}`);
     parsed.groundingSources = sources;
+
+    // Ensure startupCostItems is populated — synthesize from total range if Gemini omitted it.
+    if (!Array.isArray(parsed.financialProjections?.startupCostItems) ||
+        parsed.financialProjections.startupCostItems.length === 0) {
+      const range: string = parsed.financialProjections?.startupCostRange ?? '';
+      const synth = synthesizeStartupCostItems(range);
+      if (synth.length > 0 && parsed.financialProjections) {
+        parsed.financialProjections.startupCostItems = synth;
+      }
+    }
 
     if (!parsed.targetCoordinates) {
       parsed.targetCoordinates = getCoordinatesForLocation(location);

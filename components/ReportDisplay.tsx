@@ -1206,6 +1206,61 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                           </div>
                       </div>
 
+                      {/* Itemized startup cost breakdown — present on reports generated after Sprint 10 */}
+                      {Array.isArray(report.financialProjections.startupCostItems) && report.financialProjections.startupCostItems.length > 0 && (
+                        <div className="mt-3 border border-gray-150 rounded-2xl overflow-hidden">
+                          <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-150 flex items-center justify-between">
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Estimated Startup Cost Breakdown</p>
+                            {report.financialProjections.startupSpaceContext?.buildOutIntensity && (
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                                report.financialProjections.startupSpaceContext.buildOutIntensity === 'High'
+                                  ? 'bg-orange-50 text-orange-600 border-orange-200'
+                                  : report.financialProjections.startupSpaceContext.buildOutIntensity === 'Moderate'
+                                    ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                    : 'bg-green-50 text-green-600 border-green-200'
+                              }`}>
+                                {report.financialProjections.startupSpaceContext.buildOutIntensity} Build-Out
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Space context row — brick-and-mortar only */}
+                          {report.financialProjections.startupSpaceContext && (report.financialProjections.startupSpaceContext.sqft || report.financialProjections.startupSpaceContext.monthlyRent) && (
+                            <div className="flex gap-6 px-4 py-2.5 bg-blue-50/40 border-b border-gray-100 text-xs">
+                              {report.financialProjections.startupSpaceContext.sqft && (
+                                <div>
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Est. Space</span>
+                                  <span className="font-semibold text-gray-700">{report.financialProjections.startupSpaceContext.sqft}</span>
+                                </div>
+                              )}
+                              {report.financialProjections.startupSpaceContext.monthlyRent && (
+                                <div>
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Est. Monthly Rent</span>
+                                  <span className="font-semibold text-gray-700">{report.financialProjections.startupSpaceContext.monthlyRent}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Line items */}
+                          <div className="divide-y divide-gray-100">
+                            {report.financialProjections.startupCostItems.map((item, i) => (
+                              <div key={i} className="flex items-start justify-between px-4 py-2 text-xs hover:bg-gray-50/50">
+                                <div className="flex-1 min-w-0 pr-4">
+                                  <span className="font-medium text-gray-700">{item.category}</span>
+                                  {item.notes && <span className="block text-[10px] text-gray-400 mt-0.5">{item.notes}</span>}
+                                </div>
+                                <span className="font-black text-gray-900 whitespace-nowrap shrink-0">{item.amount}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="px-4 py-2 bg-gray-50 border-t border-gray-150">
+                            <p className="text-[9px] text-gray-400 italic">Estimates only — not quotes. Actual costs vary by contractor, market conditions, and build scope.</p>
+                          </div>
+                        </div>
+                      )}
+
                       <LockedSection
                         currentPlan={currentPlan}
                         requiredPlan="Pro"

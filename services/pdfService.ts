@@ -420,8 +420,57 @@ export class PDFService {
       doc.setTextColor(80, 85, 90);
       writeWrappedText(report.financialProjections.startupCostBreakdown, 25, currentY + 22, 160, 4);
 
-      // Financial performance columns table
       currentY += 38;
+
+      // Itemized cost breakdown table — present on reports generated after Sprint 10
+      const costItems = report.financialProjections.startupCostItems;
+      if (Array.isArray(costItems) && costItems.length > 0) {
+        currentY = ensureRemainingY(currentY, 12 + costItems.length * 7 + 10);
+
+        // Section header
+        doc.setFillColor(lColor[0], lColor[1], lColor[2]);
+        doc.rect(20, currentY, 170, 7, 'F');
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(pColor[0], pColor[1], pColor[2]);
+        doc.text('ESTIMATED STARTUP COST BREAKDOWN', 24, currentY + 5);
+
+        // Space context (sq ft / monthly rent) if present
+        const spaceCtx = report.financialProjections.startupSpaceContext;
+        if (spaceCtx && (spaceCtx.sqft || spaceCtx.monthlyRent)) {
+          currentY += 7;
+          doc.setFont('Helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(80, 85, 90);
+          const spaceParts: string[] = [];
+          if (spaceCtx.sqft) spaceParts.push(`Space: ${spaceCtx.sqft}`);
+          if (spaceCtx.monthlyRent) spaceParts.push(`Monthly rent: ${spaceCtx.monthlyRent}`);
+          if (spaceCtx.buildOutIntensity) spaceParts.push(`Build-out intensity: ${spaceCtx.buildOutIntensity}`);
+          doc.text(spaceParts.join('   ·   '), 24, currentY + 5);
+        }
+
+        currentY += 7;
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8.5);
+        for (const item of costItems) {
+          doc.setDrawColor(235, 240, 245);
+          doc.line(20, currentY + 6, 190, currentY + 6);
+          doc.setTextColor(60, 65, 70);
+          doc.text(sanitizeForPdf(item.category), 24, currentY + 4.5);
+          doc.setFont('Helvetica', 'bold');
+          doc.text(sanitizeForPdf(item.amount), 190, currentY + 4.5, { align: 'right' });
+          doc.setFont('Helvetica', 'normal');
+          currentY += 7;
+        }
+
+        // Disclaimer
+        doc.setFontSize(7.5);
+        doc.setTextColor(140, 145, 150);
+        doc.text('Estimates only — not quotes. Actual costs vary by contractor, market conditions, and build scope.', 24, currentY + 4);
+        currentY += 10;
+      }
+
+      // Financial performance columns table
       currentY = ensureRemainingY(currentY, 65);
 
       doc.setFillColor(lColor[0], lColor[1], lColor[2]);

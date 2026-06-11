@@ -33,10 +33,26 @@ export interface FinancialMetric {
   value: string;
 }
 
+export interface StartupCostItem {
+  category: string;
+  amount: string;
+  notes?: string;
+}
+
+export interface StartupSpaceContext {
+  sqft?: string;
+  monthlyRent?: string;
+  buildOutIntensity?: 'Low' | 'Moderate' | 'High';
+}
+
 export interface FinancialProjections {
   summary: string;
   startupCostRange: string;
   startupCostBreakdown: string;
+  /** Structured line-item breakdown — present on reports generated after Sprint 10. */
+  startupCostItems?: StartupCostItem[];
+  /** Brick-and-mortar space context — present when applicable. */
+  startupSpaceContext?: StartupSpaceContext;
   revenueYear1: string;
   revenueYear3: string;
   breakEvenTime: string;
