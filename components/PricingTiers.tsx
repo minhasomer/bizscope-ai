@@ -16,6 +16,16 @@ interface PricingTiersProps {
   isBetaActive?: boolean;
 }
 
+const PLAN_ORDER: Record<string, number> = { Explorer: 0, Pro: 1, 'Pro+': 2, Enterprise: 3 };
+
+function getPlanRelation(currentPlan: string, cardId: string): 'active' | 'upgrade' | 'downgrade' | 'enterprise' {
+  if (currentPlan === cardId) return 'active';
+  if (cardId === 'Enterprise') return 'enterprise';
+  const current = PLAN_ORDER[currentPlan] ?? 0;
+  const card = PLAN_ORDER[cardId] ?? 0;
+  return card > current ? 'upgrade' : 'downgrade';
+}
+
 // Map icon keys from plans.ts to actual React icon components.
 // Icon styling matches the original per-plan colour conventions.
 const PLAN_ICONS: Record<PlanIconKey, React.ReactNode> = {
@@ -181,20 +191,33 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
 
               {/* CTA */}
               <div className="px-6 pb-6 pt-4 border-t border-gray-50">
-                <button
-                  onClick={() => handlePlanAction(card.id)}
-                  className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-150 cursor-pointer text-center ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100'
-                      : `${card.ctaClass} border border-transparent`
-                  }`}
-                >
-                  {isActive
-                    ? 'Currently Active'
-                    : !isDemo && card.id !== 'Explorer' && card.id !== 'Enterprise'
-                      ? `${card.cta} →`
-                      : card.cta}
-                </button>
+                {(() => {
+                  const relation = getPlanRelation(currentPlan, card.id);
+                  let label: string;
+                  let btnClass: string;
+                  if (relation === 'active') {
+                    label = 'Currently Active';
+                    btnClass = 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100';
+                  } else if (relation === 'enterprise') {
+                    label = card.cta;
+                    btnClass = `${card.ctaClass} border border-transparent`;
+                  } else if (relation === 'upgrade') {
+                    label = !isDemo ? `${card.cta} →` : card.cta;
+                    btnClass = `${card.ctaClass} border border-transparent`;
+                  } else {
+                    // downgrade
+                    label = card.id === 'Explorer' ? 'Downgrade to Free' : `Switch to ${card.name}`;
+                    btnClass = 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100';
+                  }
+                  return (
+                    <button
+                      onClick={() => handlePlanAction(card.id)}
+                      className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-150 cursor-pointer text-center ${btnClass}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           );
