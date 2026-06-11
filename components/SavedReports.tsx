@@ -3,6 +3,7 @@ import { SavedReport, SavedMarketGapReport, OpportunityReport } from '../types';
 import { SavedReportsService } from '../services/savedReportsService';
 import { isDemoMode } from '../src/config/appConfig';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
+import { viabilityScoreToAssessment, scoreToRiskRating, scoreToCompetitionRating } from '../src/utils/assessmentUtils';
 import { 
   Briefcase, 
   MapPin, 
@@ -509,10 +510,15 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                           <Heart className={`w-3.5 h-3.5 transition-all duration-300 ${report.isFavorite ? 'fill-rose-500 scale-110 text-rose-500' : ''}`} />
                         </button>
 
-                        {/* Score display tag */}
-                        <div className={`px-2 py-1 text-xs font-black rounded-lg border tracking-tight ${getScoreColor(report.viabilityScore)}`}>
-                          VIABILITY: {report.viabilityScore}%
-                        </div>
+                        {/* Assessment tag */}
+                        {(() => {
+                          const a = viabilityScoreToAssessment(report.viabilityScore);
+                          return (
+                            <div className={`px-2 py-1 text-xs font-black rounded-lg border tracking-tight ${a.bgClass} ${a.borderClass} ${a.colorClass}`}>
+                              {a.emoji} {a.label}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -791,10 +797,14 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                       <MapPin className="w-3 h-3 text-gray-450" /> {formatLocationDisplay(reportA.location)}
                     </p>
                   </div>
-                  <div className="mt-4 flex items-center gap-3">
-                    <span className="text-3xl font-black text-blue-900">{reportA.viabilityScore}%</span>
-                    <span className="text-xs text-gray-400">Overall Viability Score</span>
-                  </div>
+                  {(() => {
+                    const a = viabilityScoreToAssessment(reportA.viabilityScore);
+                    return (
+                      <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border font-black text-xs ${a.bgClass} ${a.borderClass} ${a.colorClass}`}>
+                        {a.emoji} {a.label}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Report B Header Column Card */}
@@ -811,21 +821,25 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                       <MapPin className="w-3 h-3 text-gray-450" /> {formatLocationDisplay(reportB.location)}
                     </p>
                   </div>
-                  <div className="mt-4 flex items-center gap-3">
-                    <span className="text-3xl font-black text-blue-900">{reportB.viabilityScore}%</span>
-                    <span className="text-xs text-gray-400">Overall Viability Score</span>
-                  </div>
+                  {(() => {
+                    const b = viabilityScoreToAssessment(reportB.viabilityScore);
+                    return (
+                      <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border font-black text-xs ${b.bgClass} ${b.borderClass} ${b.colorClass}`}>
+                        {b.emoji} {b.label}
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>
 
-              {/* Tie / Score Differential status overlay indicator */}
+              {/* Comparison result indicator */}
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center text-xs text-gray-650 flex items-center justify-center gap-1.5 font-semibold">
                 {isTie ? (
-                  <span>⚖️ Both dossiers share identical viability ratings ({reportA.viabilityScore}%).</span>
+                  <span>⚖️ Both options share the same overall assessment.</span>
                 ) : (
                   <span>
-                    🏆 <strong className="text-gray-900">"{isAWinner ? reportA.businessType : reportB.businessType}"</strong> has a <strong className="text-blue-700">+{scoreDiff} point</strong> feasibility advantage over the other option.
+                    🏆 <strong className="text-gray-900">"{isAWinner ? reportA.businessType : reportB.businessType}"</strong> rates higher overall.
                   </span>
                 )}
               </div>
@@ -926,21 +940,19 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
                     <div className="p-4">
-                      {reportA.scoreBreakdown?.riskLevel !== undefined && (
-                        <span className="text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-100 px-2 py-0.5 rounded-md uppercase">
-                          Risk Level: {reportA.scoreBreakdown.riskLevel}/100
-                        </span>
-                      )}
+                      {reportA.scoreBreakdown?.riskLevel !== undefined && (() => {
+                        const r = scoreToRiskRating(reportA.scoreBreakdown!.riskLevel);
+                        return <span className={`text-[10px] font-extrabold ${r.bgClass} ${r.colorClass} border border-current/20 px-2 py-0.5 rounded-md uppercase`}>Risk: {r.label}</span>;
+                      })()}
                       <p className="text-xs text-gray-650 mt-2 font-medium leading-relaxed">
                         {getRiskLabel(reportA)}
                       </p>
                     </div>
                     <div className="p-4">
-                      {reportB.scoreBreakdown?.riskLevel !== undefined && (
-                        <span className="text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-100 px-2 py-0.5 rounded-md uppercase">
-                          Risk Level: {reportB.scoreBreakdown.riskLevel}/100
-                        </span>
-                      )}
+                      {reportB.scoreBreakdown?.riskLevel !== undefined && (() => {
+                        const r = scoreToRiskRating(reportB.scoreBreakdown!.riskLevel);
+                        return <span className={`text-[10px] font-extrabold ${r.bgClass} ${r.colorClass} border border-current/20 px-2 py-0.5 rounded-md uppercase`}>Risk: {r.label}</span>;
+                      })()}
                       <p className="text-xs text-gray-650 mt-2 font-medium leading-relaxed">
                         {getRiskLabel(reportB)}
                       </p>
@@ -955,21 +967,19 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
                     <div className="p-4">
-                      {reportA.scoreBreakdown?.competitionIntensity !== undefined && (
-                        <span className="text-[10px] font-extrabold bg-blue-50 text-blue-800 border border-blue-100 px-2 py-0.5 rounded-md uppercase">
-                          Intensity Score: {reportA.scoreBreakdown.competitionIntensity}/100
-                        </span>
-                      )}
+                      {reportA.scoreBreakdown?.competitionIntensity !== undefined && (() => {
+                        const r = scoreToCompetitionRating(reportA.scoreBreakdown!.competitionIntensity);
+                        return <span className={`text-[10px] font-extrabold ${r.bgClass} ${r.colorClass} border border-current/20 px-2 py-0.5 rounded-md uppercase`}>Competition: {r.label}</span>;
+                      })()}
                       <p className="text-xs text-gray-650 mt-2 font-medium leading-relaxed">
                         {getCompetitionLabel(reportA)}
                       </p>
                     </div>
                     <div className="p-4">
-                      {reportB.scoreBreakdown?.competitionIntensity !== undefined && (
-                        <span className="text-[10px] font-extrabold bg-blue-50 text-blue-800 border border-blue-100 px-2 py-0.5 rounded-md uppercase">
-                          Intensity Score: {reportB.scoreBreakdown.competitionIntensity}/100
-                        </span>
-                      )}
+                      {reportB.scoreBreakdown?.competitionIntensity !== undefined && (() => {
+                        const r = scoreToCompetitionRating(reportB.scoreBreakdown!.competitionIntensity);
+                        return <span className={`text-[10px] font-extrabold ${r.bgClass} ${r.colorClass} border border-current/20 px-2 py-0.5 rounded-md uppercase`}>Competition: {r.label}</span>;
+                      })()}
                       <p className="text-xs text-gray-650 mt-2 font-medium leading-relaxed">
                         {getCompetitionLabel(reportB)}
                       </p>

@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import { SubscriptionPlan, canViewFullFinancials, canViewRegionalIntelligence } from '../src/utils/planUtils';
 import { ViabilityReport } from '../types';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
+import { viabilityScoreToPdfLabel, factorScoreToPdfLabel } from '../src/utils/assessmentUtils';
 
 export interface PDFExportOptions {
   isWhiteLabelMode: boolean;
@@ -188,37 +189,34 @@ export class PDFService {
     doc.rect(20, 116, 170, 50, 'D');
 
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(9);
     doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-    doc.text("VIABILITY SCORE", 30, 128);
+    doc.text("OVERALL ASSESSMENT", 30, 125);
 
-    doc.setFontSize(36);
+    const assessmentLabel = viabilityScoreToPdfLabel(report.viabilityScore);
+    doc.setFontSize(18);
     doc.setTextColor(20, 25, 30);
-    doc.text(`${report.viabilityScore}/100`, 30, 146);
+    doc.text(sanitizeForPdf(assessmentLabel), 30, 138);
 
-    // Score band label
-    const scoreBandLabel =
-      report.viabilityScore >= 76 ? 'HIGH VIABILITY' :
-      report.viabilityScore >= 51 ? 'MODERATE VIABILITY' :
-      report.viabilityScore >= 26 ? 'LOW VIABILITY' :
-      'VERY LOW VIABILITY';
+    doc.setFont('Helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(80, 90, 100);
-    doc.text(scoreBandLabel, 30, 152);
+    doc.text(`Score: ${report.viabilityScore}/100`, 30, 147);
 
+    doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(60, 65, 70);
-    doc.text(sanitizeForPdf(`Verdict: ${report.recommendation?.decision || "Caution Advised"}`), 30, 160);
+    doc.text(sanitizeForPdf(`Verdict: ${report.recommendation?.decision || "Caution Advised"}`), 30, 158);
 
-    // Score breakdown block side elements with plain-English context
+    // Score breakdown block side elements with plain-English labels
     if (report.scoreBreakdown) {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(80, 90, 100);
-      doc.text(`Market Demand:          ${report.scoreBreakdown.marketDemand}/100  (consumer need & spending power)`, 95, 128);
-      doc.text(`Financial Feasibility:  ${report.scoreBreakdown.financialFeasibility}/100  (profitability vs. startup cost)`, 95, 135);
-      doc.text(`Competition Intensity:  ${report.scoreBreakdown.competitionIntensity}/100  (lower = less competition)`, 95, 142);
-      doc.text(`Risk Level:             ${report.scoreBreakdown.riskLevel}/100  (lower = less risk)`, 95, 149);
+      doc.text(`Market Demand:          ${factorScoreToPdfLabel(report.scoreBreakdown.marketDemand, false)}`, 95, 128);
+      doc.text(`Financial Feasibility:  ${factorScoreToPdfLabel(report.scoreBreakdown.financialFeasibility, false)}`, 95, 135);
+      doc.text(`Competition Intensity:  ${factorScoreToPdfLabel(report.scoreBreakdown.competitionIntensity, true)}`, 95, 142);
+      doc.text(`Risk Level:             ${factorScoreToPdfLabel(report.scoreBreakdown.riskLevel, true)}`, 95, 149);
     }
 
     // Corporate meta info block bottom

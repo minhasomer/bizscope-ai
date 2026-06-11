@@ -1062,7 +1062,6 @@ const MetricBar: React.FC<{ label: string; value: number; description?: string }
         <span className="text-xs font-semibold text-slate-600">{label}</span>
         <div className="flex items-center gap-1.5">
           <span className={`text-[10px] font-bold ${level.color}`}>{level.label}</span>
-          <span className="text-xs font-black text-slate-900">{value}/100</span>
         </div>
       </div>
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

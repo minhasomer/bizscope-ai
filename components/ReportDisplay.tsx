@@ -5,6 +5,17 @@ import { SavedReportsService } from '../services/savedReportsService';
 import { generateRegionalAnalysis, generateMockRegionalData } from '../services/geminiService';
 import { isDemoMode } from '../src/config/appConfig';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
+import {
+  viabilityScoreToAssessment,
+  scoreToMarketDemandRating,
+  scoreToCompetitionRating,
+  scoreToCapitalRating,
+  scoreToComplexityRating,
+  scoreToGrowthRating,
+  scoreToRiskRating,
+  getNextStep,
+  getConfidenceLevel,
+} from '../src/utils/assessmentUtils';
 import { LiveModeConfirmModal } from './LiveModeConfirmModal';
 import { UsageTrackerService } from '../services/usageTrackerService';
 import { ReportCacheService } from '../services/reportCacheService';
@@ -393,69 +404,13 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
 };
 
 // Animated Viability Score Circle component
-const ScoreCircle: React.FC<{ score: number }> = ({ score }) => {
-  const [animatedScore, setAnimatedScore] = useState(0);
-
-  useEffect(() => {
-    let start = 0;
-    const duration = 1200; // Complete in 1.2s
-    const increment = score / (duration / 16); 
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= score) {
-        setAnimatedScore(score);
-        clearInterval(timer);
-      } else {
-        setAnimatedScore(Math.floor(start));
-      }
-    }, 16);
-
-    return () => clearInterval(timer);
-  }, [score]);
-
-  const getScoreColor = () => {
-    if (animatedScore >= 70) return 'text-emerald-700 bg-emerald-50';
-    if (animatedScore >= 40) return 'text-amber-600 bg-amber-50';
-    return 'text-rose-600 bg-rose-50';
-  };
-
-  const getStrokeColor = () => {
-    if (animatedScore >= 70) return 'stroke-emerald-500';
-    if (animatedScore >= 40) return 'stroke-amber-500';
-    return 'stroke-rose-500';
-  };
-
-  const circumference = 2 * Math.PI * 45; // radius = 45
-  const offset = circumference - (animatedScore / 100) * circumference;
-
+const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
+  const a = viabilityScoreToAssessment(score);
   return (
-    <div className="relative w-36 h-36 md:w-44 md:h-44 group select-none">
-      <svg className="w-full h-full transform transition-transform duration-500 group-hover:scale-105" viewBox="0 0 100 100">
-        <circle
-          className="text-gray-200 stroke-current"
-          strokeWidth="6"
-          cx="50"
-          cy="50"
-          r="45"
-          fill="transparent"
-        ></circle>
-        <circle
-          className={`${getStrokeColor()} transition-all duration-150 stroke-current`}
-          strokeWidth="7"
-          strokeLinecap="round"
-          cx="50"
-          cy="50"
-          r="45"
-          fill="transparent"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          transform="rotate(-90 50 50)"
-        ></circle>
-      </svg>
-      <div className={`absolute inset-4 rounded-full flex flex-col items-center justify-center shadow-xs ${getScoreColor()} transition-colors duration-500`}>
-        <span className="text-4xl md:text-5xl font-black tracking-tight">{animatedScore}</span>
-        <span className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">Viability</span>
-      </div>
+    <div className={`flex flex-col items-center justify-center w-36 h-36 md:w-44 md:h-44 rounded-3xl border-2 ${a.bgClass} ${a.borderClass} select-none transition-all duration-300`}>
+      <span className="text-4xl md:text-5xl mb-1.5 leading-none">{a.emoji}</span>
+      <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
+      <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
     </div>
   );
 };
@@ -544,11 +499,6 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
           </span>
           <div className="flex items-center gap-1.5">
             <span className={`text-[10px] font-bold ${band.color}`}>{band.label}</span>
-            {!isInverse && (
-              <span className="font-mono font-black text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md min-w-[42px] text-center border border-gray-200">
-                {currentValue}/100
-              </span>
-            )}
           </div>
         </div>
         <div className="w-full bg-gray-150 rounded-full h-2.5 overflow-hidden border border-gray-200/40">
@@ -578,6 +528,39 @@ const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdo
         <p className="text-[10px] text-gray-350 leading-relaxed">
           Scores reflect how favorable each factor is for this business — from Very Low to Very High.
         </p>
+      </div>
+    </div>
+  );
+};
+
+// 6-category ratings grid — replaces ScoringBreakdownView in the report header
+const RatingsGrid: React.FC<{ report: ViabilityReport }> = ({ report }) => {
+  const sb = report.scoreBreakdown;
+  if (!sb) return null;
+  const scalability = report.financialProjections?.scalability;
+
+  const rows: Array<{ category: string; label: string; colorClass: string; bgClass: string }> = [
+    { category: 'Market Demand',          ...scoreToMarketDemandRating(sb.marketDemand) },
+    { category: 'Competition',            ...scoreToCompetitionRating(sb.competitionIntensity) },
+    { category: 'Capital Requirements',   ...scoreToCapitalRating(sb.financialFeasibility) },
+    { category: 'Operational Complexity', ...scoreToComplexityRating(sb.riskLevel) },
+    { category: 'Growth Potential',       ...scoreToGrowthRating(sb.marketDemand, scalability) },
+    { category: 'Risk Level',             ...scoreToRiskRating(sb.riskLevel) },
+  ];
+
+  return (
+    <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs flex-grow">
+      <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2 flex items-center justify-between">
+        <span>Assessment Ratings</span>
+        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">AI Estimate</span>
+      </h4>
+      <div className="grid grid-cols-1 gap-2">
+        {rows.map(({ category, label, colorClass, bgClass }) => (
+          <div key={category} className={`flex justify-between items-center px-3 py-1.5 rounded-xl ${bgClass} border border-current/10`}>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{category}</span>
+            <span className={`text-[10px] font-black ${colorClass}`}>{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -975,7 +958,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             
             <div className="flex flex-col md:flex-row gap-8 mb-8 items-center md:items-start text-center md:text-left">
                 <div className="flex flex-col items-center flex-shrink-0 relative">
-                    <ScoreCircle score={report.viabilityScore} />
+                    <AssessmentBadge score={report.viabilityScore} />
                 </div>
                 
                 <div className="flex-grow flex flex-col md:flex-row gap-6 w-full md:items-start">
@@ -1032,14 +1015,33 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         )}
                     </div>
 
-                    {/* Score Breakdown Visualization */}
+                    {/* Assessment Ratings Grid */}
                     {report.scoreBreakdown && (
                         <div className="w-full md:w-1/3 min-w-[280px]">
-                            <ScoringBreakdownView breakdown={report.scoreBreakdown} />
+                            <RatingsGrid report={report} />
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Decision Guidance + Confidence Level */}
+            {(() => {
+              const nextStep = getNextStep(report.recommendation.decision, report.viabilityScore);
+              const confidence = getConfidenceLevel(report);
+              return (
+                <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3 print:hidden">
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+                    <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Recommended Next Step</p>
+                    <p className="text-xs font-black text-blue-800">{nextStep}</p>
+                  </div>
+                  <div className={`${confidence.bgClass} border ${confidence.borderClass} rounded-2xl px-4 py-3`}>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Confidence Level</p>
+                    <p className={`text-xs font-black ${confidence.colorClass}`}>{confidence.level}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{confidence.description}</p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Print Friendly Meta Block */}
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
@@ -1106,7 +1108,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <div className="mt-5 grid grid-cols-4 gap-6 text-sm border-t border-gray-100 pt-4">
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Business</span> {report.businessType}</div>
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Location</span> {formatLocationDisplay(report.location)}</div>
-                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Viability Score</span> {report.viabilityScore} / 100</div>
+                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Assessment</span> {viabilityScoreToAssessment(report.viabilityScore).label}</div>
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Plan</span> {currentPlan}</div>
             </div>
         </div>
@@ -1788,7 +1790,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 }`}>
                                     {report.recommendation.decision}
                                 </span>
-                                <span className="text-xs text-gray-500">Viability Score: <strong className="text-gray-800">{report.viabilityScore}%</strong></span>
+                                <span className="text-xs text-gray-500">Assessment: <strong className="text-gray-800">{viabilityScoreToAssessment(report.viabilityScore).label}</strong></span>
                             </div>
                         </div>
 

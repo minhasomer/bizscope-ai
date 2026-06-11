@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
 
 interface SampleReportsProps {
   onNavigate: (page: string) => void;
@@ -58,11 +59,6 @@ const SAMPLES: SampleCard[] = [
   },
 ];
 
-function getScoreColors(score: number): { ring: string; text: string } {
-  if (score >= 75) return { ring: 'stroke-emerald-500', text: 'text-emerald-600' };
-  if (score >= 60) return { ring: 'stroke-amber-500', text: 'text-amber-600' };
-  return { ring: 'stroke-red-400', text: 'text-red-600' };
-}
 
 export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunSample }) => {
   return (
@@ -103,9 +99,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {SAMPLES.map((s) => {
-            const colors = getScoreColors(s.viabilityScore);
-            const circumference = 2 * Math.PI * 28;
-            const offset = circumference - (s.viabilityScore / 100) * circumference;
+            const assessment = viabilityScoreToAssessment(s.viabilityScore);
 
             return (
               <div
@@ -134,27 +128,15 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                   </span>
                 </div>
 
-                {/* Score ring + decision badge */}
+                {/* Assessment badge + decision badge */}
                 <div className="px-5 py-4 flex items-center gap-4 border-b border-gray-100">
-                  <div className="relative shrink-0">
-                    <svg width="64" height="64" viewBox="0 0 68 68" className="-rotate-90">
-                      <circle cx="34" cy="34" r="28" fill="none" stroke="#e5e7eb" strokeWidth="6" />
-                      <circle
-                        cx="34" cy="34" r="28" fill="none"
-                        className={colors.ring}
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={offset}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className={`text-lg font-black ${colors.text}`}>{s.viabilityScore}</span>
-                    </div>
+                  <div className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl border ${assessment.bgClass} ${assessment.borderClass} shrink-0`}>
+                    <span className="text-xl leading-none">{assessment.emoji}</span>
+                    <span className={`text-[7px] font-black uppercase tracking-wide ${assessment.colorClass} text-center leading-tight mt-0.5 px-1`}>{assessment.label}</span>
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1.5">
-                      Viability Score
+                      Overall Assessment
                     </p>
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${s.decisionColor}`}>
                       {s.decision}

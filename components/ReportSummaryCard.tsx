@@ -2,6 +2,7 @@
 import React from 'react';
 import type { ViabilityReport } from '../types';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
+import { viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
 
 interface ReportSummaryCardProps {
   report: ViabilityReport;
@@ -16,9 +17,6 @@ const decisionStyle = (d: string) => {
   return                                    'bg-red-50    text-red-700    border-red-200';
 };
 
-const ringColor  = (s: number) => s >= 70 ? 'stroke-emerald-500' : s >= 50 ? 'stroke-amber-500' : 'stroke-red-400';
-const scoreColor = (s: number) => s >= 70 ? 'text-emerald-600'   : s >= 50 ? 'text-amber-600'   : 'text-red-600';
-
 export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, onViewFull, onRegenerate }) => {
   const {
     viabilityScore: score,
@@ -31,8 +29,7 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
     franchiseScoreAdjustment: fsa,
   } = report;
 
-  const C      = 2 * Math.PI * 28;
-  const offset = C - (score / 100) * C;
+  const assessment = viabilityScoreToAssessment(score);
   const truncated = summary.length > 220 ? summary.slice(0, 220).trimEnd() + '…' : summary;
 
   const stats = [
@@ -56,21 +53,11 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
             <p className="text-xs text-slate-400 mt-0.5">{formatLocationDisplay(location)}</p>
           </div>
 
-          <div className="flex items-center gap-4 shrink-0">
-            {/* Score ring */}
-            <div className="relative">
-              <svg width="64" height="64" viewBox="0 0 68 68" className="-rotate-90">
-                <circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
-                <circle
-                  cx="34" cy="34" r="28" fill="none"
-                  className={ringColor(score)}
-                  strokeWidth="6" strokeLinecap="round"
-                  strokeDasharray={C} strokeDashoffset={offset}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-lg font-black ${scoreColor(score)}`}>{score}</span>
-              </div>
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Assessment tier badge */}
+            <div className={`flex flex-col items-center justify-center w-20 h-14 rounded-xl border ${assessment.bgClass} ${assessment.borderClass} px-2`}>
+              <span className="text-xl leading-none">{assessment.emoji}</span>
+              <span className={`text-[8px] font-black uppercase tracking-wide ${assessment.colorClass} text-center leading-tight mt-0.5`}>{assessment.label}</span>
             </div>
             {/* Decision badge */}
             <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border ${decisionStyle(recommendation.decision)}`}>
