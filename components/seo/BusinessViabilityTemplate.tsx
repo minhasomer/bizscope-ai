@@ -33,7 +33,7 @@ export const BusinessViabilityTemplate: React.FC<BusinessViabilityTemplateProps>
   const faqs: FAQItem[] = [
     {
       question: `Is a ${business} viable in ${city}?`,
-      answer: `A ${business} can be viable in ${city} depending on location, capital, and competitive positioning. BizScope analyzes local demographics, competitor density by ZIP code, and economic indicators to give you a viability score and specific recommendations before you invest.`,
+      answer: `A ${business} can be viable in ${city} depending on location, capital, and competitive positioning. BizScope analyzes local demographics, competitor density by ZIP code, and economic indicators to give you a viability assessment and specific recommendations before you invest.`,
     },
     {
       question: `How much does it cost to start a ${business} in ${city}?`,
@@ -121,7 +121,7 @@ export const BusinessViabilityTemplate: React.FC<BusinessViabilityTemplateProps>
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'Opportunity Score', icon: '📊', desc: '0–100 composite rating' },
+              { label: 'Opportunity Assessment', icon: '📊', desc: 'Composite tier rating' },
               { label: 'Startup Cost Range', icon: '💰', desc: 'Min–max with breakdown' },
               { label: 'ZIP-Level Map', icon: '🗺️', desc: 'Best neighborhoods to open' },
               { label: 'Revenue Projection', icon: '📈', desc: 'Year 1–3 estimates' },
@@ -181,7 +181,7 @@ export const BusinessViabilityTemplate: React.FC<BusinessViabilityTemplateProps>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl font-black mb-3 tracking-tight">Get the Full {business} Report for {city}</h2>
           <p className="text-gray-300 text-sm mb-7 leading-relaxed">
-            Detailed AI analysis including competitor mapping, demographic profiles, and ZIP-level opportunity scores — before you sign a lease or write a check.
+            Detailed AI analysis including competitor mapping, demographic profiles, and ZIP-level opportunity assessments — before you sign a lease or write a check.
           </p>
           <button
             onClick={() => onNavigate('home')}

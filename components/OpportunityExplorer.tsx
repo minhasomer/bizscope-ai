@@ -712,7 +712,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                 <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4">
                   <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-amber-300 leading-relaxed">
-                    <strong className="text-amber-200">Limited grounding:</strong> Live web search data was unavailable for this analysis. All scores and recommendations are based on Gemini's training knowledge only, not verified live market data. Treat results as directional only.
+                    <strong className="text-amber-200">Limited grounding:</strong> Live web search data was unavailable for this analysis. All ratings and recommendations are based on Gemini's training knowledge only, not verified live market data. Treat results as directional only.
                   </p>
                 </div>
               )}
@@ -781,19 +781,19 @@ const HowRankingsWork: React.FC = () => {
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">How the Score is Calculated</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">How the Assessment is Calculated</p>
             <ul className="text-xs text-slate-600 space-y-1 leading-relaxed">
               <li><span className="font-semibold text-slate-700">Market Demand</span> — local consumer need &amp; spending signals</li>
               <li><span className="font-semibold text-slate-700">Competition</span> — how crowded the category already is</li>
               <li><span className="font-semibold text-slate-700">Financial Feasibility</span> — realistic startup cost vs. revenue</li>
               <li><span className="font-semibold text-slate-700">Risk Level</span> — execution, market, and regulatory risk factors</li>
             </ul>
-            <p className="text-[10px] text-slate-400 mt-2">Higher score = stronger opportunity. #1 ranked = best balance of all four factors.</p>
+            <p className="text-[10px] text-slate-400 mt-2">Higher rating = stronger opportunity. #1 ranked = best balance of all four factors.</p>
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Confidence Level</p>
             <p className="text-xs text-slate-600 leading-relaxed mb-2">
-              Scores are AI-estimated from live web search signals and training data. They are <span className="font-semibold text-slate-700">directional, not definitive</span> — treat them as a starting point for research, not a guarantee of success.
+              Ratings are AI-estimated from live web search signals and training data. They are <span className="font-semibold text-slate-700">directional, not definitive</span> — treat them as a starting point for research, not a guarantee of success.
             </p>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
               <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
@@ -1498,15 +1498,15 @@ const OpportunityDossierModal: React.FC<{
                     />
                     <div className="pt-3 border-t border-slate-100">
                       <MetricBar
-                        label="Overall Score"
+                        label="Overall Rating"
                         value={opportunity.opportunityScorecard.overallScore}
                         description="Weighted composite of all five dimensions above. 76–100: Strong opportunity. 51–75: Moderate. Below 50: Proceed with caution."
                       />
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-4 pt-3 border-t border-slate-100">
-                    Score ranges: 0–25 Very Low · 26–50 Low · 51–75 Moderate · 76–100 High.
-                    Competition Advantage scores are directional — a score of 80 means the market is 80% open, not 80% saturated.
+                    Rating ranges: 0–25 Very Low · 26–50 Low · 51–75 Moderate · 76–100 High.
+                    Competition Advantage ratings are directional — a rating of 80 means the market is 80% open, not 80% saturated.
                   </p>
                 </DossierSection>
               )}

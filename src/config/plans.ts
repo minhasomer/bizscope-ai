@@ -443,7 +443,7 @@ export const COMPARISON_TABLE_ROWS: ComparisonTableRow[] = [
     values: ['3/mo', '20/mo', '50/mo', 'Unlimited'],
   },
   {
-    label:  'Viability Scores & Executive Summary',
+    label:  'Viability Assessment & Executive Summary',
     values: [true, true, true, true],
   },
   {

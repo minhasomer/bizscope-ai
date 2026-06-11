@@ -910,7 +910,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl">{report.recommendation.reasoning}</p>
                         {report.franchiseTerritoryCheck && (
                           <p className="mt-2 text-xs text-amber-700 font-semibold leading-relaxed max-w-2xl">
-                            ⚠️ This score reflects market conditions only — territory availability is not confirmed. Verify directly with the franchisor before investing.
+                            ⚠️ This assessment reflects market conditions only — territory availability is not confirmed. Verify directly with the franchisor before investing.
                           </p>
                         )}
                         {/* AI disclaimer — inside header, near score and recommendation */}
@@ -1071,7 +1071,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   </div>
 
                   <p className="text-[11px] text-amber-700 leading-relaxed font-medium border-t border-amber-200 pt-2">
-                    <strong>Important:</strong> The viability score and recommendation above reflect general market conditions for this business concept. They do not constitute approval to open a {ftc.brandName} franchise and should not be interpreted as confirmation that this territory is available.
+                    <strong>Important:</strong> This assessment and recommendation reflect general market conditions for this business concept. They do not constitute approval to open a {ftc.brandName} franchise and should not be interpreted as confirmation that this territory is available.
                   </p>
                 </div>
               </div>
@@ -1470,9 +1470,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-center">
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Market Interest Score</p>
-                                <p className="text-4xl font-black text-blue-600">{proInsights.interestScore}<span className="text-xl">/100</span></p>
-                                <p className="text-[10px] font-bold text-blue-500 mt-1">{proInsights.interestLabel} Interest</p>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Market Interest Rating</p>
+                                <p className="text-3xl font-black text-blue-600">{proInsights.interestLabel}</p>
+                                <p className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-wide">Consumer Interest Level</p>
                                 <p className="text-xs text-emerald-600 font-extrabold mt-1 flex items-center justify-center gap-1">
                                     &uarr; {proInsights.yoyGrowth}% YoY search growth
                                 </p>

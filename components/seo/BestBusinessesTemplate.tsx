@@ -33,7 +33,7 @@ export const BestBusinessesTemplate: React.FC<BestBusinessesTemplateProps> = ({ 
     },
     {
       question: `How does BizScope analyze business opportunities in ${city}?`,
-      answer: `BizScope combines US Census Bureau demographic data, geo-mapped competitor density, economic indicators, and consumer spending patterns specific to ${city} to generate an opportunity score for each business type. Higher scores indicate stronger market demand relative to existing competition.`,
+      answer: `BizScope combines US Census Bureau demographic data, geo-mapped competitor density, economic indicators, and consumer spending patterns specific to ${city} to generate an opportunity assessment for each business type. Higher ratings indicate stronger market demand relative to existing competition.`,
     },
     {
       question: `Which ZIP codes in ${city} have the best business opportunities?`,
@@ -75,7 +75,7 @@ export const BestBusinessesTemplate: React.FC<BestBusinessesTemplateProps> = ({ 
             Top Business Opportunities in {city}
           </h2>
           <p className="text-gray-500 text-center text-sm mb-10 max-w-xl mx-auto">
-            Ranked by opportunity score — a composite of market demand, competition level, and startup feasibility.
+            Ranked by opportunity assessment — a composite of market demand, competition level, and startup feasibility.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {BUSINESS_HIGHLIGHTS.map((biz, i) => (

@@ -950,7 +950,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                   <div>
                     <p className="text-sm text-slate-500 leading-relaxed mb-3">
-                      BizScope analyzes the viability of any business idea or franchise concept in any US market. Enter a business type and city — and in seconds you get a structured report covering competitor density, demographic fit, startup cost estimates, market opportunity scoring, risk factors, and AI-driven go/no-go guidance.
+                      BizScope analyzes the viability of any business idea or franchise concept in any US market. Enter a business type and city — and in seconds you get a structured report covering competitor density, demographic fit, startup cost estimates, market opportunity ratings, risk factors, and AI-driven go/no-go guidance.
                     </p>
                     <p className="text-sm text-slate-500 leading-relaxed">
                       Reports combine US Census demographics, economic indicators, and large-language-model analysis — surfacing real signal, not generic advice.
@@ -1000,7 +1000,7 @@ const App: React.FC = () => {
                 <div className="bg-gradient-to-br from-slate-900 to-[#0a0f1e] rounded-2xl p-5 border border-slate-800">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                     {[
-                      'Viability Score & Executive Summary',
+                      'Viability Assessment & Executive Summary',
                       'Competitor Landscape Analysis',
                       'Demographic & Consumer Fit',
                       'Startup Cost Range Estimates',

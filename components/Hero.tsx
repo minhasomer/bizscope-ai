@@ -260,7 +260,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                 </h1>
 
                 <p className="text-base md:text-lg text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-                    Enter any business idea or franchise name, choose your target location, and get a complete viability report — competitor landscape, demographic fit, startup cost range, market opportunity score, and AI-driven go/no-go analysis.
+                    Enter any business idea or franchise name, choose your target location, and get a complete viability report — competitor landscape, demographic fit, startup cost range, market opportunity assessment, and AI-driven go/no-go analysis.
                 </p>
 
                 {/* Input Form */}
