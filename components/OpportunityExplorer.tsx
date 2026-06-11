@@ -323,15 +323,6 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     <div className="max-w-6xl mx-auto py-8 px-4">
       {/* Header */}
       <div className="text-center mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4 border border-indigo-100"
-        >
-          <TrendingUp className="w-3.5 h-3.5" />
-          Market Intelligence · Opportunity Discovery
-        </motion.div>
-
         <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3 tracking-tight">
           Find High-Potential Markets Before They're Crowded
         </h2>
