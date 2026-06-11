@@ -4,6 +4,7 @@ import { CompetitorMap } from './CompetitorMap';
 import { SavedReportsService } from '../services/savedReportsService';
 import { generateRegionalAnalysis, generateMockRegionalData } from '../services/geminiService';
 import { isDemoMode } from '../src/config/appConfig';
+import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 import { LiveModeConfirmModal } from './LiveModeConfirmModal';
 import { UsageTrackerService } from '../services/usageTrackerService';
 import { ReportCacheService } from '../services/reportCacheService';
@@ -1198,7 +1199,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                       <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-150 grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                               <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estimated Startup Cost</p>
-                              <p className="text-2xl font-black text-gray-900 mt-1">{report.financialProjections.startupCostRange}</p>
+                              <p className="text-2xl font-black text-gray-900 mt-1">{normalizeRangeSeparator(report.financialProjections.startupCostRange)}</p>
                           </div>
                           <div>
                               <p className="text-xs text-gray-405 font-bold uppercase tracking-wider">Cost Breakdown</p>
@@ -1230,13 +1231,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                               {report.financialProjections.startupSpaceContext.sqft && (
                                 <div>
                                   <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Est. Space</span>
-                                  <span className="font-semibold text-gray-700">{report.financialProjections.startupSpaceContext.sqft}</span>
+                                  <span className="font-semibold text-gray-700">{normalizeRangeSeparator(report.financialProjections.startupSpaceContext.sqft)}</span>
                                 </div>
                               )}
                               {report.financialProjections.startupSpaceContext.monthlyRent && (
                                 <div>
                                   <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Est. Monthly Rent</span>
-                                  <span className="font-semibold text-gray-700">{report.financialProjections.startupSpaceContext.monthlyRent}</span>
+                                  <span className="font-semibold text-gray-700">{normalizeRangeSeparator(report.financialProjections.startupSpaceContext.monthlyRent)}</span>
                                 </div>
                               )}
                             </div>
@@ -1250,7 +1251,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   <span className="font-medium text-gray-700">{item.category}</span>
                                   {item.notes && <span className="block text-[10px] text-gray-400 mt-0.5">{item.notes}</span>}
                                 </div>
-                                <span className="font-black text-gray-900 whitespace-nowrap shrink-0">{item.amount}</span>
+                                <span className="font-black text-gray-900 whitespace-nowrap shrink-0">{normalizeRangeSeparator(item.amount)}</span>
                               </div>
                             ))}
                           </div>
@@ -1274,12 +1275,12 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   <div className="grid grid-cols-2 gap-4">
                                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                                           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Year 1 Revenue Projection</p>
-                                          <p className="font-black text-lg md:text-xl text-emerald-600 mt-1">{report.financialProjections.revenueYear1}</p>
+                                          <p className="font-black text-lg md:text-xl text-emerald-600 mt-1">{normalizeRangeSeparator(report.financialProjections.revenueYear1)}</p>
                                           <p className="text-[10px] text-gray-400 mt-1">Estimated total gross revenue in the first full year of operation.</p>
                                       </div>
                                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                                           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Year 3 Revenue Projection</p>
-                                          <p className="font-black text-lg md:text-xl text-emerald-700 mt-1">{report.financialProjections.revenueYear3}</p>
+                                          <p className="font-black text-lg md:text-xl text-emerald-700 mt-1">{normalizeRangeSeparator(report.financialProjections.revenueYear3)}</p>
                                           <p className="text-[10px] text-gray-400 mt-1">Projected revenue after establishing market presence and customer base.</p>
                                       </div>
                                   </div>

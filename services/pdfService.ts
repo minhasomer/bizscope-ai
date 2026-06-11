@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { SubscriptionPlan, canViewFullFinancials, canViewRegionalIntelligence } from '../src/utils/planUtils';
 import { ViabilityReport } from '../types';
+import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 
 export interface PDFExportOptions {
   isWhiteLabelMode: boolean;
@@ -413,7 +414,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(14);
       doc.setTextColor(20, 25, 30);
-      doc.text(sanitizeForPdf(report.financialProjections.startupCostRange), 25, currentY + 16);
+      doc.text(sanitizeForPdf(normalizeRangeSeparator(report.financialProjections.startupCostRange)), 25, currentY + 16);
 
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8.5);
@@ -443,10 +444,10 @@ export class PDFService {
           doc.setFontSize(8);
           doc.setTextColor(80, 85, 90);
           const spaceParts: string[] = [];
-          if (spaceCtx.sqft) spaceParts.push(`Space: ${spaceCtx.sqft}`);
-          if (spaceCtx.monthlyRent) spaceParts.push(`Monthly rent: ${spaceCtx.monthlyRent}`);
+          if (spaceCtx.sqft) spaceParts.push(`Space: ${sanitizeForPdf(normalizeRangeSeparator(spaceCtx.sqft))}`);
+          if (spaceCtx.monthlyRent) spaceParts.push(`Monthly rent: ${sanitizeForPdf(normalizeRangeSeparator(spaceCtx.monthlyRent))}`);
           if (spaceCtx.buildOutIntensity) spaceParts.push(`Build-out intensity: ${spaceCtx.buildOutIntensity}`);
-          doc.text(spaceParts.join('   ·   '), 24, currentY + 5);
+          doc.text(spaceParts.join('   \xb7   '), 24, currentY + 5);
         }
 
         currentY += 7;
@@ -458,7 +459,7 @@ export class PDFService {
           doc.setTextColor(60, 65, 70);
           doc.text(sanitizeForPdf(item.category), 24, currentY + 4.5);
           doc.setFont('Helvetica', 'bold');
-          doc.text(sanitizeForPdf(item.amount), 190, currentY + 4.5, { align: 'right' });
+          doc.text(sanitizeForPdf(normalizeRangeSeparator(item.amount)), 190, currentY + 4.5, { align: 'right' });
           doc.setFont('Helvetica', 'normal');
           currentY += 7;
         }
