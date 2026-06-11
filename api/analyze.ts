@@ -8,7 +8,7 @@ import {
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
-import { detectFranchise } from '../src/utils/franchiseDetection.js';
+import { detectFranchise, findSameBrandCompetitors } from '../src/utils/franchiseDetection.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 
 export const maxDuration = 60;
@@ -885,6 +885,69 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           return comp;
         },
       );
+    }
+
+    // Apply franchise score adjustment — mirrors geminiService.ts.
+    // Must run after competitors are populated so findSameBrandCompetitors has data.
+    if (franchiseCheck.isFranchise && franchiseCheck.brandName) {
+      const competitors = parsed.competitionAnalysis?.competitors ?? [];
+      const sameBrandIndices = findSameBrandCompetitors(franchiseCheck.brandName, competitors);
+      const sameBrandFound = sameBrandIndices.length > 0;
+
+      parsed.franchiseTerritoryCheck = {
+        brandName: franchiseCheck.brandName,
+        sameBrandIndices,
+        sameBrandCount: sameBrandIndices.length,
+        existingPresenceDetected: true,
+        sameBrandFoundInSearch: sameBrandFound,
+      };
+
+      const brand = franchiseCheck.brandName;
+      const originalScore: number = parsed.viabilityScore;
+      const adjustment = sameBrandFound ? -15 : -8;
+      const finalScore = Math.max(0, Math.round(originalScore + adjustment));
+
+      const rawDecision: string =
+        finalScore >= 76 ? 'Recommended' :
+        finalScore >= 51 ? 'Caution Advised' :
+        'Not Recommended';
+
+      const cappedDecision =
+        sameBrandFound
+          ? (rawDecision === 'Recommended' ? 'Caution Advised' : rawDecision)
+          : (rawDecision === 'Recommended' ? 'Verification Required' : rawDecision);
+
+      const franchiseReasoning = sameBrandFound
+        ? `This market shows viable demand for ${brand}, but existing same-brand locations have been identified nearby. Franchise territory agreements may already restrict or prohibit a new unit at this location — this is a contractual risk the viability score cannot fully reflect. Confirm territory availability with ${brand}'s franchise development team before proceeding.`
+        : `Market conditions for ${brand} in this area are favorable, but franchise territory availability has not been confirmed. ${brand} assigns protected territories and pending agreements may already restrict this location. This analysis reflects general market viability only — franchisor approval is a required prerequisite, not an assumption.`;
+
+      const franchiseSummaryPrefix = sameBrandFound
+        ? `⚠️ Franchise territory conflict risk: existing ${brand} presence detected near this location — territory may already be claimed. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for territory risk). `
+        : `⚠️ Franchise verification required: this analysis reflects market conditions only. ${brand} territory availability must be confirmed directly with the franchisor before any investment decision. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for unverified territory). `;
+
+      const normalizeScoreMentions = (text: string): string =>
+        text
+          .replace(new RegExp(`\\b${originalScore}\\s*/\\s*100\\b`, 'g'), `${finalScore}/100`)
+          .replace(new RegExp(`\\b${originalScore}\\s+out\\s+of\\s+100\\b`, 'gi'), `${finalScore} out of 100`)
+          .replace(new RegExp(`(viability\\s+score\\s*(?:of|is|at|:)?\\s*)${originalScore}\\b`, 'gi'), `$1${finalScore}`)
+          .replace(new RegExp(`(?<![\\w-])(score\\s+of\\s+)${originalScore}\\b`, 'gi'), `$1${finalScore}`);
+
+      parsed.viabilityScore = finalScore;
+      parsed.franchiseScoreAdjustment = {
+        originalScore,
+        adjustment,
+        finalScore,
+        reason: sameBrandFound
+          ? `Score reduced by ${Math.abs(adjustment)} points: existing ${brand} locations detected near this market. Territory saturation is a material risk.`
+          : `Score reduced by ${Math.abs(adjustment)} points: ${brand} is a franchise brand. Territory availability cannot be confirmed without direct franchisor disclosure.`,
+      };
+      parsed.recommendation = {
+        ...parsed.recommendation,
+        decision: cappedDecision,
+        reasoning: franchiseReasoning,
+      };
+      parsed.executiveSummary = franchiseSummaryPrefix + normalizeScoreMentions(parsed.executiveSummary ?? '');
+      if (parsed.methodology) parsed.methodology = normalizeScoreMentions(parsed.methodology);
     }
 
     parsed.generationMeta = {
