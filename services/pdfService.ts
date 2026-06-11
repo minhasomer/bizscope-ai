@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { SubscriptionPlan, canViewFullFinancials, canViewRegionalIntelligence } from '../src/utils/planUtils';
 import { ViabilityReport } from '../types';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
-import { viabilityScoreToPdfLabel, factorScoreToPdfLabel } from '../src/utils/assessmentUtils';
+import { viabilityScoreToPdfLabel, factorScoreToPdfLabel, scoreToCompetitionRating, scoreToRiskRating } from '../src/utils/assessmentUtils';
 
 export interface PDFExportOptions {
   isWhiteLabelMode: boolean;
@@ -213,10 +213,10 @@ export class PDFService {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(80, 90, 100);
-      doc.text(`Market Demand:          ${factorScoreToPdfLabel(report.scoreBreakdown.marketDemand, false)}`, 95, 128);
-      doc.text(`Financial Feasibility:  ${factorScoreToPdfLabel(report.scoreBreakdown.financialFeasibility, false)}`, 95, 135);
-      doc.text(`Competition Intensity:  ${factorScoreToPdfLabel(report.scoreBreakdown.competitionIntensity, true)}`, 95, 142);
-      doc.text(`Risk Level:             ${factorScoreToPdfLabel(report.scoreBreakdown.riskLevel, true)}`, 95, 149);
+      doc.text(`Market Demand:          ${factorScoreToPdfLabel(report.scoreBreakdown.marketDemand)}`, 95, 128);
+      doc.text(`Financial Feasibility:  ${factorScoreToPdfLabel(report.scoreBreakdown.financialFeasibility)}`, 95, 135);
+      doc.text(`Competition Intensity:  ${scoreToCompetitionRating(report.scoreBreakdown.competitionIntensity).label}`, 95, 142);
+      doc.text(`Risk Level:             ${scoreToRiskRating(report.scoreBreakdown.riskLevel).label}`, 95, 149);
     }
 
     // Corporate meta info block bottom

@@ -146,24 +146,6 @@ export function getConfidenceLevel(report: ViabilityReport): ConfidenceLevel {
   };
 }
 
-// ─── Market Gap / Opportunity Tier ────────────────────────────────────────────
-
-export interface OpportunityTierLabel {
-  label: string;
-  emoji: string;
-  colorClass: string;
-  bgClass: string;
-  borderClass: string;
-}
-
-/** Maps a viability score to a Market Gap opportunity tier label. */
-export function opportunityScoreToTier(score: number): OpportunityTierLabel {
-  if (score >= 75) return { label: 'Strong Opportunity',     emoji: '🟢', colorClass: 'text-emerald-700', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-200' };
-  if (score >= 60) return { label: 'Attractive Opportunity', emoji: '🟢', colorClass: 'text-emerald-600', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-200' };
-  if (score >= 45) return { label: 'Worth Investigating',    emoji: '🟡', colorClass: 'text-amber-700',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-300'   };
-  if (score >= 30) return { label: 'Competitive Market',     emoji: '🟡', colorClass: 'text-amber-600',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-200'   };
-  return             { label: 'Limited Opportunity',        emoji: '🔴', colorClass: 'text-rose-700',    bgClass: 'bg-rose-50',     borderClass: 'border-rose-200'    };
-}
 
 // ─── PDF helpers (plain text, no JSX) ────────────────────────────────────────
 
@@ -201,19 +183,16 @@ export function normalizeExecutiveSummary(text: string): string {
     .replace(/\bscore\s+of\s+\d+\s*\/\s*100\b/gi, 'overall assessment');
 }
 
-/** Returns a short PDF-safe tier label for an individual factor score. */
-export function factorScoreToPdfLabel(score: number, inverse: boolean): string {
-  if (inverse) {
-    if (score <= 20) return 'Very Low';
-    if (score <= 40) return 'Low';
-    if (score <= 60) return 'Moderate';
-    if (score <= 80) return 'High';
-    return 'Very High';
-  } else {
-    if (score >= 80) return 'Exceptional';
-    if (score >= 65) return 'Strong';
-    if (score >= 45) return 'Moderate';
-    if (score >= 25) return 'Weak';
-    return 'Very Weak';
-  }
+/**
+ * Returns a PDF-safe tier label for a direct (non-inverse) factor score.
+ * Used for Market Demand and Financial Feasibility.
+ * For Competition and Risk Level, use scoreToCompetitionRating / scoreToRiskRating
+ * directly so PDF labels always match browser UI labels exactly.
+ */
+export function factorScoreToPdfLabel(score: number): string {
+  if (score >= 80) return 'Exceptional';
+  if (score >= 65) return 'Strong';
+  if (score >= 45) return 'Moderate';
+  if (score >= 25) return 'Weak';
+  return 'Very Weak';
 }
