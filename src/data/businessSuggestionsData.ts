@@ -45,6 +45,35 @@ const FRANCHISES: BusinessSuggestion[] = [
   { name: "Dutch Bros Coffee",                  category: "Franchise", type: "franchise", keywords: ["coffee", "drive through", "beverage", "drink", "franchise", "dutch"] },
   { name: "Massage Envy",                       category: "Franchise", type: "franchise", keywords: ["massage", "spa", "wellness", "therapy", "franchise"] },
   { name: "The Joint Chiropractic",             category: "Franchise", type: "franchise", keywords: ["chiropractor", "back", "pain", "health", "joint", "alignment", "franchise"] },
+  // Home / Outdoor Services
+  { name: "The Brothers That Just Do Gutters",  category: "Franchise", type: "franchise", keywords: ["gutter", "brothers gutters", "gutters", "home service", "exterior", "franchise", "brothers"] },
+  { name: "Mosquito Joe",                       category: "Franchise", type: "franchise", keywords: ["mosquito", "pest control", "outdoor", "spray", "bug", "yard", "franchise", "mosquito joe"] },
+  { name: "Mosquito Squad",                     category: "Franchise", type: "franchise", keywords: ["mosquito", "pest control", "outdoor", "spray", "bug", "yard", "franchise"] },
+  { name: "Two Men and a Truck",                category: "Franchise", type: "franchise", keywords: ["moving", "mover", "truck", "relocation", "franchise", "two men"] },
+  { name: "1-800-GOT-JUNK",                    category: "Franchise", type: "franchise", keywords: ["junk removal", "junk", "hauling", "trash", "disposal", "franchise", "got junk"] },
+  { name: "Mr. Handyman",                       category: "Franchise", type: "franchise", keywords: ["handyman", "repair", "home service", "maintenance", "fix", "franchise"] },
+  { name: "ServiceMaster Clean",                category: "Franchise", type: "franchise", keywords: ["restoration", "cleaning", "water damage", "commercial", "franchise", "servicemaster"] },
+  { name: "Merry Maids",                        category: "Franchise", type: "franchise", keywords: ["cleaning", "maid", "home service", "residential", "housekeeping", "franchise", "merry maids"] },
+  // Food & Beverage
+  { name: "Five Guys",                          category: "Franchise", type: "franchise", keywords: ["burger", "fast food", "fries", "dining", "franchise", "five guys"] },
+  { name: "Firehouse Subs",                     category: "Franchise", type: "franchise", keywords: ["sandwich", "sub", "food", "dining", "franchise", "firehouse"] },
+  { name: "Raising Cane's",                     category: "Franchise", type: "franchise", keywords: ["chicken", "fast food", "tenders", "dining", "franchise", "canes", "raising canes"] },
+  { name: "Tropical Smoothie Cafe",             category: "Franchise", type: "franchise", keywords: ["smoothie", "juice", "health", "drink", "cafe", "franchise", "tropical"] },
+  { name: "Pizza Hut",                          category: "Franchise", type: "franchise", keywords: ["pizza", "delivery", "food", "dining", "franchise", "pizza hut"] },
+  { name: "Little Caesars",                     category: "Franchise", type: "franchise", keywords: ["pizza", "fast food", "food", "dining", "franchise", "little caesars"] },
+  // Fitness / Beauty
+  { name: "F45 Training",                       category: "Franchise", type: "franchise", keywords: ["gym", "fitness", "hiit", "training", "group", "workout", "franchise", "f45"] },
+  { name: "Club Pilates",                       category: "Franchise", type: "franchise", keywords: ["pilates", "reformer", "fitness", "core", "wellness", "franchise", "club pilates"] },
+  { name: "Crunch Fitness",                     category: "Franchise", type: "franchise", keywords: ["gym", "fitness", "workout", "exercise", "franchise", "crunch"] },
+  { name: "Sport Clips",                        category: "Franchise", type: "franchise", keywords: ["hair", "cut", "barber", "men", "salon", "franchise", "sport clips"] },
+  { name: "European Wax Center",                category: "Franchise", type: "franchise", keywords: ["wax", "hair removal", "beauty", "skin", "salon", "franchise", "european wax"] },
+  { name: "Hand & Stone Massage",               category: "Franchise", type: "franchise", keywords: ["massage", "spa", "facial", "wellness", "therapy", "franchise", "hand and stone"] },
+  // Education
+  { name: "Goldfish Swim School",               category: "Franchise", type: "franchise", keywords: ["swim", "swimming", "kids", "lessons", "pool", "aquatic", "franchise", "goldfish"] },
+  // Real Estate
+  { name: "RE/MAX",                             category: "Franchise", type: "franchise", keywords: ["real estate", "realtor", "broker", "house", "property", "franchise", "remax"] },
+  { name: "Keller Williams",                    category: "Franchise", type: "franchise", keywords: ["real estate", "realtor", "broker", "house", "property", "franchise", "keller"] },
+  { name: "Century 21",                         category: "Franchise", type: "franchise", keywords: ["real estate", "realtor", "broker", "house", "property", "franchise", "century 21"] },
 ];
 
 // ─── FOOD & BEVERAGE ──────────────────────────────────────────────────────────
@@ -129,22 +158,22 @@ const AUTOMOTIVE: BusinessSuggestion[] = [
 
 // ─── PERSONAL SERVICES ────────────────────────────────────────────────────────
 const PERSONAL_SERVICES: BusinessSuggestion[] = [
-  { name: "Hair Salon",                         category: "Personal Services", type: "independent", keywords: ["hair", "salon", "cut", "color", "style", "beauty", "highlights", "blowout"] },
-  { name: "Barber Shop",                        category: "Personal Services", type: "independent", keywords: ["barber", "hair", "cut", "shave", "salon", "men", "grooming", "fade"] },
-  { name: "Nail Salon",                         category: "Personal Services", type: "independent", keywords: ["nail", "manicure", "pedicure", "salon", "beauty", "polish", "acrylic", "gel"] },
-  { name: "Spa",                                category: "Personal Services", type: "independent", keywords: ["spa", "massage", "facial", "beauty", "wellness", "relaxation", "skin care", "body wrap"] },
-  { name: "Massage Therapy Business",           category: "Personal Services", type: "independent", keywords: ["massage", "therapy", "spa", "wellness", "relaxation", "deep tissue", "swedish", "therapist"] },
-  { name: "Tanning Salon",                      category: "Personal Services", type: "independent", keywords: ["tanning", "spray tan", "bronze", "beauty", "salon", "skin", "glow", "uv"] },
-  { name: "Med Spa",                            category: "Personal Services", type: "independent", keywords: ["med spa", "medspa", "medical", "spa", "beauty", "aesthetic", "skin", "laser", "botox", "filler"] },
-  { name: "Personal Training Studio",           category: "Personal Services", type: "independent", keywords: ["personal training", "trainer", "fitness", "gym", "workout", "strength", "one on one", "private coach"] },
-  { name: "Yoga Studio",                        category: "Personal Services", type: "independent", keywords: ["yoga", "meditation", "mindfulness", "wellness", "fitness", "workout", "vinyasa", "hot yoga"] },
-  { name: "Pilates Studio",                     category: "Personal Services", type: "independent", keywords: ["pilates", "reformer", "fitness", "core", "flexibility", "wellness", "mind body", "studio"] },
-  { name: "Martial Arts Studio",                category: "Personal Services", type: "independent", keywords: ["martial arts", "karate", "jiu jitsu", "mma", "kickboxing", "bjj", "fitness", "training", "kids"] },
-  { name: "Dance Studio",                       category: "Personal Services", type: "independent", keywords: ["dance", "studio", "ballet", "hip hop", "salsa", "classes", "performance", "kids", "adult"] },
-  { name: "Dry Cleaner",                        category: "Personal Services", type: "independent", keywords: ["laundry", "clean", "dry", "clothes", "wash", "service", "alterations", "garments", "pressing"] },
-  { name: "Laundromat",                         category: "Personal Services", type: "independent", keywords: ["laundry", "laundromat", "wash", "clean", "coin", "self-service", "clothes", "dryer", "washroom"] },
-  { name: "Tailoring Service",                  category: "Personal Services", type: "independent", keywords: ["tailor", "alterations", "sewing", "clothes", "suit", "hemming", "custom", "dress"] },
-  { name: "Shoe Repair Shop",                   category: "Personal Services", type: "independent", keywords: ["shoe", "repair", "cobbler", "sole", "heel", "leather", "boot", "sneaker"] },
+  { name: "Hair Salon",                         category: "Beauty & Personal Care", type: "independent", keywords: ["hair", "salon", "cut", "color", "style", "beauty", "highlights", "blowout"] },
+  { name: "Barber Shop",                        category: "Beauty & Personal Care", type: "independent", keywords: ["barber", "hair", "cut", "shave", "salon", "men", "grooming", "fade"] },
+  { name: "Nail Salon",                         category: "Beauty & Personal Care", type: "independent", keywords: ["nail", "manicure", "pedicure", "salon", "beauty", "polish", "acrylic", "gel"] },
+  { name: "Spa",                                category: "Beauty & Personal Care", type: "independent", keywords: ["spa", "massage", "facial", "beauty", "wellness", "relaxation", "skin care", "body wrap"] },
+  { name: "Massage Therapy Business",           category: "Beauty & Personal Care", type: "independent", keywords: ["massage", "therapy", "spa", "wellness", "relaxation", "deep tissue", "swedish", "therapist"] },
+  { name: "Tanning Salon",                      category: "Beauty & Personal Care", type: "independent", keywords: ["tanning", "spray tan", "bronze", "beauty", "salon", "skin", "glow", "uv"] },
+  { name: "Med Spa",                            category: "Beauty & Personal Care", type: "independent", keywords: ["med spa", "medspa", "medical", "spa", "beauty", "aesthetic", "skin", "laser", "botox", "filler"] },
+  { name: "Personal Training Studio",           category: "Beauty & Personal Care", type: "independent", keywords: ["personal training", "trainer", "fitness", "gym", "workout", "strength", "one on one", "private coach"] },
+  { name: "Yoga Studio",                        category: "Beauty & Personal Care", type: "independent", keywords: ["yoga", "meditation", "mindfulness", "wellness", "fitness", "workout", "vinyasa", "hot yoga"] },
+  { name: "Pilates Studio",                     category: "Beauty & Personal Care", type: "independent", keywords: ["pilates", "reformer", "fitness", "core", "flexibility", "wellness", "mind body", "studio"] },
+  { name: "Martial Arts Studio",                category: "Beauty & Personal Care", type: "independent", keywords: ["martial arts", "karate", "jiu jitsu", "mma", "kickboxing", "bjj", "fitness", "training", "kids"] },
+  { name: "Dance Studio",                       category: "Beauty & Personal Care", type: "independent", keywords: ["dance", "studio", "ballet", "hip hop", "salsa", "classes", "performance", "kids", "adult"] },
+  { name: "Dry Cleaner",                        category: "Beauty & Personal Care", type: "independent", keywords: ["laundry", "clean", "dry", "clothes", "wash", "service", "alterations", "garments", "pressing"] },
+  { name: "Laundromat",                         category: "Beauty & Personal Care", type: "independent", keywords: ["laundry", "laundromat", "wash", "clean", "coin", "self-service", "clothes", "dryer", "washroom"] },
+  { name: "Tailoring Service",                  category: "Beauty & Personal Care", type: "independent", keywords: ["tailor", "alterations", "sewing", "clothes", "suit", "hemming", "custom", "dress"] },
+  { name: "Shoe Repair Shop",                   category: "Beauty & Personal Care", type: "independent", keywords: ["shoe", "repair", "cobbler", "sole", "heel", "leather", "boot", "sneaker"] },
 ];
 
 // ─── PET SERVICES ─────────────────────────────────────────────────────────────
@@ -163,19 +192,19 @@ const PET_SERVICES: BusinessSuggestion[] = [
 
 // ─── CHILD / FAMILY / EDUCATION ───────────────────────────────────────────────
 const EDUCATION: BusinessSuggestion[] = [
-  { name: "Daycare Center",                     category: "Education & Family", type: "independent", keywords: ["daycare", "childcare", "child", "kid", "baby", "care", "toddler", "infant", "preschool"] },
-  { name: "Preschool",                          category: "Education & Family", type: "independent", keywords: ["preschool", "pre-k", "child", "kid", "toddler", "early education", "learning", "school"] },
-  { name: "Tutoring Center",                    category: "Education & Family", type: "independent", keywords: ["tutor", "tutoring", "education", "school", "learning", "academic", "test prep", "sat", "kids"] },
-  { name: "Test Prep Business",                 category: "Education & Family", type: "independent", keywords: ["test prep", "sat", "act", "gre", "gmat", "exam", "tutoring", "education", "college"] },
-  { name: "Music Lessons Studio",               category: "Education & Family", type: "independent", keywords: ["music", "lessons", "guitar", "piano", "violin", "voice", "studio", "teaching", "instrument"] },
-  { name: "Art Classes Studio",                 category: "Education & Family", type: "independent", keywords: ["art", "classes", "studio", "painting", "drawing", "kids", "adult", "creative", "lessons"] },
-  { name: "STEM Learning Center",               category: "Education & Family", type: "independent", keywords: ["stem", "science", "technology", "math", "coding", "robotics", "kids", "learning", "education"] },
-  { name: "Kids Indoor Play Center",            category: "Education & Family", type: "independent", keywords: ["indoor play", "kids", "children", "play center", "birthday party", "trampoline", "bounce", "family"] },
-  { name: "Children's Party Business",          category: "Education & Family", type: "independent", keywords: ["kids party", "birthday party", "children", "entertainment", "balloon", "character", "events"] },
-  { name: "Swim School",                        category: "Education & Family", type: "independent", keywords: ["swim", "swimming", "kids", "children", "lessons", "pool", "aquatic", "water safety"] },
-  { name: "After School Program",               category: "Education & Family", type: "independent", keywords: ["after school", "kids", "children", "program", "care", "activities", "tutoring", "enrichment"] },
-  { name: "Language School",                    category: "Education & Family", type: "independent", keywords: ["language", "school", "esl", "english", "spanish", "mandarin", "classes", "adult", "learning"] },
-  { name: "Driving School",                     category: "Education & Family", type: "independent", keywords: ["driving school", "drive", "license", "dmv", "teen", "adult", "lessons", "behind the wheel"] },
+  { name: "Daycare Center",                     category: "Education & Childcare", type: "independent", keywords: ["daycare", "childcare", "child", "kid", "baby", "care", "toddler", "infant", "preschool"] },
+  { name: "Preschool",                          category: "Education & Childcare", type: "independent", keywords: ["preschool", "pre-k", "child", "kid", "toddler", "early education", "learning", "school"] },
+  { name: "Tutoring Center",                    category: "Education & Childcare", type: "independent", keywords: ["tutor", "tutoring", "education", "school", "learning", "academic", "test prep", "sat", "kids"] },
+  { name: "Test Prep Business",                 category: "Education & Childcare", type: "independent", keywords: ["test prep", "sat", "act", "gre", "gmat", "exam", "tutoring", "education", "college"] },
+  { name: "Music Lessons Studio",               category: "Education & Childcare", type: "independent", keywords: ["music", "lessons", "guitar", "piano", "violin", "voice", "studio", "teaching", "instrument"] },
+  { name: "Art Classes Studio",                 category: "Education & Childcare", type: "independent", keywords: ["art", "classes", "studio", "painting", "drawing", "kids", "adult", "creative", "lessons"] },
+  { name: "STEM Learning Center",               category: "Education & Childcare", type: "independent", keywords: ["stem", "science", "technology", "math", "coding", "robotics", "kids", "learning", "education"] },
+  { name: "Kids Indoor Play Center",            category: "Education & Childcare", type: "independent", keywords: ["indoor play", "kids", "children", "play center", "birthday party", "trampoline", "bounce", "family"] },
+  { name: "Children's Party Business",          category: "Education & Childcare", type: "independent", keywords: ["kids party", "birthday party", "children", "entertainment", "balloon", "character", "events"] },
+  { name: "Swim School",                        category: "Education & Childcare", type: "independent", keywords: ["swim", "swimming", "kids", "children", "lessons", "pool", "aquatic", "water safety"] },
+  { name: "After School Program",               category: "Education & Childcare", type: "independent", keywords: ["after school", "kids", "children", "program", "care", "activities", "tutoring", "enrichment"] },
+  { name: "Language School",                    category: "Education & Childcare", type: "independent", keywords: ["language", "school", "esl", "english", "spanish", "mandarin", "classes", "adult", "learning"] },
+  { name: "Driving School",                     category: "Education & Childcare", type: "independent", keywords: ["driving school", "drive", "license", "dmv", "teen", "adult", "lessons", "behind the wheel"] },
 ];
 
 // ─── HEALTHCARE ───────────────────────────────────────────────────────────────
@@ -275,54 +304,54 @@ const RETAIL: BusinessSuggestion[] = [
 
 // ─── B2B / INDUSTRIAL ─────────────────────────────────────────────────────────
 const B2B_INDUSTRIAL: BusinessSuggestion[] = [
-  { name: "Commercial Cleaning Company",        category: "B2B Services", type: "independent", keywords: ["commercial cleaning", "janitorial", "office cleaning", "facility", "b2b", "maintenance", "corporate"] },
-  { name: "Office Cleaning Business",           category: "B2B Services", type: "independent", keywords: ["office cleaning", "commercial", "janitorial", "workspace", "b2b", "facility", "daily"] },
-  { name: "Janitorial Service",                 category: "B2B Services", type: "independent", keywords: ["janitorial", "cleaning", "facility", "commercial", "b2b", "maintenance", "custodial"] },
-  { name: "Security Guard Company",             category: "B2B Services", type: "independent", keywords: ["security guard", "security", "protection", "guard", "b2b", "commercial", "patrol"] },
-  { name: "Courier Service",                    category: "B2B Services", type: "independent", keywords: ["courier", "delivery", "local delivery", "same day", "logistics", "b2b", "messenger"] },
-  { name: "Local Delivery Business",            category: "B2B Services", type: "independent", keywords: ["delivery", "local delivery", "courier", "logistics", "last mile", "route", "b2b"] },
-  { name: "Logistics Company",                  category: "B2B Services", type: "independent", keywords: ["logistics", "freight", "shipping", "supply chain", "warehouse", "distribution", "b2b"] },
-  { name: "Freight Brokerage",                  category: "B2B Services", type: "independent", keywords: ["freight", "broker", "trucking", "logistics", "shipping", "load board", "carrier", "b2b"] },
-  { name: "Equipment Rental Company",           category: "B2B Services", type: "independent", keywords: ["equipment rental", "tools", "construction", "rental", "machinery", "b2b", "contractor"] },
-  { name: "Tool Rental Business",               category: "B2B Services", type: "independent", keywords: ["tool rental", "tools", "equipment", "rental", "construction", "b2b", "DIY", "contractor"] },
-  { name: "Commercial Landscaping",             category: "B2B Services", type: "independent", keywords: ["commercial landscaping", "hoa", "property management", "grounds", "lawn", "b2b", "maintenance"] },
-  { name: "Print Shop",                         category: "B2B Services", type: "independent", keywords: ["print shop", "printing", "signage", "sign", "banner", "vinyl", "marketing", "design", "graphic"] },
-  { name: "Signage Company",                    category: "B2B Services", type: "independent", keywords: ["signage", "sign", "banner", "vinyl", "commercial", "outdoor", "trade show", "b2b"] },
-  { name: "Waste Management Business",          category: "B2B Services", type: "independent", keywords: ["waste", "trash", "garbage", "hauling", "disposal", "commercial", "dumpster", "recycling"] },
-  { name: "Recycling Business",                 category: "B2B Services", type: "independent", keywords: ["recycling", "scrap", "metal", "ewaste", "environmental", "waste", "b2b", "sustainability"] },
-  { name: "Uniform Rental Service",             category: "B2B Services", type: "independent", keywords: ["uniform", "workwear", "rental", "laundry", "apparel", "b2b", "commercial", "service"] },
-  { name: "Commercial Laundry Service",         category: "B2B Services", type: "independent", keywords: ["commercial laundry", "linen", "hospital", "hotel", "laundry", "b2b", "uniform", "bulk"] },
-  { name: "Industrial Cleaning Business",       category: "B2B Services", type: "independent", keywords: ["industrial cleaning", "factory", "manufacturing", "pressure washing", "b2b", "facility", "degreasing"] },
+  { name: "Commercial Cleaning Company",        category: "Business Services", type: "independent", keywords: ["commercial cleaning", "janitorial", "office cleaning", "facility", "b2b", "maintenance", "corporate"] },
+  { name: "Office Cleaning Business",           category: "Business Services", type: "independent", keywords: ["office cleaning", "commercial", "janitorial", "workspace", "b2b", "facility", "daily"] },
+  { name: "Janitorial Service",                 category: "Business Services", type: "independent", keywords: ["janitorial", "cleaning", "facility", "commercial", "b2b", "maintenance", "custodial"] },
+  { name: "Security Guard Company",             category: "Business Services", type: "independent", keywords: ["security guard", "security", "protection", "guard", "b2b", "commercial", "patrol"] },
+  { name: "Courier Service",                    category: "Business Services", type: "independent", keywords: ["courier", "delivery", "local delivery", "same day", "logistics", "b2b", "messenger"] },
+  { name: "Local Delivery Business",            category: "Business Services", type: "independent", keywords: ["delivery", "local delivery", "courier", "logistics", "last mile", "route", "b2b"] },
+  { name: "Logistics Company",                  category: "Business Services", type: "independent", keywords: ["logistics", "freight", "shipping", "supply chain", "warehouse", "distribution", "b2b"] },
+  { name: "Freight Brokerage",                  category: "Business Services", type: "independent", keywords: ["freight", "broker", "trucking", "logistics", "shipping", "load board", "carrier", "b2b"] },
+  { name: "Equipment Rental Company",           category: "Business Services", type: "independent", keywords: ["equipment rental", "tools", "construction", "rental", "machinery", "b2b", "contractor"] },
+  { name: "Tool Rental Business",               category: "Business Services", type: "independent", keywords: ["tool rental", "tools", "equipment", "rental", "construction", "b2b", "DIY", "contractor"] },
+  { name: "Commercial Landscaping",             category: "Business Services", type: "independent", keywords: ["commercial landscaping", "hoa", "property management", "grounds", "lawn", "b2b", "maintenance"] },
+  { name: "Print Shop",                         category: "Business Services", type: "independent", keywords: ["print shop", "printing", "signage", "sign", "banner", "vinyl", "marketing", "design", "graphic"] },
+  { name: "Signage Company",                    category: "Business Services", type: "independent", keywords: ["signage", "sign", "banner", "vinyl", "commercial", "outdoor", "trade show", "b2b"] },
+  { name: "Waste Management Business",          category: "Business Services", type: "independent", keywords: ["waste", "trash", "garbage", "hauling", "disposal", "commercial", "dumpster", "recycling"] },
+  { name: "Recycling Business",                 category: "Business Services", type: "independent", keywords: ["recycling", "scrap", "metal", "ewaste", "environmental", "waste", "b2b", "sustainability"] },
+  { name: "Uniform Rental Service",             category: "Business Services", type: "independent", keywords: ["uniform", "workwear", "rental", "laundry", "apparel", "b2b", "commercial", "service"] },
+  { name: "Commercial Laundry Service",         category: "Business Services", type: "independent", keywords: ["commercial laundry", "linen", "hospital", "hotel", "laundry", "b2b", "uniform", "bulk"] },
+  { name: "Industrial Cleaning Business",       category: "Business Services", type: "independent", keywords: ["industrial cleaning", "factory", "manufacturing", "pressure washing", "b2b", "facility", "degreasing"] },
 ];
 
 // ─── REAL ESTATE / LOCAL DEVELOPMENT ─────────────────────────────────────────
 const REAL_ESTATE: BusinessSuggestion[] = [
-  { name: "Coworking Space",                    category: "Real Estate", type: "startup",     keywords: ["coworking", "office space", "shared office", "workspace", "startup", "flexible", "hot desk"] },
-  { name: "Event Venue",                        category: "Real Estate", type: "independent", keywords: ["event", "venue", "wedding", "party", "banquet", "hall", "reception", "corporate", "space"] },
-  { name: "Wedding Venue",                      category: "Real Estate", type: "independent", keywords: ["wedding", "venue", "event", "reception", "ceremony", "banquet", "barn", "outdoor"] },
-  { name: "Self Storage Facility",              category: "Real Estate", type: "independent", keywords: ["self storage", "storage", "unit", "locker", "climate controlled", "facility", "rental"] },
-  { name: "RV Storage Facility",                category: "Real Estate", type: "independent", keywords: ["rv storage", "boat storage", "vehicle storage", "outdoor storage", "facility", "rental"] },
-  { name: "Short-Term Rental Management",       category: "Real Estate", type: "startup",     keywords: ["airbnb", "vrbo", "short term rental", "vacation rental", "property management", "str"] },
-  { name: "Real Estate Photography",            category: "Real Estate", type: "independent", keywords: ["real estate photography", "photo", "drone", "matterport", "listing", "virtual tour", "realtor"] },
-  { name: "Home Inspection Business",           category: "Real Estate", type: "independent", keywords: ["home inspection", "inspector", "real estate", "safety", "property", "building", "contractor"] },
-  { name: "Property Maintenance Company",       category: "Real Estate", type: "independent", keywords: ["property maintenance", "hoa", "landlord", "repairs", "facility", "real estate", "upkeep"] },
-  { name: "Parking Lot Business",               category: "Real Estate", type: "independent", keywords: ["parking", "lot", "garage", "urban", "rental", "monthly", "commercial", "real estate"] },
+  { name: "Coworking Space",                    category: "Real Estate Services", type: "startup",     keywords: ["coworking", "office space", "shared office", "workspace", "startup", "flexible", "hot desk"] },
+  { name: "Event Venue",                        category: "Real Estate Services", type: "independent", keywords: ["event", "venue", "wedding", "party", "banquet", "hall", "reception", "corporate", "space"] },
+  { name: "Wedding Venue",                      category: "Real Estate Services", type: "independent", keywords: ["wedding", "venue", "event", "reception", "ceremony", "banquet", "barn", "outdoor"] },
+  { name: "Self Storage Facility",              category: "Real Estate Services", type: "independent", keywords: ["self storage", "storage", "unit", "locker", "climate controlled", "facility", "rental"] },
+  { name: "RV Storage Facility",                category: "Real Estate Services", type: "independent", keywords: ["rv storage", "boat storage", "vehicle storage", "outdoor storage", "facility", "rental"] },
+  { name: "Short-Term Rental Management",       category: "Real Estate Services", type: "startup",     keywords: ["airbnb", "vrbo", "short term rental", "vacation rental", "property management", "str"] },
+  { name: "Real Estate Photography",            category: "Real Estate Services", type: "independent", keywords: ["real estate photography", "photo", "drone", "matterport", "listing", "virtual tour", "realtor"] },
+  { name: "Home Inspection Business",           category: "Real Estate Services", type: "independent", keywords: ["home inspection", "inspector", "real estate", "safety", "property", "building", "contractor"] },
+  { name: "Property Maintenance Company",       category: "Real Estate Services", type: "independent", keywords: ["property maintenance", "hoa", "landlord", "repairs", "facility", "real estate", "upkeep"] },
+  { name: "Parking Lot Business",               category: "Real Estate Services", type: "independent", keywords: ["parking", "lot", "garage", "urban", "rental", "monthly", "commercial", "real estate"] },
 ];
 
 // ─── CREATIVE / EVENTS ────────────────────────────────────────────────────────
 const CREATIVE_EVENTS: BusinessSuggestion[] = [
-  { name: "Photography Studio",                 category: "Creative & Events", type: "independent", keywords: ["photography", "photo", "studio", "portrait", "wedding", "event", "headshot", "product", "photographer"] },
-  { name: "Videography Business",               category: "Creative & Events", type: "independent", keywords: ["video", "videography", "wedding", "event", "film", "production", "youtube", "content"] },
-  { name: "Event Planning Business",            category: "Creative & Events", type: "independent", keywords: ["event", "party", "wedding", "planner", "organizer", "corporate", "coordinating", "celebration"] },
-  { name: "Wedding Planning Business",          category: "Creative & Events", type: "independent", keywords: ["wedding", "planner", "event", "ceremony", "reception", "bridal", "coordinator"] },
-  { name: "DJ Service",                         category: "Creative & Events", type: "independent", keywords: ["dj", "music", "event", "wedding", "party", "club", "entertainment", "sound"] },
-  { name: "Party Rental Business",              category: "Creative & Events", type: "independent", keywords: ["party rental", "bounce house", "tables", "chairs", "tent", "event", "equipment", "linen"] },
-  { name: "Bounce House Rental",                category: "Creative & Events", type: "independent", keywords: ["bounce house", "inflatable", "party", "kids", "rental", "jumper", "event"] },
-  { name: "Photo Booth Rental",                 category: "Creative & Events", type: "independent", keywords: ["photo booth", "party", "event", "wedding", "rental", "photos", "props", "entertainment"] },
-  { name: "Floral Shop",                        category: "Creative & Events", type: "independent", keywords: ["flower", "florist", "floral", "bouquet", "arrangement", "wedding", "event", "plant", "fresh"] },
-  { name: "Local Media Company",                category: "Creative & Events", type: "startup",     keywords: ["media", "local news", "content", "publication", "blog", "newsletter", "journalism"] },
-  { name: "Podcast Studio",                     category: "Creative & Events", type: "startup",     keywords: ["podcast", "studio", "recording", "audio", "content", "creator", "production", "rental"] },
-  { name: "Content Creation Studio",            category: "Creative & Events", type: "startup",     keywords: ["content", "creator", "video", "youtube", "social media", "studio", "production", "brand"] },
+  { name: "Photography Studio",                 category: "Entertainment & Recreation", type: "independent", keywords: ["photography", "photo", "studio", "portrait", "wedding", "event", "headshot", "product", "photographer"] },
+  { name: "Videography Business",               category: "Entertainment & Recreation", type: "independent", keywords: ["video", "videography", "wedding", "event", "film", "production", "youtube", "content"] },
+  { name: "Event Planning Business",            category: "Entertainment & Recreation", type: "independent", keywords: ["event", "party", "wedding", "planner", "organizer", "corporate", "coordinating", "celebration"] },
+  { name: "Wedding Planning Business",          category: "Entertainment & Recreation", type: "independent", keywords: ["wedding", "planner", "event", "ceremony", "reception", "bridal", "coordinator"] },
+  { name: "DJ Service",                         category: "Entertainment & Recreation", type: "independent", keywords: ["dj", "music", "event", "wedding", "party", "club", "entertainment", "sound"] },
+  { name: "Party Rental Business",              category: "Entertainment & Recreation", type: "independent", keywords: ["party rental", "bounce house", "tables", "chairs", "tent", "event", "equipment", "linen"] },
+  { name: "Bounce House Rental",                category: "Entertainment & Recreation", type: "independent", keywords: ["bounce house", "inflatable", "party", "kids", "rental", "jumper", "event"] },
+  { name: "Photo Booth Rental",                 category: "Entertainment & Recreation", type: "independent", keywords: ["photo booth", "party", "event", "wedding", "rental", "photos", "props", "entertainment"] },
+  { name: "Floral Shop",                        category: "Entertainment & Recreation", type: "independent", keywords: ["flower", "florist", "floral", "bouquet", "arrangement", "wedding", "event", "plant", "fresh"] },
+  { name: "Local Media Company",                category: "Entertainment & Recreation", type: "startup",     keywords: ["media", "local news", "content", "publication", "blog", "newsletter", "journalism"] },
+  { name: "Podcast Studio",                     category: "Entertainment & Recreation", type: "startup",     keywords: ["podcast", "studio", "recording", "audio", "content", "creator", "production", "rental"] },
+  { name: "Content Creation Studio",            category: "Entertainment & Recreation", type: "startup",     keywords: ["content", "creator", "video", "youtube", "social media", "studio", "production", "brand"] },
 ];
 
 // ─── FITNESS / WELLNESS ───────────────────────────────────────────────────────
@@ -381,20 +410,64 @@ export const businessSuggestionsList: BusinessSuggestion[] = [
 
 /**
  * Shown in the dropdown when the user focuses the input without typing.
- * Deliberately diverse — one or two from each major cluster.
- * Franchises are included but not dominant.
+ * Grouped by category for browsable discovery. Items are sorted so the same
+ * category stays contiguous — Hero groups these with visible category headers.
+ * 2–3 items per major category; franchises included but not dominant.
  */
 export const DEFAULT_SUGGESTIONS: BusinessSuggestion[] = [
-  { name: "Coffee Shop",               category: "Food & Beverage",      type: "independent", keywords: [] },
-  { name: "HVAC Company",              category: "Home Services",         type: "independent", keywords: [] },
-  { name: "Auto Detailing Business",   category: "Automotive",            type: "independent", keywords: [] },
-  { name: "Daycare Center",            category: "Education & Family",    type: "independent", keywords: [] },
-  { name: "Physical Therapy Clinic",   category: "Healthcare",            type: "independent", keywords: [] },
-  { name: "SaaS Startup",              category: "Technology",            type: "startup",     keywords: [] },
-  { name: "Pet Grooming Business",     category: "Pet Services",          type: "independent", keywords: [] },
-  { name: "Roofing Company",           category: "Home Services",         type: "independent", keywords: [] },
+  // Food & Beverage
+  { name: "Coffee Shop",                       category: "Food & Beverage",            type: "independent", keywords: [] },
+  { name: "Ice Cream Shop",                    category: "Food & Beverage",            type: "independent", keywords: [] },
+  { name: "Food Truck",                        category: "Food & Beverage",            type: "independent", keywords: [] },
+  // Home Services
+  { name: "HVAC Company",                      category: "Home Services",              type: "independent", keywords: [] },
+  { name: "Plumbing Company",                  category: "Home Services",              type: "independent", keywords: [] },
+  { name: "Lawn Care Service",                 category: "Home Services",              type: "independent", keywords: [] },
+  // Healthcare
+  { name: "Physical Therapy Clinic",           category: "Healthcare",                 type: "independent", keywords: [] },
+  { name: "Dental Practice",                   category: "Healthcare",                 type: "independent", keywords: [] },
+  { name: "Weight Loss Clinic",                category: "Healthcare",                 type: "independent", keywords: [] },
+  // Fitness & Wellness
+  { name: "Gym",                               category: "Fitness & Wellness",         type: "independent", keywords: [] },
+  { name: "Yoga Studio",                       category: "Fitness & Wellness",         type: "independent", keywords: [] },
+  // Automotive
+  { name: "Auto Repair Shop",                  category: "Automotive",                 type: "independent", keywords: [] },
+  { name: "Auto Detailing Business",           category: "Automotive",                 type: "independent", keywords: [] },
+  // Education & Childcare
+  { name: "Daycare Center",                    category: "Education & Childcare",      type: "independent", keywords: [] },
+  { name: "Tutoring Center",                   category: "Education & Childcare",      type: "independent", keywords: [] },
+  // Professional Services
+  { name: "Accounting Firm",                   category: "Professional Services",      type: "independent", keywords: [] },
+  { name: "Marketing Agency",                  category: "Professional Services",      type: "independent", keywords: [] },
+  { name: "Insurance Agency",                  category: "Professional Services",      type: "independent", keywords: [] },
+  // Retail
+  { name: "Boutique Clothing Store",           category: "Retail",                     type: "independent", keywords: [] },
+  { name: "Convenience Store",                 category: "Retail",                     type: "independent", keywords: [] },
+  // Technology
+  { name: "Managed IT Services",               category: "Technology",                 type: "independent", keywords: [] },
+  { name: "Computer Repair Shop",              category: "Technology",                 type: "independent", keywords: [] },
+  // Beauty & Personal Care
+  { name: "Hair Salon",                        category: "Beauty & Personal Care",     type: "independent", keywords: [] },
+  { name: "Nail Salon",                        category: "Beauty & Personal Care",     type: "independent", keywords: [] },
+  { name: "Med Spa",                           category: "Beauty & Personal Care",     type: "independent", keywords: [] },
+  // Pet Services
+  { name: "Pet Grooming Business",             category: "Pet Services",               type: "independent", keywords: [] },
+  { name: "Dog Daycare",                       category: "Pet Services",               type: "independent", keywords: [] },
+  // Entertainment & Recreation
+  { name: "Photography Studio",               category: "Entertainment & Recreation",  type: "independent", keywords: [] },
+  { name: "Event Planning Business",           category: "Entertainment & Recreation", type: "independent", keywords: [] },
+  // Business Services
+  { name: "Commercial Cleaning Company",       category: "Business Services",          type: "independent", keywords: [] },
+  { name: "Security Guard Company",            category: "Business Services",          type: "independent", keywords: [] },
+  // Real Estate Services
+  { name: "Coworking Space",                   category: "Real Estate Services",       type: "startup",     keywords: [] },
+  { name: "Event Venue",                       category: "Real Estate Services",       type: "independent", keywords: [] },
+  // Franchise
+  { name: "Chick-fil-A",                       category: "Franchise",                  type: "franchise",   keywords: [] },
+  { name: "Jersey Mike's Subs",                category: "Franchise",                  type: "franchise",   keywords: [] },
+  { name: "Anytime Fitness",                   category: "Franchise",                  type: "franchise",   keywords: [] },
+  { name: "The Brothers That Just Do Gutters", category: "Franchise",                  type: "franchise",   keywords: [] },
 ].map(stub => {
-  // Resolve keywords from the full list so stubs stay DRY
   const full = businessSuggestionsList.find(b => b.name === stub.name);
   return full ?? stub;
 });

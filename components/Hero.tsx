@@ -284,24 +284,23 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                     required
                                 />
                                 {showBusinessSuggestions && (currentBizSuggestions.length > 0 || businessType.trim().length > 0) && (
-                                  <div className="absolute z-50 w-full bg-white rounded-xl shadow-2xl mt-1 max-h-80 overflow-y-auto text-left border border-gray-100 divide-y divide-gray-50">
-                                    {currentBizSuggestions.length > 0 ? (
-                                        currentBizSuggestions.map((s, i) => {
+                                  <div className="absolute z-50 w-full bg-white rounded-xl shadow-2xl mt-1 max-h-80 overflow-y-auto text-left border border-gray-100">
+                                    {currentBizSuggestions.length > 0 ? (() => {
+                                        const badgeStyles: Record<string, string> = {
+                                          franchise:   'text-purple-700 bg-purple-50 border-purple-100',
+                                          startup:     'text-blue-700 bg-blue-50 border-blue-100',
+                                          independent: 'text-emerald-700 bg-emerald-50 border-emerald-100',
+                                        };
+                                        const badgeLabels: Record<string, string> = {
+                                          franchise:   'Franchise',
+                                          startup:     'Startup',
+                                          independent: 'Independent',
+                                        };
+
+                                        const renderItem = (s: BusinessSuggestion, i: number, hideCategoryLabel: boolean) => {
                                             const isSelected = i === activeBizIndex;
-                                            // Badge style per business type
-                                            const badgeStyles: Record<string, string> = {
-                                              franchise:   'text-purple-700 bg-purple-50 border-purple-100',
-                                              startup:     'text-blue-700 bg-blue-50 border-blue-100',
-                                              independent: 'text-emerald-700 bg-emerald-50 border-emerald-100',
-                                            };
-                                            const badgeLabels: Record<string, string> = {
-                                              franchise:   'Franchise',
-                                              startup:     'Startup',
-                                              independent: 'Independent',
-                                            };
                                             const badgeBg    = badgeStyles[s.type]  ?? badgeStyles.independent;
                                             const badgeLabel = badgeLabels[s.type]  ?? 'Independent';
-
                                             return (
                                                 <div
                                                     key={i}
@@ -327,15 +326,36 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                                 >
                                                     <div className="flex flex-col text-left min-w-0">
                                                         <span className="text-sm font-medium text-gray-900 truncate">{s.name}</span>
-                                                        <span className="text-[10px] text-gray-400 mt-0.5 truncate">{s.category}</span>
+                                                        {!hideCategoryLabel && <span className="text-[10px] text-gray-400 mt-0.5 truncate">{s.category}</span>}
                                                     </div>
                                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeBg} tracking-wide shrink-0`}>
                                                         {badgeLabel}
                                                     </span>
                                                 </div>
                                             );
-                                        })
-                                    ) : (
+                                        };
+
+                                        // Browse mode (empty input): group by category with headers
+                                        if (!businessType.trim()) {
+                                            const rows: React.ReactNode[] = [];
+                                            let lastCat = '';
+                                            currentBizSuggestions.forEach((s, i) => {
+                                                if (s.category !== lastCat) {
+                                                    lastCat = s.category;
+                                                    rows.push(
+                                                        <div key={`h-${s.category}`} className="px-4 pt-2.5 pb-1 bg-gray-50 border-b border-t border-gray-100 first:border-t-0">
+                                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{s.category}</span>
+                                                        </div>
+                                                    );
+                                                }
+                                                rows.push(renderItem(s, i, true));
+                                            });
+                                            return <>{rows}</>;
+                                        }
+
+                                        // Search mode (typed query): flat ranked list with category sub-label
+                                        return <>{currentBizSuggestions.map((s, i) => renderItem(s, i, false))}</>;
+                                    })() : (
                                         <div
                                             className="px-4 py-3.5 cursor-pointer flex items-center gap-3 hover:bg-indigo-50 transition-colors"
                                             onMouseDown={async (e) => {
