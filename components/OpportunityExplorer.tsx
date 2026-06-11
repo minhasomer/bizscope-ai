@@ -11,7 +11,7 @@ import { generateOpportunityReport, generateOpportunityDossier } from '../servic
 import { SavedReportsService } from '../services/savedReportsService';
 import { Loader } from './Loader';
 import { SubscriptionPlan } from '../src/utils/planUtils';
-import { filterLocationSuggestions } from '../src/data/locationSuggestionsData';
+import { filterLocationSuggestions, fetchLocationAutocomplete } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
 
@@ -133,7 +133,26 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     }
   }, []);
 
-  const locationDropdownItems = filterLocationSuggestions(location);
+  // Async location autocomplete — static results appear instantly, Photon upgrades
+  // them after 300 ms. Falls back to static list on any network error.
+  const [locationDropdownItems, setLocationDropdownItems] = useState<string[]>(() =>
+    filterLocationSuggestions(location),
+  );
+  const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current);
+    if (!location.trim()) {
+      setLocationDropdownItems(filterLocationSuggestions(''));
+      return;
+    }
+    setLocationDropdownItems(filterLocationSuggestions(location));
+    locationDebounceRef.current = setTimeout(async () => {
+      const results = await fetchLocationAutocomplete(location);
+      setLocationDropdownItems(results);
+    }, 300);
+    return () => { if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current); };
+  }, [location]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity, rank: number) => {
     setSelectedDossierRank(rank);

@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { searchBusinessTypes, DEFAULT_SUGGESTIONS, BusinessSuggestion } from '../src/data/businessSuggestionsData';
-import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSuggestions } from '../src/data/locationSuggestionsData';
+import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSuggestions, fetchLocationAutocomplete } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
 
@@ -164,8 +164,33 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
     }
   };
 
-  // Derived list — computed once per render so all location handlers share the same snapshot
-  const locationDropdownItems = getLocationSuggestions(location);
+  // Async location autocomplete state.
+  // Shows static matches instantly (no blank flash), then upgrades to Photon
+  // results after a 300 ms debounce. Falls back to static on any network error.
+  const [locationDropdownItems, setLocationDropdownItems] = useState<string[]>(() =>
+    defaultLocationSuggestions.slice(0, 8),
+  );
+  const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Refresh defaults when geolocation results arrive and the field is still empty.
+  useEffect(() => {
+    if (!location.trim()) setLocationDropdownItems(getLocationSuggestions(''));
+  }, [geoLocationDefaults]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced async fetch — static results shown immediately, Photon upgrades them.
+  useEffect(() => {
+    if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current);
+    if (!location.trim()) {
+      setLocationDropdownItems(getLocationSuggestions(''));
+      return;
+    }
+    setLocationDropdownItems(filterLocationSuggestions(location));
+    locationDebounceRef.current = setTimeout(async () => {
+      const results = await fetchLocationAutocomplete(location);
+      setLocationDropdownItems(results);
+    }, 300);
+    return () => { if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current); };
+  }, [location]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLocationChange = (value: string) => {
     setLocation(value);

@@ -746,6 +746,27 @@ async function verifyAndGetPlan(authHeader: string | undefined): Promise<{
   }
 }
 
+// ─── Location geocode proxy ──────────────────────────────────────────────────
+// Maps full US state names (as returned by Photon) to 2-letter abbreviations.
+const US_STATE_ABBREVS: Record<string, string> = {
+  'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
+  'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
+  'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID',
+  'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
+  'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+  'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+  'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
+  'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
+  'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK',
+  'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+  'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT',
+  'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
+  'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC',
+};
+// Short-lived in-memory cache so rapid typing doesn't hammer Photon.
+const geocodeCache = new Map<string, { results: string[]; expires: number }>();
+const GEOCODE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 // Main server launcher
 async function startServer() {
   const app = express();
@@ -1497,6 +1518,70 @@ async function startServer() {
   });
 
   // -------------------------------------------------------------
+
+  // API 7: /api/geocode — US location autocomplete via Photon/Komoot (no API key)
+  // Results are cached in-memory for 5 min to avoid hammering Photon during typing.
+  // Returns [] on any error so the client can silently fall back to the static list.
+  app.get("/api/geocode", async (req: Request, res: Response) => {
+    const q = ((req.query.q as string) ?? '').trim();
+    if (!q || q.length < 2) return res.json([]);
+
+    const cacheKey = q.toLowerCase();
+    const cached = geocodeCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) return res.json(cached.results);
+
+    try {
+      // Photon doesn't support countrycodes= filter; we filter by country_code in the loop below.
+      // US bounding box reduces non-US results: W=-180, S=18, E=-66, N=72 (covers all US territories).
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=en&limit=10&bbox=-180,18,-66,72`;
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'BizScopeAI/1.0' },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!response.ok) return res.json([]);
+
+      const data = (await response.json()) as { features?: any[] };
+      const features = data.features ?? [];
+
+      const seen  = new Set<string>();
+      const results: string[] = [];
+
+      for (const feature of features) {
+        const p    = feature.properties ?? {};
+        const code = ((p.country_code ?? '') as string).toUpperCase();
+        if (code && code !== 'US') continue;
+
+        const name:  string = (p.name  ?? '') as string;
+        const state: string = (p.state ?? '') as string;
+        const type:  string = ((p.type ?? p.osm_value ?? '') as string).toLowerCase();
+
+        // Skip address-level results — too granular for a city/county/state picker
+        if (['house', 'road', 'street', 'neighbourhood', 'quarter', 'building'].includes(type)) continue;
+
+        const stateAbbr = US_STATE_ABBREVS[state] ?? (state.length === 2 ? state.toUpperCase() : '');
+
+        let formatted = '';
+        if (type === 'state') {
+          formatted = name;
+        } else if (name && stateAbbr) {
+          formatted = `${name}, ${stateAbbr}`;
+        } else {
+          // Non-state result without a recognizable US state — likely non-US or ambiguous; skip it.
+          continue;
+        }
+
+        if (formatted && !seen.has(formatted.toLowerCase())) {
+          seen.add(formatted.toLowerCase());
+          results.push(formatted);
+        }
+      }
+
+      geocodeCache.set(cacheKey, { results, expires: Date.now() + GEOCODE_CACHE_TTL_MS });
+      return res.json(results);
+    } catch {
+      return res.json([]);
+    }
+  });
 
   // ---- Stripe Routes ----
 

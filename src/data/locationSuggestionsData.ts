@@ -119,7 +119,28 @@ export async function getGeolocationSuggestions(): Promise<string[]> {
 // ─── FILTER ─────────────────────────────────────────────────────────────────
 export function filterLocationSuggestions(input: string): string[] {
   if (!input.trim()) return defaultLocationSuggestions;
-  return locationSuggestions
-    .filter(item => item.toLowerCase().includes(input.toLowerCase()))
-    .slice(0, 10);
+  const q = input.toLowerCase();
+  // Starts-with matches first, then other substring matches
+  const startsWith = locationSuggestions.filter(s => s.toLowerCase().startsWith(q));
+  const contains   = locationSuggestions.filter(s => !s.toLowerCase().startsWith(q) && s.toLowerCase().includes(q));
+  return [...startsWith, ...contains].slice(0, 10);
+}
+
+// ─── ASYNC AUTOCOMPLETE (Photon proxy) ───────────────────────────────────────
+// Calls /api/geocode, which proxies to Photon/Komoot with countrycodes=us.
+// Falls back to the static filterLocationSuggestions on any error or empty result.
+export async function fetchLocationAutocomplete(query: string): Promise<string[]> {
+  const q = query.trim();
+  if (!q) return defaultLocationSuggestions.slice(0, 8);
+  if (q.length < 2) return filterLocationSuggestions(q);
+  try {
+    const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as string[];
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch { /* network error, server down, or timeout — use static fallback */ }
+  return filterLocationSuggestions(q);
 }
