@@ -177,6 +177,30 @@ export function viabilityScoreToPdfLabel(score: number): string {
   return 'Not Recommended';
 }
 
+// ─── Executive Summary render-time normalizer ────────────────────────────────
+
+/**
+ * Strips score-first phrasing from AI-generated executive summary text.
+ * Applied at render time only — never mutates stored data.
+ *
+ * Replaces patterns such as:
+ *   "viability score of 65"              → "overall assessment"
+ *   "overall viability score of 65"      → "overall assessment"
+ *   "a score of 65/100"                  → "an overall assessment"
+ *   "scored 65 out of 100"              → "assessed well"
+ *   "65/100 viability"                  → "overall viability"
+ */
+export function normalizeExecutiveSummary(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\b(overall\s+)?viability\s+score\s+of\s+\d+\b/gi, 'overall assessment')
+    .replace(/\ba\s+score\s+of\s+\d+\s*\/\s*100\b/gi, 'an overall assessment')
+    .replace(/\bscored?\s+\d+\s*(?:\/\s*100|out\s+of\s+100)\b/gi, 'assessed well')
+    .replace(/\b\d+\s*\/\s*100\s+viability\b/gi, 'overall viability')
+    .replace(/\bviability\s+score\s+of\s+\d+\s*\/\s*100\b/gi, 'overall assessment')
+    .replace(/\bscore\s+of\s+\d+\s*\/\s*100\b/gi, 'overall assessment');
+}
+
 /** Returns a short PDF-safe tier label for an individual factor score. */
 export function factorScoreToPdfLabel(score: number, inverse: boolean): string {
   if (inverse) {

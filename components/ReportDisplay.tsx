@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { ViabilityReport, ScoreBreakdown } from '../types';
+import type { ViabilityReport } from '../types';
 import { CompetitorMap } from './CompetitorMap';
 import { SavedReportsService } from '../services/savedReportsService';
 import { generateRegionalAnalysis, generateMockRegionalData } from '../services/geminiService';
@@ -15,6 +15,7 @@ import {
   scoreToRiskRating,
   getNextStep,
   getConfidenceLevel,
+  normalizeExecutiveSummary,
 } from '../src/utils/assessmentUtils';
 import { LiveModeConfirmModal } from './LiveModeConfirmModal';
 import { UsageTrackerService } from '../services/usageTrackerService';
@@ -442,98 +443,7 @@ const SectionCard: React.FC<{
   </div>
 );
 
-// High fidelity score breakdown components
-const ScoringBreakdownView: React.FC<{ breakdown: ScoreBreakdown }> = ({ breakdown }) => {
-  const [animatedBreakdowns, setAnimatedBreakdowns] = useState({
-    marketDemand: 0,
-    competitionIntensity: 0,
-    financialFeasibility: 0,
-    riskLevel: 0
-  });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimatedBreakdowns({
-        marketDemand: breakdown.marketDemand,
-        competitionIntensity: breakdown.competitionIntensity,
-        financialFeasibility: breakdown.financialFeasibility,
-        riskLevel: breakdown.riskLevel
-      });
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [breakdown]);
-
-  const getScoreBand = (val: number, inverse: boolean, suffix?: string): { label: string; color: string } => {
-    if (inverse) {
-      const s = suffix ?? '';
-      if (val <= 25) return { label: `Very Low${s}`, color: 'text-emerald-600' };
-      if (val <= 45) return { label: `Low${s}`, color: 'text-emerald-500' };
-      if (val <= 65) return { label: `Moderate${s}`, color: 'text-amber-600' };
-      if (val <= 80) return { label: `High${s}`, color: 'text-rose-500' };
-      return { label: `Very High${s}`, color: 'text-rose-700' };
-    } else {
-      if (val <= 25) return { label: 'Very Low', color: 'text-rose-600' };
-      if (val <= 45) return { label: 'Low', color: 'text-amber-600' };
-      if (val <= 65) return { label: 'Moderate', color: 'text-blue-600' };
-      if (val <= 80) return { label: 'High', color: 'text-emerald-600' };
-      return { label: 'Very High', color: 'text-emerald-700' };
-    }
-  };
-
-  const renderBar = (label: string, currentValue: number, isInverse: boolean, weight: string, icon: React.ReactNode, description: string, labelSuffix?: string) => {
-    let colorClass = 'bg-blue-600';
-    if (isInverse) {
-      colorClass = currentValue > 60 ? 'bg-rose-500' : currentValue > 30 ? 'bg-amber-500' : 'bg-emerald-500';
-    } else {
-      colorClass = currentValue >= 70 ? 'bg-emerald-500' : currentValue >= 45 ? 'bg-amber-500' : 'bg-rose-500';
-    }
-    const band = getScoreBand(currentValue, isInverse, labelSuffix);
-
-    return (
-      <div className="group/bar mb-4 last:mb-0 select-none">
-        <div className="flex justify-between items-center text-xs mb-1.5">
-          <span className="font-extrabold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide text-[11px]">
-            {icon}
-            <span>{label}</span>
-            <span className="text-gray-400 font-medium normal-case">({weight})</span>
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] font-bold ${band.color}`}>{band.label}</span>
-          </div>
-        </div>
-        <div className="w-full bg-gray-150 rounded-full h-2.5 overflow-hidden border border-gray-200/40">
-          <div
-            className={`h-full rounded-full ${colorClass} transition-all duration-1000 ease-out`}
-            style={{ width: `${currentValue}%` }}
-          ></div>
-        </div>
-        <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">{description}</p>
-      </div>
-    );
-  };
-
-  return (
-    <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs flex-grow">
-      <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2 flex items-center justify-between">
-        <span>Score Factors</span>
-        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">AI Estimate</span>
-      </h4>
-      <div className="space-y-4">
-        {renderBar("Market Demand", animatedBreakdowns.marketDemand, false, "30%", <TrendingUp className="w-3.5 h-3.5 text-blue-500" />, "Consumer need, search volume, and spending power in your target market area. Higher is better.")}
-        {renderBar("Competition Intensity", animatedBreakdowns.competitionIntensity, true, "25%", <MapPin className="w-3.5 h-3.5 text-emerald-500" />, "How crowded the market is with existing competitors. Very Low means plenty of room for a new entrant; Very High means a saturated market.")}
-        {renderBar("Financial Feasibility", animatedBreakdowns.financialFeasibility, false, "25%", <DollarSign className="w-3.5 h-3.5 text-purple-500" />, "Projected profitability relative to startup capital required and ongoing operational costs. Higher is better.")}
-        {renderBar("Risk Level", animatedBreakdowns.riskLevel, true, "20%", <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />, "Exposure to market volatility, regulatory change, and execution challenges. Very Low Risk means a stable environment; Very High Risk means significant uncertainties.", " Risk")}
-      </div>
-      <div className="mt-4 pt-3 border-t border-gray-100">
-        <p className="text-[10px] text-gray-350 leading-relaxed">
-          Scores reflect how favorable each factor is for this business — from Very Low to Very High.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-// 6-category ratings grid — replaces ScoringBreakdownView in the report header
+// 6-category ratings grid — assessment-first breakdown in the report header
 const RatingsGrid: React.FC<{ report: ViabilityReport }> = ({ report }) => {
   const sb = report.scoreBreakdown;
   if (!sb) return null;
@@ -1178,7 +1088,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               id="overview"
               icon={<Layers className="w-5 h-5 text-blue-600" />}
             >
-              <p className="leading-relaxed text-sm text-gray-700 whitespace-normal">{report.executiveSummary}</p>
+              <p className="leading-relaxed text-sm text-gray-700 whitespace-normal">{normalizeExecutiveSummary(report.executiveSummary)}</p>
             </SectionCard>
 
             {/* Financial Outlook Card with Locked Pro indicators */}
