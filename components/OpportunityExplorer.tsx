@@ -397,7 +397,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
 
             {/* Location autocomplete dropdown */}
             {showLocationSuggestions && (locationDropdownItems.length > 0 || location.trim().length > 0) && (
-              <div className="absolute z-50 w-full bg-white rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto text-left border border-gray-100">
+              <div className="absolute z-50 w-full bg-white rounded-xl shadow-xl mt-1 max-h-72 overflow-y-auto text-left border border-gray-100">
                 {locationDropdownItems.length > 0 ? (
                   locationDropdownItems.map((s, i) => (
                     <div

@@ -168,7 +168,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
   // Shows static matches instantly (no blank flash), then upgrades to Photon
   // results after a 300 ms debounce. Falls back to static on any network error.
   const [locationDropdownItems, setLocationDropdownItems] = useState<string[]>(() =>
-    defaultLocationSuggestions.slice(0, 8),
+    defaultLocationSuggestions.slice(0, 10),
   );
   const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -402,7 +402,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                                     required
                                 />
                                 {showLocationSuggestions && (locationDropdownItems.length > 0 || location.trim().length > 0) && (
-                                  <div className="absolute z-50 w-full bg-white rounded-lg shadow-xl mt-1 max-h-60 overflow-y-auto text-left border border-gray-100">
+                                  <div className="absolute z-50 w-full bg-white rounded-lg shadow-xl mt-1 max-h-72 overflow-y-auto text-left border border-gray-100">
                                     {locationDropdownItems.length > 0 ? (
                                       locationDropdownItems.map((s, i) => {
                                         const isActive = i === activeLocationIndex;

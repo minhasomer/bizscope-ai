@@ -284,7 +284,7 @@ export function filterLocationSuggestions(input: string): string[] {
 
   const startsWith = locationSuggestions.filter(s => s.toLowerCase().startsWith(q) && !aliasHits.includes(s));
   const contains   = locationSuggestions.filter(s => !s.toLowerCase().startsWith(q) && s.toLowerCase().includes(q) && !aliasHits.includes(s));
-  return [...aliasHits, ...startsWith, ...contains].slice(0, 10);
+  return [...aliasHits, ...startsWith, ...contains].slice(0, 12);
 }
 
 // ─── ASYNC AUTOCOMPLETE (Photon proxy) ───────────────────────────────────────
