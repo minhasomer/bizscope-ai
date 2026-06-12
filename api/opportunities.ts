@@ -217,6 +217,44 @@ function normalizeCacheKey(s: string): string {
   return s.toLowerCase().trim();
 }
 
+// Maps full US state names (lowercase) to their 2-letter abbreviations.
+// Used to collapse "Gurnee, Illinois" → "gurnee, il" before cache key construction.
+const STATE_NAME_TO_ABBREV: Record<string, string> = {
+  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+  'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+  'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+  'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+  'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN',
+  'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE',
+  'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+  'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC',
+  'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK', 'oregon': 'OR',
+  'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+  'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA',
+  'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY',
+  'district of columbia': 'DC', 'washington dc': 'DC', 'washington d.c.': 'DC',
+};
+
+// Collapses equivalent location strings to a single cache key:
+//   "Gurnee, Illinois" → "gurnee, il"
+//   "Gurnee, IL"       → "gurnee, il"  (already canonical)
+//   "Gurnee"           → "gurnee"      (no state → no guess)
+//   "Springfield"      → "springfield" (ambiguous → no guess)
+//   "60031"            → "60031"
+function canonicalizeLocationForCache(raw: string): string {
+  const s = raw.trim();
+  const commaIdx = s.lastIndexOf(',');
+  if (commaIdx !== -1) {
+    const before = s.slice(0, commaIdx).trim();
+    const after  = s.slice(commaIdx + 1).trim().toLowerCase();
+    const abbrev = STATE_NAME_TO_ABBREV[after];
+    if (abbrev) return `${before}, ${abbrev}`.toLowerCase();
+  }
+  return s.toLowerCase();
+}
+
 interface CacheHit {
   report:       any;
   isStale:      boolean;
@@ -469,12 +507,17 @@ export default async function handler(
     return json(res, 400, { error: locationCheck.reason, code: 'UNSUPPORTED_LOCATION' });
   }
 
+  // Canonical form used for all cache operations — collapses full state names to
+  // abbreviations so "Gurnee, IL" and "Gurnee, Illinois" share one cache entry.
+  const canonLocation = canonicalizeLocationForCache(location.trim());
+  console.log(`[MarketGapCache] rawLocation="${location.trim()}" canonicalLocation="${canonLocation}"`);
+
   // ── Shared cache check — before Gemini so cache hits skip AI entirely ────
   let cacheWasStale = false;
   if (!forceRegenerate) {
-    const cacheHit = await getFromServerCache('market_gaps', location, 'opportunities', MARKET_GAP_CACHE_MAX_AGE_DAYS);
+    const cacheHit = await getFromServerCache('market_gaps', canonLocation, 'opportunities', MARKET_GAP_CACHE_MAX_AGE_DAYS);
     if (cacheHit && !cacheHit.isStale) {
-      console.log(`[Opportunities] Cache hit — returning cached opportunities, no Gemini call for ${location}`);
+      console.log(`[MarketGapCache] HIT — ${canonLocation}`);
       return json(res, 200, {
         ...cacheHit.report,
         _cached:        true,
@@ -484,9 +527,10 @@ export default async function handler(
         _isStale:       false,
       });
     }
+    console.log(`[MarketGapCache] MISS — ${canonLocation}${cacheHit?.isStale ? ' (stale)' : ''}`);
     cacheWasStale = !!cacheHit?.isStale;
   } else {
-    console.log(`[Opportunities] forceRegenerate=true — bypassing cache for ${location}`);
+    console.log(`[MarketGapCache] BYPASS (forceRegenerate) — ${canonLocation}`);
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -679,7 +723,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     if (cacheWasStale) parsed._refreshedFromStale = true;
 
     // Store in shared server-side cache — all accounts/devices get the same opportunities.
-    await setInServerCache('market_gaps', location, 'opportunities', verifiedPlan, parsed);
+    await setInServerCache('market_gaps', canonLocation, 'opportunities', verifiedPlan, parsed);
 
     return json(res, 200, parsed);
   } catch (err: any) {
