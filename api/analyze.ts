@@ -11,7 +11,11 @@ import {
 import { checkStandardQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection.js';
-import { classifySearchGeography, haversineMiles, classifyTerritoryStatus, classifyTerritoryConfidence } from '../src/utils/franchiseGeography.js';
+import {
+  classifySearchGeography, haversineMiles, classifyTerritoryStatus, classifyTerritoryConfidence,
+  classifyTerritoryImpactLevel, classifyBusinessOpportunity, deriveRecommendationV2,
+  DEFAULT_SATURATION_THRESHOLD,
+} from '../src/utils/franchiseGeography.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 
 export const maxDuration = 60;
@@ -1148,6 +1152,72 @@ Include ALL competitors found in the Competition Analysis above in the competiti
         currentSameBrandFound: sameBrandFound, currentAdjustment: adjustment,
         currentOriginalScore: originalScoreForLogging, currentFinalScore: finalScore,
         currentCappedDecision: cappedDecision,
+      });
+
+      // ─── Phase 4 shadow mode — preview only. ───────────────────────────
+      // Computes a parallel recommendation using a saturation-aware
+      // territory model and an unpenalized business-opportunity score.
+      // Does NOT mutate parsed.viabilityScore or parsed.recommendation —
+      // those remain on the existing -15/-8 adjustment logic above. Preview
+      // fields are attached for review only; nothing reads them yet.
+      const saturationThreshold = DEFAULT_SATURATION_THRESHOLD;
+      const saturationFlagTriggered = geographyType === 'zip' && sameBrandIndices.length >= saturationThreshold;
+
+      const territoryStatus = classifyTerritoryStatus({
+        geographyType, nearestDistanceMiles, densityTier, sameBrandFound,
+        sameBrandCount: sameBrandIndices.length, saturationThreshold,
+      });
+      const territoryConfidencePreview = classifyTerritoryConfidence({
+        geographyType, nearestDistanceMiles, densityTier, sameBrandFound,
+        sameBrandCount: sameBrandIndices.length, saturationThreshold,
+      });
+      const territoryImpactLevel = classifyTerritoryImpactLevel(territoryStatus);
+      const businessOpportunityRating = classifyBusinessOpportunity(originalScoreForLogging);
+      const recommendationV2Preview = deriveRecommendationV2(businessOpportunityRating, territoryStatus);
+
+      const territoryReason = !sameBrandFound
+        ? 'No same-brand locations detected nearby.'
+        : densityTier === 'mature_national'
+          ? (territoryStatus === '🟢 no_known_conflicts'
+            ? `Existing location(s) consistent with normal density for ${brand}.`
+            : `${sameBrandIndices.length}+ existing ${brand} locations in this ZIP — density may exceed normal saturation; review cannibalization risk.`)
+          : geographyType === 'zip'
+            ? `Same-brand location found within this ZIP — territory may already be claimed.`
+            : geographyType === 'city'
+              ? `Same-brand presence detected in this city; confirm territory directly with ${brand}'s franchisor.`
+              : `Same-brand presence detected in the wider area; this is a soft signal, not a confirmed conflict.`;
+
+      const recommendationV2Rationale =
+        `${businessOpportunityRating} market opportunity (raw score ${originalScoreForLogging}). ` +
+        `Territory: ${territoryStatus.replace(/^[^\s]+\s/, '')} — ${territoryReason}`;
+
+      parsed.franchiseRecommendationV2Preview = {
+        businessOpportunityRating,
+        territoryStatus,
+        territoryConfidence: territoryConfidencePreview,
+        territoryImpactLevel,
+        territoryReason,
+        recommendationV2Preview,
+        recommendationV2Rationale,
+        saturationThreshold,
+        saturationFlagTriggered,
+      };
+
+      console.log('[Phase4Shadow]', {
+        businessType, location,
+        oldRecommendation: cappedDecision,
+        recommendationV2Preview,
+        match: cappedDecision === recommendationV2Preview,
+        businessOpportunityRating,
+        territoryStatus,
+        territoryConfidence: territoryConfidencePreview,
+        territoryImpactLevel,
+        sameBrandCount: sameBrandIndices.length,
+        saturationThreshold,
+        saturationFlagTriggered,
+        geographyType,
+        densityTier,
+        rawScore: originalScoreForLogging,
       });
     }
 

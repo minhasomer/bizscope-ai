@@ -249,6 +249,37 @@ export interface FranchiseTerritoryCheck {
   territoryConfidence?: 'strong' | 'moderate' | 'low';
 }
 
+/**
+ * Phase 4 shadow-mode preview fields (see src/utils/franchiseGeography.ts).
+ * Computed alongside FranchiseTerritoryCheck but kept at the top level of
+ * ViabilityReport — deliberately NOT nested inside FranchiseTerritoryCheck,
+ * since that interface already has an (unrelated, Phase 3) `territoryConfidence`
+ * field and nesting these here would collide with it.
+ *
+ * NOT used by recommendation.decision or viabilityScore — observability/
+ * comparison only, pending manual review before any future cutover.
+ */
+export interface FranchiseRecommendationV2Preview {
+  /** Preview-only business-opportunity rating, derived from the raw (pre-adjustment) score. */
+  businessOpportunityRating: 'Strong' | 'Moderate' | 'Weak';
+  /** Preview-only territory status — refined, saturation-aware version of territoryStatusPreview. */
+  territoryStatus: '🟢 no_known_conflicts' | '🟡 verification_required' | '🔴 likely_unavailable';
+  /** Preview-only confidence rating for territoryStatus. */
+  territoryConfidence: 'strong' | 'moderate' | 'low';
+  /** Preview-only impact-level summary of territoryStatus. */
+  territoryImpactLevel: 'none' | 'low' | 'moderate' | 'high';
+  /** Preview-only human-readable reason backing territoryStatus. */
+  territoryReason: string;
+  /** Preview-only Phase 4 recommendation, reusing the existing 3-value enum. */
+  recommendationV2Preview: 'Recommended' | 'Caution Advised' | 'Not Recommended';
+  /** Preview-only rationale text backing recommendationV2Preview. */
+  recommendationV2Rationale: string;
+  /** Same-ZIP same-brand count above which mature-brand presence is flagged as saturation. */
+  saturationThreshold: number;
+  /** Whether sameBrandCount met/exceeded saturationThreshold at ZIP level. */
+  saturationFlagTriggered: boolean;
+}
+
 export interface ViabilityReport {
   businessType: string;
   location: string;
@@ -305,6 +336,9 @@ export interface ViabilityReport {
 
   // Franchise territory check — populated client-side after report generation
   franchiseTerritoryCheck?: FranchiseTerritoryCheck;
+
+  // Phase 4 shadow-mode preview — observability only, see FranchiseRecommendationV2Preview.
+  franchiseRecommendationV2Preview?: FranchiseRecommendationV2Preview;
 
   // Score adjustment applied when franchise territory risk is detected
   franchiseScoreAdjustment?: {

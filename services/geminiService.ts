@@ -1,7 +1,11 @@
 
 import type { ViabilityReport, UserLocation, OpportunityReport, RegionalIntelligenceData, BusinessOpportunity } from '../types';
 import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection';
-import { classifySearchGeography, haversineMiles, classifyTerritoryStatus, classifyTerritoryConfidence } from '../src/utils/franchiseGeography';
+import {
+    classifySearchGeography, haversineMiles, classifyTerritoryStatus, classifyTerritoryConfidence,
+    classifyTerritoryImpactLevel, classifyBusinessOpportunity, deriveRecommendationV2,
+    DEFAULT_SATURATION_THRESHOLD,
+} from '../src/utils/franchiseGeography';
 import { mockReport } from '../src/data/mockReport.js';
 import { ReportCacheService } from './reportCacheService';
 import { mockRegionalReport } from '../src/data/mockRegionalReport.js';
@@ -814,6 +818,68 @@ export const generateViabilityReport = async (
             currentCappedDecision: cappedDecision,
         });
 
+        // ─── Phase 4 shadow mode — preview only (mock-mode mirror of api/analyze.ts). ───
+        // Does NOT mutate result.viabilityScore or result.recommendation.
+        const saturationThreshold = DEFAULT_SATURATION_THRESHOLD;
+        const saturationFlagTriggered = geographyType === 'zip' && sameBrandIndices.length >= saturationThreshold;
+
+        const territoryStatus = classifyTerritoryStatus({
+            geographyType, nearestDistanceMiles, densityTier, sameBrandFound,
+            sameBrandCount: sameBrandIndices.length, saturationThreshold,
+        });
+        const territoryConfidencePreview = classifyTerritoryConfidence({
+            geographyType, nearestDistanceMiles, densityTier, sameBrandFound,
+            sameBrandCount: sameBrandIndices.length, saturationThreshold,
+        });
+        const territoryImpactLevel = classifyTerritoryImpactLevel(territoryStatus);
+        const businessOpportunityRating = classifyBusinessOpportunity(originalScore);
+        const recommendationV2Preview = deriveRecommendationV2(businessOpportunityRating, territoryStatus);
+
+        const territoryReason = !sameBrandFound
+            ? 'No same-brand locations detected nearby.'
+            : densityTier === 'mature_national'
+                ? (territoryStatus === '🟢 no_known_conflicts'
+                    ? `Existing location(s) consistent with normal density for ${brand}.`
+                    : `${sameBrandIndices.length}+ existing ${brand} locations in this ZIP — density may exceed normal saturation; review cannibalization risk.`)
+                : geographyType === 'zip'
+                    ? `Same-brand location found within this ZIP — territory may already be claimed.`
+                    : geographyType === 'city'
+                        ? `Same-brand presence detected in this city; confirm territory directly with ${brand}'s franchisor.`
+                        : `Same-brand presence detected in the wider area; this is a soft signal, not a confirmed conflict.`;
+
+        const recommendationV2Rationale =
+            `${businessOpportunityRating} market opportunity (raw score ${originalScore}). ` +
+            `Territory: ${territoryStatus.replace(/^[^\s]+\s/, '')} — ${territoryReason}`;
+
+        const franchiseRecommendationV2Preview = {
+            businessOpportunityRating,
+            territoryStatus,
+            territoryConfidence: territoryConfidencePreview,
+            territoryImpactLevel,
+            territoryReason,
+            recommendationV2Preview,
+            recommendationV2Rationale,
+            saturationThreshold,
+            saturationFlagTriggered,
+        };
+
+        console.log('[Phase4Shadow]', {
+            businessType, location,
+            oldRecommendation: cappedDecision,
+            recommendationV2Preview,
+            match: cappedDecision === recommendationV2Preview,
+            businessOpportunityRating,
+            territoryStatus,
+            territoryConfidence: territoryConfidencePreview,
+            territoryImpactLevel,
+            sameBrandCount: sameBrandIndices.length,
+            saturationThreshold,
+            saturationFlagTriggered,
+            geographyType,
+            densityTier,
+            rawScore: originalScore,
+        });
+
         result = {
             ...result,
             viabilityScore: finalScore,
@@ -831,6 +897,7 @@ export const generateViabilityReport = async (
                 territoryStatusPreview,
                 territoryConfidence,
             },
+            franchiseRecommendationV2Preview,
             recommendation: {
                 ...result.recommendation,
                 decision: cappedDecision,

@@ -15,13 +15,22 @@ export class ReportCacheService {
   private static STORAGE_KEY = 'bizscope_report_cache';
 
   /**
+   * Bumped when report generation logic changes in a way that makes old
+   * cached entries unsafe to serve as-is (e.g. Phase 4 shadow-mode preview
+   * fields are now computed and expected on every report). Bumping this
+   * changes every cache key, so old entries become unreachable (effectively
+   * evicted) without needing an explicit migration pass.
+   */
+  private static CACHE_VERSION = 'v2-phase4-shadow';
+
+  /**
    * Generates a unique key for the cache entry lookup.
    */
   private static makeKey(businessType: string, location: string, reportType: 'standard' | 'regional', planTier: string): string {
     const cleanBiz = businessType.toLowerCase().trim();
     const cleanLoc = location.toLowerCase().trim();
     const cleanTier = planTier.toLowerCase().trim();
-    return `${cleanBiz}||${cleanLoc}||${reportType}||${cleanTier}`;
+    return `${this.CACHE_VERSION}||${cleanBiz}||${cleanLoc}||${reportType}||${cleanTier}`;
   }
 
   /**
