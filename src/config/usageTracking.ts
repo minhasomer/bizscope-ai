@@ -30,13 +30,49 @@ export interface QuotaCheckResult {
 }
 
 /**
- * Checks the caller's standard-report quota for the current month.
- * report_type is always 'standard' here — analyze.ts and opportunities.ts
- * share the same monthly cap (PLAN_LIMITS.standardReportsPerCycle).
- *
+ * Shared quota lookup against usage_tracking for the current month.
  * Fails open (allows the request) if Supabase is unreachable or the query
  * errors, consistent with the rest of the app's logging/tracking paths —
  * a transient DB issue must not block report generation.
+ */
+async function checkQuota(
+  supabaseAdmin: any,
+  userId: string,
+  reportType: 'standard' | 'regional',
+  limit: number | null,
+  betaFullAccess: boolean,
+): Promise<QuotaCheckResult> {
+  if (limit === null) {
+    return { allowed: true, used: 0, limit: null };
+  }
+  if (!supabaseAdmin) {
+    return { allowed: true, used: 0, limit };
+  }
+
+  const monthKey = getCurrentMonthKey();
+  const { data, error } = await supabaseAdmin
+    .from('usage_tracking')
+    .select('count')
+    .eq('user_id', userId)
+    .eq('report_type', reportType)
+    .eq('month_key', monthKey)
+    .maybeSingle();
+
+  if (error) {
+    console.error(`[UsageTracking] quota check failed (${reportType}), failing open:`, error.message ?? error);
+    return { allowed: true, used: 0, limit };
+  }
+
+  const used = data?.count ?? 0;
+  if (betaFullAccess) {
+    return { allowed: true, used, limit };
+  }
+  return { allowed: used < limit, used, limit };
+}
+
+/**
+ * Checks the caller's standard-report quota for the current month.
+ * report_type is 'standard' — viability reports (api/analyze.ts) only.
  */
 export async function checkStandardQuota(
   supabaseAdmin: any,
@@ -45,32 +81,23 @@ export async function checkStandardQuota(
   betaFullAccess: boolean,
 ): Promise<QuotaCheckResult> {
   const { standardReportsPerCycle } = getPlanLimits(plan);
-  if (standardReportsPerCycle === null) {
-    return { allowed: true, used: 0, limit: null };
-  }
-  if (!supabaseAdmin) {
-    return { allowed: true, used: 0, limit: standardReportsPerCycle };
-  }
+  return checkQuota(supabaseAdmin, userId, 'standard', standardReportsPerCycle, betaFullAccess);
+}
 
-  const monthKey = getCurrentMonthKey();
-  const { data, error } = await supabaseAdmin
-    .from('usage_tracking')
-    .select('count')
-    .eq('user_id', userId)
-    .eq('report_type', 'standard')
-    .eq('month_key', monthKey)
-    .maybeSingle();
-
-  if (error) {
-    console.error('[UsageTracking] quota check failed, failing open:', error.message ?? error);
-    return { allowed: true, used: 0, limit: standardReportsPerCycle };
-  }
-
-  const used = data?.count ?? 0;
-  if (betaFullAccess) {
-    return { allowed: true, used, limit: standardReportsPerCycle };
-  }
-  return { allowed: used < standardReportsPerCycle, used, limit: standardReportsPerCycle };
+/**
+ * Checks the caller's Market Gap / Regional-counter quota for the current
+ * month. report_type is 'regional' — this is the dashboard's "Market Gap
+ * Reports" counter (PLAN_LIMITS.regionalReportsPerCycle), used by
+ * api/opportunities.ts.
+ */
+export async function checkRegionalQuota(
+  supabaseAdmin: any,
+  userId: string,
+  plan: SubscriptionPlan,
+  betaFullAccess: boolean,
+): Promise<QuotaCheckResult> {
+  const { regionalReportsPerCycle } = getPlanLimits(plan);
+  return checkQuota(supabaseAdmin, userId, 'regional', regionalReportsPerCycle, betaFullAccess);
 }
 
 /**

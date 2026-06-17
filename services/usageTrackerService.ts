@@ -225,18 +225,22 @@ export class UsageTrackerService {
       const standardLimit: number | null = data?.standard?.limit ?? limits.standardReportsPerCycle;
       const standardRemaining = standardLimit === null ? Infinity : Math.max(0, standardLimit - standardUsed);
 
+      const regionalUsed = data?.regional?.used ?? 0;
+      const regionalLimit: number | null = data?.regional?.limit ?? limits.regionalReportsPerCycle;
+      const regionalRemaining = regionalLimit === null ? Infinity : Math.max(0, regionalLimit - regionalUsed);
+
       return {
         plan,
         standardLimit,
         standardUsed,
         standardRemaining,
         standardResetDate: null, // server tracks by calendar month, not a rolling reset timestamp
-        regionalLimit: limits.regionalReportsPerCycle,
-        regionalUsed: 0, // regional reports are not yet server-tracked by this task
-        regionalRemaining: limits.regionalReportsPerCycle === null ? Infinity : limits.regionalReportsPerCycle,
+        regionalLimit,
+        regionalUsed,
+        regionalRemaining,
         regionalResetDate: null,
         canRunStandard: standardLimit === null || standardRemaining > 0,
-        canRunRegional: limits.regionalReportsPerCycle === null || limits.regionalReportsPerCycle > 0,
+        canRunRegional: regionalLimit === null || (regionalLimit > 0 && regionalRemaining > 0),
         standardLimitDescription: standardLimit === null ? 'Unlimited reports' : `${standardLimit} reports per month`,
         resetCycleDescription: limits.standardResetCycle === 'none' ? 'No reset limits' : 'Monthly reset cycle',
       };

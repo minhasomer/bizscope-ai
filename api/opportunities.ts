@@ -8,7 +8,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
-import { checkStandardQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
+import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 
@@ -574,7 +574,7 @@ export default async function handler(
   }
 
   // ── Server-side quota check — standard reports (after cache, before Gemini) ─
-  const quota = await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  const quota = await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
   if (!quota.allowed) {
     console.warn(`[Opportunities] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
     return json(res, 429, {
@@ -810,7 +810,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     }
 
     // Quota counter — only fresh, successful, non-cached generations count.
-    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;

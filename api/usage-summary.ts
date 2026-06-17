@@ -75,6 +75,7 @@ export default async function handler(
   const monthKey = getCurrentMonthKey();
 
   let standardUsed = 0;
+  let regionalUsed = 0;
   let dossierUsed = 0;
 
   if (supabaseAdmin) {
@@ -83,13 +84,14 @@ export default async function handler(
       .select('report_type, count')
       .eq('user_id', userId)
       .eq('month_key', monthKey)
-      .in('report_type', ['standard', 'opportunity_dossier']);
+      .in('report_type', ['standard', 'regional', 'opportunity_dossier']);
 
     if (error) {
       console.error('[UsageSummary] usage_tracking query failed:', error.message ?? error);
     } else {
       for (const row of data ?? []) {
         if (row.report_type === 'standard') standardUsed = row.count ?? 0;
+        if (row.report_type === 'regional') regionalUsed = row.count ?? 0;
         if (row.report_type === 'opportunity_dossier') dossierUsed = row.count ?? 0;
       }
     }
@@ -105,6 +107,15 @@ export default async function handler(
       remaining: limits.standardReportsPerCycle === null
         ? null
         : Math.max(0, limits.standardReportsPerCycle - standardUsed),
+    },
+    // "Market Gap Reports" on the dashboard — keyed 'regional' to match
+    // PLAN_LIMITS.regionalReportsPerCycle / UsageDetails.regionalUsed.
+    regional: {
+      used: regionalUsed,
+      limit: limits.regionalReportsPerCycle,
+      remaining: limits.regionalReportsPerCycle === null
+        ? null
+        : Math.max(0, limits.regionalReportsPerCycle - regionalUsed),
     },
     opportunityDossier: {
       used: dossierUsed,
