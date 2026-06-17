@@ -17,6 +17,7 @@ import {
   DEFAULT_SATURATION_THRESHOLD,
 } from '../src/utils/franchiseGeography.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
+import { normalizeViabilityReport } from '../src/utils/reportNormalization.js';
 
 export const maxDuration = 60;
 
@@ -786,7 +787,7 @@ export default async function handler(
         console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
       }
       return json(res, 200, {
-        ...cacheHit.report,
+        ...normalizeViabilityReport(cacheHit.report),
         _cached:        true,
         _generatedAt:   cacheHit.generatedAt,
         _cacheAgeDays:  cacheHit.cacheAgeDays,
@@ -1288,6 +1289,8 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;
+
+    normalizeViabilityReport(parsed);
 
     // Store in shared server-side cache — all accounts/devices get the same report.
     await setInServerCache(businessType, location, 'standard', verifiedPlan, parsed);

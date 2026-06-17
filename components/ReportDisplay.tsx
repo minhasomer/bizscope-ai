@@ -798,7 +798,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     }
   };
 
-  const recStyle = getRecommendationStyle(report.recommendation.decision, report.riskLevel);
+  const recStyle = getRecommendationStyle(report.recommendation?.decision ?? 'Verification Required', report.riskLevel);
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth">
@@ -912,7 +912,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             </div>
                           )}
                         </div>
-                        <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl">{report.recommendation.reasoning}</p>
+                        <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl">{report.recommendation?.reasoning ?? 'Recommendation reasoning was unavailable for this report.'}</p>
                         {report.franchiseTerritoryCheck && (
                           <p className="mt-2 text-xs text-amber-700 font-semibold leading-relaxed max-w-2xl">
                             ⚠️ This assessment reflects market conditions only — territory availability is not confirmed. Verify directly with the franchisor before investing.
@@ -941,7 +941,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
             {/* Decision Guidance + Confidence Level */}
             {(() => {
-              const nextStep = getNextStep(report.recommendation.decision, report.viabilityScore);
+              const nextStep = getNextStep(report.recommendation?.decision ?? 'Verification Required', report.viabilityScore);
               const confidence = getConfidenceLevel(report);
               return (
                 <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3 print:hidden">
@@ -1695,15 +1695,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <ShieldCheck className="w-4 h-4 text-amber-600" />
                                 Positioning Summary
                             </h4>
-                            <p className="text-sm text-gray-700 leading-relaxed">{report.recommendation.reasoning}</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{report.recommendation?.reasoning ?? 'Recommendation reasoning was unavailable for this report.'}</p>
                             <div className="mt-3 flex items-center gap-3 flex-wrap">
                                 <span className={`text-xs font-black px-3 py-1 rounded-full ${
-                                    report.recommendation.decision === 'Recommended' ? 'bg-emerald-100 text-emerald-800' :
-                                    report.recommendation.decision === 'Caution Advised' ? 'bg-amber-100 text-amber-800' :
-                                    report.recommendation.decision === 'Verification Required' ? 'bg-orange-100 text-orange-800' :
+                                    report.recommendation?.decision === 'Recommended' ? 'bg-emerald-100 text-emerald-800' :
+                                    report.recommendation?.decision === 'Caution Advised' ? 'bg-amber-100 text-amber-800' :
+                                    report.recommendation?.decision === 'Verification Required' ? 'bg-orange-100 text-orange-800' :
                                     'bg-red-100 text-red-800'
                                 }`}>
-                                    {report.recommendation.decision}
+                                    {report.recommendation?.decision ?? 'Verification Required'}
                                 </span>
                                 <span className="text-xs text-gray-500">Assessment: <strong className="text-gray-800">{viabilityScoreToAssessment(report.viabilityScore).label}</strong></span>
                             </div>

@@ -9,6 +9,7 @@ import {
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise } from '../src/utils/franchiseDetection.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
+import { normalizeViabilityReport } from '../src/utils/reportNormalization.js';
 
 export const maxDuration = 60;
 
@@ -568,7 +569,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.error('[ActivityLog] failed preview success:', logErr.message ?? logErr);
     }
 
-    return json(res, 200, parsed);
+    return json(res, 200, normalizeViabilityReport(parsed));
   } catch (err: any) {
     const errStatus  = err?.status  ?? err?.httpStatus ?? null;
     const errCode    = err?.code    ?? null;

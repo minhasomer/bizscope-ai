@@ -15,6 +15,7 @@ import { mockOpportunitiesMidwest } from '../src/data/mockOpportunitiesMidwest.j
 import { appConfig, isBetaRoleEnabled } from '../src/config/appConfig';
 import { assertLiveService } from '../src/lib/guardrails';
 import { supabase } from './supabaseClient';
+import { normalizeViabilityReport } from '../src/utils/reportNormalization';
 
 // Preserves structured fields (code, used, limit) from API error responses
 // (e.g. 429 QUOTA_EXCEEDED) so callers can branch on them instead of just
@@ -542,7 +543,7 @@ export const generateViabilityReport = async (
         if (cached) {
             setLoadingMessage("Cache hit! Loading report...");
             await new Promise(resolve => setTimeout(resolve, 300));
-            return cached as ViabilityReport;
+            return normalizeViabilityReport(cached as ViabilityReport);
         }
     }
 
@@ -908,6 +909,7 @@ export const generateViabilityReport = async (
         };
     }
 
+    normalizeViabilityReport(result);
     await ReportCacheService.set(businessType, location, 'standard', planTier, result);
     return result;
 };

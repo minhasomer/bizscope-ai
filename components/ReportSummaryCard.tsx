@@ -60,8 +60,8 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
               <span className={`text-[8px] font-black uppercase tracking-wide ${assessment.colorClass} text-center leading-tight mt-0.5`}>{assessment.label}</span>
             </div>
             {/* Decision badge */}
-            <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border ${decisionStyle(recommendation.decision)}`}>
-              {recommendation.decision}
+            <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border ${decisionStyle(recommendation?.decision ?? 'Verification Required')}`}>
+              {recommendation?.decision ?? 'Verification Required'}
             </span>
           </div>
         </div>

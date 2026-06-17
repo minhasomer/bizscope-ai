@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Hero } from './components/Hero';
 import { ReportDisplay } from './components/ReportDisplay';
+import { ReportErrorBoundary } from './components/ReportErrorBoundary';
 import { Loader, REPORT_LOADING_MESSAGES } from './components/Loader';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -1354,13 +1355,15 @@ const App: React.FC = () => {
         return (
           <div className="bg-gradient-to-b from-gray-50/50 to-white py-8 print:py-0">
             <div className="px-4">
-              <ReportDisplay
-                report={report}
-                currentPlan={userPlan}
-                onNavigate={navigate}
-                onRegenerate={() => { navigate('home'); handleAnalysisRequest(report.businessType, report.location, true); }}
-                isAdminOrDev={!isDemoMode && isAdmin(currentUser?.role ?? '')}
-              />
+              <ReportErrorBoundary onNavigate={navigate} key={`${report.businessType}|${report.location}`}>
+                <ReportDisplay
+                  report={report}
+                  currentPlan={userPlan}
+                  onNavigate={navigate}
+                  onRegenerate={() => { navigate('home'); handleAnalysisRequest(report.businessType, report.location, true); }}
+                  isAdminOrDev={!isDemoMode && isAdmin(currentUser?.role ?? '')}
+                />
+              </ReportErrorBoundary>
             </div>
           </div>
         );
