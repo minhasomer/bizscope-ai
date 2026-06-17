@@ -8,7 +8,7 @@ import { PricingTiers } from './components/PricingTiers';
 import { OpportunityExplorer } from './components/OpportunityExplorer';
 import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
-import { generateViabilityReport, generateAnonymousPreviewReport } from './services/geminiService';
+import { generateViabilityReport, generateAnonymousPreviewReport, ApiError } from './services/geminiService';
 import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess } from './src/config/appConfig';
 import type { ViabilityReport, OpportunityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
@@ -658,6 +658,12 @@ const App: React.FC = () => {
     } catch (err) {
       console.error(err);
       const rawMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
+      // Server-side quota rejection (api/analyze.ts 429) — show the existing
+      // limit modal instead of the generic error banner.
+      if (err instanceof ApiError && err.code === 'QUOTA_EXCEEDED') {
+        setShowLimitModal(true);
+        return;
+      }
       // Network interruption (e.g. Android Chrome killed the fetch when the tab
       // was backgrounded): show the amber recovery banner so the user can retry
       // and pick up the result from report_cache if the backend finished.

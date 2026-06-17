@@ -10,7 +10,8 @@ import {
 } from '../src/config/aiBudget.js';
 import { checkStandardQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
-import { detectFranchise, findSameBrandCompetitors } from '../src/utils/franchiseDetection.js';
+import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection.js';
+import { classifySearchGeography, haversineMiles, classifyTerritoryStatus, classifyTerritoryConfidence } from '../src/utils/franchiseGeography.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 
 export const maxDuration = 60;
@@ -1057,9 +1058,10 @@ Include ALL competitors found in the Competition Analysis above in the competiti
         ? `This market shows viable demand for ${brand}, but existing same-brand locations have been identified nearby. Franchise territory agreements may already restrict or prohibit a new unit at this location — this is a contractual risk the viability score cannot fully reflect. Confirm territory availability with ${brand}'s franchise development team before proceeding.`
         : `Market conditions for ${brand} in this area are favorable, but franchise territory availability has not been confirmed. ${brand} assigns protected territories and pending agreements may already restrict this location. This analysis reflects general market viability only — franchisor approval is a required prerequisite, not an assumption.`;
 
+      // Sprint 11: narrative-based wording, no raw score/point-deduction language.
       const franchiseSummaryPrefix = sameBrandFound
-        ? `⚠️ Franchise territory conflict risk: existing ${brand} presence detected near this location — territory may already be claimed. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for territory risk). `
-        : `⚠️ Franchise verification required: this analysis reflects market conditions only. ${brand} territory availability must be confirmed directly with the franchisor before any investment decision. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for unverified territory). `;
+        ? `⚠️ Territory availability concerns identified: existing ${brand} presence detected near this location — territory may already be claimed. See Territory Status below for details. `
+        : `⚠️ Franchise verification required: this analysis reflects market conditions only. Final assessment incorporates territory availability considerations — confirm directly with ${brand}'s franchisor before any investment decision. `;
 
       const normalizeScoreMentions = (text: string): string =>
         text
@@ -1068,22 +1070,85 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           .replace(new RegExp(`(viability\\s+score\\s*(?:of|is|at|:)?\\s*)${originalScore}\\b`, 'gi'), `$1${finalScore}`)
           .replace(new RegExp(`(?<![\\w-])(score\\s+of\\s+)${originalScore}\\b`, 'gi'), `$1${finalScore}`);
 
+      // Bug fix: the AI's own executiveSummary sometimes already contains a
+      // franchise/territory sentence (the prompt asks it to address territory
+      // risk). Strip any such AI-authored sentence before prepending the
+      // canonical one below, so the warning doesn't appear twice.
+      const TERRITORY_SENTENCE_STOPWORDS = new Set(['the', 'a', 'an', 'and', 'of', 'to', 'that', 'just', 'do']);
+      const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const stripAiTerritorySentence = (text: string): string => {
+        const distinctiveWords = brand
+          .split(/\s+/)
+          .filter(w => w.length > 2 && !TERRITORY_SENTENCE_STOPWORDS.has(w.toLowerCase()))
+          .slice(0, 2)
+          .map(escapeRegExp);
+        const normalizedBrand = brand.toLowerCase().replace(/\s+/g, ' ').trim();
+        const sentenceSplit = text.split(/(?<=[.!?])\s+/);
+        return sentenceSplit
+          .filter(sentence => {
+            const lower = sentence.toLowerCase();
+            const mentionsBrand = distinctiveWords.length > 0
+              ? new RegExp(`\\b(${distinctiveWords.join('|')})\\b`, 'i').test(sentence)
+              : lower.replace(/\s+/g, ' ').includes(normalizedBrand);
+            const mentionsTerritory = /territory|franchise/i.test(lower);
+            const mentionsConflict = /nearby|detected|claimed|presence/i.test(lower);
+            return !(mentionsBrand && mentionsTerritory && mentionsConflict);
+          })
+          .join(' ');
+      };
+
+      const originalScoreForLogging = originalScore;
       parsed.viabilityScore = finalScore;
       parsed.franchiseScoreAdjustment = {
         originalScore,
         adjustment,
         finalScore,
         reason: sameBrandFound
-          ? `Score reduced by ${Math.abs(adjustment)} points: existing ${brand} locations detected near this market. Territory saturation is a material risk.`
-          : `Score reduced by ${Math.abs(adjustment)} points: ${brand} is a franchise brand. Territory availability cannot be confirmed without direct franchisor disclosure.`,
+          ? `Territory verification required: existing ${brand} locations were identified near this market. Territory saturation is a material risk.`
+          : `Territory availability cannot be confirmed without direct franchisor disclosure, as required for any ${brand} franchise location.`,
       };
       parsed.recommendation = {
         ...parsed.recommendation,
         decision: cappedDecision,
         reasoning: franchiseReasoning,
       };
-      parsed.executiveSummary = franchiseSummaryPrefix + normalizeScoreMentions(parsed.executiveSummary ?? '');
+      parsed.executiveSummary =
+        franchiseSummaryPrefix + normalizeScoreMentions(stripAiTerritorySentence(parsed.executiveSummary ?? ''));
       if (parsed.methodology) parsed.methodology = normalizeScoreMentions(parsed.methodology);
+
+      // ─── Phase 3: geography-aware signals — computed and stored for ───
+      // ─── observability only. Does NOT affect adjustment/finalScore/   ───
+      // ─── cappedDecision above (Phase 4 scope).                        ───
+      const geographyType = classifySearchGeography(location);
+      const densityTier = getFranchiseDensityTier(brand);
+      let nearestDistanceMiles: number | null = null;
+      if (userLocation?.latitude && userLocation?.longitude && sameBrandIndices.length > 0) {
+        const distances = sameBrandIndices
+          .map(i => competitors[i])
+          .filter((c): c is typeof c & { latitude: number; longitude: number } =>
+            typeof c?.latitude === 'number' && typeof c?.longitude === 'number')
+          .map(c => haversineMiles(userLocation.latitude, userLocation.longitude, c.latitude, c.longitude));
+        if (distances.length > 0) nearestDistanceMiles = Math.min(...distances);
+      }
+      const territoryStatusPreview = classifyTerritoryStatus({ geographyType, nearestDistanceMiles, densityTier, sameBrandFound });
+      const territoryConfidence = classifyTerritoryConfidence({ geographyType, nearestDistanceMiles, densityTier, sameBrandFound });
+
+      parsed.franchiseTerritoryCheck = {
+        ...parsed.franchiseTerritoryCheck,
+        geographyType,
+        nearestDistanceMiles,
+        densityTier,
+        territoryStatusPreview,
+        territoryConfidence,
+      };
+
+      console.log('[FranchiseGeo]', {
+        brand, geographyType, nearestDistanceMiles, densityTier,
+        territoryStatusPreview, territoryConfidence,
+        currentSameBrandFound: sameBrandFound, currentAdjustment: adjustment,
+        currentOriginalScore: originalScoreForLogging, currentFinalScore: finalScore,
+        currentCappedDecision: cappedDecision,
+      });
     }
 
     parsed.generationMeta = {

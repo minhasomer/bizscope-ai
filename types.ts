@@ -229,6 +229,24 @@ export interface FranchiseTerritoryCheck {
    * Distinct from existingPresenceDetected (which is always true for known franchises).
    */
   sameBrandFoundInSearch: boolean;
+
+  // ─── Phase 3: geography-aware signals (observability only — see src/utils/franchiseGeography.ts) ───
+  /** Classification of the searched location string (zip/city/county/metro/region). */
+  geographyType?: 'zip' | 'city' | 'county' | 'metro' | 'region';
+  /** Distance in miles from the searcher's location to the nearest same-brand competitor, if known. */
+  nearestDistanceMiles?: number | null;
+  /** Expected nearby-unit density tier for the brand. */
+  densityTier?: 'mature_national' | 'established_regional' | 'emerging' | 'unknown';
+  /**
+   * Preview of what a geography/density-aware territory status would be.
+   * Not used by recommendation/score logic yet — observability only.
+   */
+  territoryStatusPreview?: '🟢 no_known_conflicts' | '🟡 verification_required' | '🔴 likely_unavailable';
+  /**
+   * Preview confidence rating for territoryStatusPreview.
+   * Not used by recommendation/score logic yet — observability only.
+   */
+  territoryConfidence?: 'strong' | 'moderate' | 'low';
 }
 
 export interface ViabilityReport {

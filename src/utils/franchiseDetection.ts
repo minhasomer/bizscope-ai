@@ -3,44 +3,101 @@
  * Zero dependencies — safe to import in both browser (Vite) and Node (API).
  *
  * Keeps a curated list of known franchise brand names and provides:
- *   detectFranchise(input)   → { isFranchise, brandName }
- *   sameBrandInCompetitors() → how many competitors share the brand name
+ *   detectFranchise(input)        → { isFranchise, brandName }
+ *   sameBrandInCompetitors()      → how many competitors share the brand name
+ *   getFranchiseDensityTier(name) → expected nearby-unit density for the brand
  */
 
-const KNOWN_FRANCHISES: string[] = [
+export type FranchiseDensityTier = 'mature_national' | 'established_regional' | 'emerging' | 'unknown';
+
+interface FranchiseEntry {
+  name: string;
+  tier: FranchiseDensityTier;
+}
+
+const KNOWN_FRANCHISES: FranchiseEntry[] = [
   // Fast Food / QSR
-  "Chick-fil-A", "McDonald's", "Subway", "Domino's Pizza", "Five Guys",
-  "Jersey Mike's", "Jersey Mike's Subs", "Firehouse Subs", "Wingstop",
-  "Culver's", "Whataburger", "In-N-Out Burger", "Shake Shack",
-  "Raising Cane's", "Zaxby's", "Bojangles", "Popeyes", "Hardee's",
+  { name: "Chick-fil-A", tier: 'mature_national' },
+  { name: "McDonald's", tier: 'mature_national' },
+  { name: "Subway", tier: 'mature_national' },
+  { name: "Domino's Pizza", tier: 'mature_national' },
+  { name: "Five Guys", tier: 'established_regional' },
+  { name: "Jersey Mike's", tier: 'established_regional' },
+  { name: "Jersey Mike's Subs", tier: 'established_regional' },
+  { name: "Firehouse Subs", tier: 'established_regional' },
+  { name: "Wingstop", tier: 'established_regional' },
+  { name: "Culver's", tier: 'established_regional' },
+  { name: "Whataburger", tier: 'established_regional' },
+  { name: "In-N-Out Burger", tier: 'established_regional' },
+  { name: "Shake Shack", tier: 'established_regional' },
+  { name: "Raising Cane's", tier: 'established_regional' },
+  { name: "Zaxby's", tier: 'established_regional' },
+  { name: "Bojangles", tier: 'established_regional' },
+  { name: "Popeyes", tier: 'mature_national' },
+  { name: "Hardee's", tier: 'established_regional' },
   // Coffee / Beverages
-  "Dutch Bros Coffee", "Dutch Bros", "Smoothie King", "Tropical Smoothie Cafe",
-  "Dunkin'", "Dunkin Donuts", "Starbucks",
+  { name: "Dutch Bros Coffee", tier: 'established_regional' },
+  { name: "Dutch Bros", tier: 'established_regional' },
+  { name: "Smoothie King", tier: 'established_regional' },
+  { name: "Tropical Smoothie Cafe", tier: 'established_regional' },
+  { name: "Dunkin'", tier: 'mature_national' },
+  { name: "Dunkin Donuts", tier: 'mature_national' },
+  { name: "Starbucks", tier: 'mature_national' },
   // Pizza
-  "Marco's Pizza", "Papa John's", "Pizza Hut", "Little Caesars",
+  { name: "Marco's Pizza", tier: 'established_regional' },
+  { name: "Papa John's", tier: 'mature_national' },
+  { name: "Pizza Hut", tier: 'mature_national' },
+  { name: "Little Caesars", tier: 'mature_national' },
   // Fitness
-  "Anytime Fitness", "Planet Fitness", "OrangeTheory Fitness", "OrangeTheory",
-  "F45 Training", "Club Pilates", "Snap Fitness", "Crunch Fitness",
+  { name: "Anytime Fitness", tier: 'established_regional' },
+  { name: "Planet Fitness", tier: 'mature_national' },
+  { name: "OrangeTheory Fitness", tier: 'established_regional' },
+  { name: "OrangeTheory", tier: 'established_regional' },
+  { name: "F45 Training", tier: 'established_regional' },
+  { name: "Club Pilates", tier: 'established_regional' },
+  { name: "Snap Fitness", tier: 'established_regional' },
+  { name: "Crunch Fitness", tier: 'established_regional' },
   // Hair / Beauty
-  "Great Clips", "Sport Clips", "Supercuts", "European Wax Center",
+  { name: "Great Clips", tier: 'mature_national' },
+  { name: "Sport Clips", tier: 'established_regional' },
+  { name: "Supercuts", tier: 'mature_national' },
+  { name: "European Wax Center", tier: 'established_regional' },
   // Health / Medical
-  "The Joint Chiropractic", "The Joint",
-  "Hand & Stone Massage", "Hand and Stone", "Massage Envy",
+  { name: "The Joint Chiropractic", tier: 'established_regional' },
+  { name: "The Joint", tier: 'established_regional' },
+  { name: "Hand & Stone Massage", tier: 'established_regional' },
+  { name: "Hand and Stone", tier: 'established_regional' },
+  { name: "Massage Envy", tier: 'mature_national' },
   // Home Services
-  "SERVPRO", "ServiceMaster Clean", "ServiceMaster",
-  "Molly Maid", "Merry Maids", "Two Men and a Truck",
-  "Mr. Handyman", "1-800-GOT-JUNK",
-  "The Brothers That Just Do Gutters",
+  { name: "SERVPRO", tier: 'mature_national' },
+  { name: "ServiceMaster Clean", tier: 'established_regional' },
+  { name: "ServiceMaster", tier: 'established_regional' },
+  { name: "Molly Maid", tier: 'established_regional' },
+  { name: "Merry Maids", tier: 'established_regional' },
+  { name: "Two Men and a Truck", tier: 'established_regional' },
+  { name: "Mr. Handyman", tier: 'established_regional' },
+  { name: "1-800-GOT-JUNK", tier: 'established_regional' },
+  { name: "The Brothers That Just Do Gutters", tier: 'emerging' },
   // Pest Control
-  "Mosquito Joe", "Mosquito Squad",
+  { name: "Mosquito Joe", tier: 'emerging' },
+  { name: "Mosquito Squad", tier: 'emerging' },
   // Retail / Shipping
-  "The UPS Store", "UPS Store", "FedEx Office", "Ace Hardware", "7-Eleven",
+  { name: "The UPS Store", tier: 'mature_national' },
+  { name: "UPS Store", tier: 'mature_national' },
+  { name: "FedEx Office", tier: 'mature_national' },
+  { name: "Ace Hardware", tier: 'mature_national' },
+  { name: "7-Eleven", tier: 'mature_national' },
   // Education / Tutoring
-  "Kumon", "Sylvan Learning", "Club Z", "Goldfish Swim School",
+  { name: "Kumon", tier: 'established_regional' },
+  { name: "Sylvan Learning", tier: 'established_regional' },
+  { name: "Club Z", tier: 'emerging' },
+  { name: "Goldfish Swim School", tier: 'emerging' },
   // Cleaning / B2B
-  "Coverall Commercial Cleaning",
+  { name: "Coverall Commercial Cleaning", tier: 'emerging' },
   // Real Estate
-  "RE/MAX", "Keller Williams", "Century 21",
+  { name: "RE/MAX", tier: 'mature_national' },
+  { name: "Keller Williams", tier: 'mature_national' },
+  { name: "Century 21", tier: 'mature_national' },
 ];
 
 export interface FranchiseDetectionResult {
@@ -57,7 +114,7 @@ export function detectFranchise(input: string): FranchiseDetectionResult {
   if (!input) return { isFranchise: false, brandName: null };
   const q = input.trim().toLowerCase();
 
-  for (const brand of KNOWN_FRANCHISES) {
+  for (const { name: brand } of KNOWN_FRANCHISES) {
     const brandLower = brand.toLowerCase();
     // Full name match, or input starts-with / includes brand name
     if (q === brandLower || q.includes(brandLower) || brandLower.includes(q)) {
@@ -65,6 +122,16 @@ export function detectFranchise(input: string): FranchiseDetectionResult {
     }
   }
   return { isFranchise: false, brandName: null };
+}
+
+/**
+ * Returns the expected nearby-unit density tier for a known franchise brand.
+ * 'unknown' for brands not in the curated list (defensive default).
+ */
+export function getFranchiseDensityTier(brandName: string): FranchiseDensityTier {
+  const brandLower = brandName.trim().toLowerCase();
+  const entry = KNOWN_FRANCHISES.find(f => f.name.toLowerCase() === brandLower);
+  return entry?.tier ?? 'unknown';
 }
 
 /**

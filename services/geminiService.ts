@@ -1,6 +1,7 @@
 
 import type { ViabilityReport, UserLocation, OpportunityReport, RegionalIntelligenceData, BusinessOpportunity } from '../types';
-import { detectFranchise, findSameBrandCompetitors } from '../src/utils/franchiseDetection';
+import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection';
+import { classifySearchGeography, haversineMiles, classifyTerritoryStatus, classifyTerritoryConfidence } from '../src/utils/franchiseGeography';
 import { mockReport } from '../src/data/mockReport.js';
 import { ReportCacheService } from './reportCacheService';
 import { mockRegionalReport } from '../src/data/mockRegionalReport.js';
@@ -10,6 +11,22 @@ import { mockOpportunitiesMidwest } from '../src/data/mockOpportunitiesMidwest.j
 import { appConfig, isBetaRoleEnabled } from '../src/config/appConfig';
 import { assertLiveService } from '../src/lib/guardrails';
 import { supabase } from './supabaseClient';
+
+// Preserves structured fields (code, used, limit) from API error responses
+// (e.g. 429 QUOTA_EXCEEDED) so callers can branch on them instead of just
+// the message string.
+export class ApiError extends Error {
+  code?: string;
+  used?: number;
+  limit?: number | null;
+  constructor(message: string, opts?: { code?: string; used?: number; limit?: number | null }) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = opts?.code;
+    this.used = opts?.used;
+    this.limit = opts?.limit;
+  }
+}
 
 /**
  * Whether Demo Mode is active.
@@ -661,7 +678,7 @@ export const generateViabilityReport = async (
             const message = typeof errField === 'string'
                 ? errField
                 : (errField?.message ?? `Server responded with status ${response.status}`);
-            throw new Error(message);
+            throw new ApiError(message, { code: errorData.code, used: errorData.used, limit: errorData.limit });
         }
 
         result = await response.json() as ViabilityReport;
@@ -676,8 +693,13 @@ export const generateViabilityReport = async (
     // which Gemini answers with rival brands, not existing same-brand locations.
     // Waiting for a same-brand hit before warning users produces dangerous false-
     // negatives (green "territory looks clear" when it may not be).
+    // Live results already have the franchise adjustment applied server-side
+    // (api/analyze.ts mirrors this exact logic). Re-applying it here would
+    // double the score penalty and duplicate the territory-check fields.
+    // Only mock-mode results (which never touch the server) need it applied
+    // client-side.
     const franchiseDetection = detectFranchise(businessType);
-    if (franchiseDetection.isFranchise && franchiseDetection.brandName) {
+    if (!_useLive && franchiseDetection.isFranchise && franchiseDetection.brandName) {
         const competitors = result.competitionAnalysis?.competitors ?? [];
         const sameBrandIndices = findSameBrandCompetitors(franchiseDetection.brandName, competitors);
         const sameBrandFound = sameBrandIndices.length > 0;
@@ -704,8 +726,8 @@ export const generateViabilityReport = async (
         const finalScore = Math.max(0, Math.round(originalScore + adjustment));
 
         const adjustmentReason = sameBrandFound
-            ? `Score reduced by ${Math.abs(adjustment)} points: existing ${brand} locations detected near this market. Territory saturation is a material risk.`
-            : `Score reduced by ${Math.abs(adjustment)} points: ${brand} is a franchise brand. Territory availability cannot be confirmed without direct franchisor disclosure.`;
+            ? `Territory verification required: existing ${brand} locations were identified near this market. Territory saturation is a material risk.`
+            : `Territory availability cannot be confirmed without direct franchisor disclosure, as required for any ${brand} franchise location.`;
 
         // Decision cap logic
         const rawDecision: string =
@@ -723,12 +745,11 @@ export const generateViabilityReport = async (
             ? `This market shows viable demand for ${brand}, but existing same-brand locations have been identified nearby. Franchise territory agreements may already restrict or prohibit a new unit at this location — this is a contractual risk the viability score cannot fully reflect. Confirm territory availability with ${brand}'s franchise development team before proceeding.`
             : `Market conditions for ${brand} in this area are favorable, but franchise territory availability has not been confirmed. ${brand} assigns protected territories and pending agreements may already restrict this location. This analysis reflects general market viability only — franchisor approval is a required prerequisite, not an assumption.`;
 
-        // Prepend a franchise context sentence to the executive summary,
-        // stating the final adjusted score so the summary always agrees with
-        // the displayed header score.
+        // Prepend a franchise context sentence to the executive summary.
+        // Sprint 11: narrative-based wording, no raw score/point-deduction language.
         const franchiseSummaryPrefix = sameBrandFound
-            ? `⚠️ Franchise territory conflict risk: existing ${brand} presence detected near this location — territory may already be claimed. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for territory risk). `
-            : `⚠️ Franchise verification required: this analysis reflects market conditions only. ${brand} territory availability must be confirmed directly with the franchisor before any investment decision. Final viability score adjusted to ${finalScore}/100 (${adjustment} points for unverified territory). `;
+            ? `⚠️ Territory availability concerns identified: existing ${brand} presence detected near this location — territory may already be claimed. See Territory Status below for details. `
+            : `⚠️ Franchise verification required: this analysis reflects market conditions only. Final assessment incorporates territory availability considerations — confirm directly with ${brand}'s franchisor before any investment decision. `;
 
         // The AI generates prose around the pre-adjustment score (e.g. "scores
         // 66/100"), which goes stale once the adjustment is applied. Rewrite
@@ -741,6 +762,58 @@ export const generateViabilityReport = async (
                 .replace(new RegExp(`(viability\\s+score\\s*(?:of|is|at|:)?\\s*)${originalScore}\\b`, 'gi'), `$1${finalScore}`)
                 .replace(new RegExp(`(?<![\\w-])(score\\s+of\\s+)${originalScore}\\b`, 'gi'), `$1${finalScore}`);
 
+        // Bug fix: the AI's own executiveSummary sometimes already contains a
+        // franchise/territory sentence (the prompt asks it to address territory
+        // risk). Strip any such AI-authored sentence before prepending the
+        // canonical one above, so the warning doesn't appear twice.
+        const TERRITORY_SENTENCE_STOPWORDS = new Set(['the', 'a', 'an', 'and', 'of', 'to', 'that', 'just', 'do']);
+        const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const stripAiTerritorySentence = (text: string): string => {
+            const distinctiveWords = brand
+                .split(/\s+/)
+                .filter(w => w.length > 2 && !TERRITORY_SENTENCE_STOPWORDS.has(w.toLowerCase()))
+                .slice(0, 2)
+                .map(escapeRegExp);
+            const normalizedBrand = brand.toLowerCase().replace(/\s+/g, ' ').trim();
+            const sentenceSplit = (text || '').split(/(?<=[.!?])\s+/);
+            return sentenceSplit
+                .filter(sentence => {
+                    const lower = sentence.toLowerCase();
+                    const mentionsBrand = distinctiveWords.length > 0
+                        ? new RegExp(`\\b(${distinctiveWords.join('|')})\\b`, 'i').test(sentence)
+                        : lower.replace(/\s+/g, ' ').includes(normalizedBrand);
+                    const mentionsTerritory = /territory|franchise/i.test(lower);
+                    const mentionsConflict = /nearby|detected|claimed|presence/i.test(lower);
+                    return !(mentionsBrand && mentionsTerritory && mentionsConflict);
+                })
+                .join(' ');
+        };
+
+        // Phase 3: geography-aware signals — computed and stored for
+        // observability only. Does NOT affect adjustment/finalScore/
+        // cappedDecision above (Phase 4 scope).
+        const geographyType = classifySearchGeography(location);
+        const densityTier = getFranchiseDensityTier(brand);
+        let nearestDistanceMiles: number | null = null;
+        if (userLocation?.latitude && userLocation?.longitude && sameBrandIndices.length > 0) {
+            const distances = sameBrandIndices
+                .map(i => competitors[i])
+                .filter((c): c is typeof c & { latitude: number; longitude: number } =>
+                    typeof c?.latitude === 'number' && typeof c?.longitude === 'number')
+                .map(c => haversineMiles(userLocation.latitude, userLocation.longitude, c.latitude, c.longitude));
+            if (distances.length > 0) nearestDistanceMiles = Math.min(...distances);
+        }
+        const territoryStatusPreview = classifyTerritoryStatus({ geographyType, nearestDistanceMiles, densityTier, sameBrandFound });
+        const territoryConfidence = classifyTerritoryConfidence({ geographyType, nearestDistanceMiles, densityTier, sameBrandFound });
+
+        console.log('[FranchiseGeo]', {
+            brand, geographyType, nearestDistanceMiles, densityTier,
+            territoryStatusPreview, territoryConfidence,
+            currentSameBrandFound: sameBrandFound, currentAdjustment: adjustment,
+            currentOriginalScore: originalScore, currentFinalScore: finalScore,
+            currentCappedDecision: cappedDecision,
+        });
+
         result = {
             ...result,
             viabilityScore: finalScore,
@@ -750,12 +823,20 @@ export const generateViabilityReport = async (
                 finalScore,
                 reason: adjustmentReason,
             },
+            franchiseTerritoryCheck: {
+                ...result.franchiseTerritoryCheck!,
+                geographyType,
+                nearestDistanceMiles,
+                densityTier,
+                territoryStatusPreview,
+                territoryConfidence,
+            },
             recommendation: {
                 ...result.recommendation,
                 decision: cappedDecision,
                 reasoning: franchiseReasoning,
             },
-            executiveSummary: franchiseSummaryPrefix + normalizeScoreMentions(result.executiveSummary),
+            executiveSummary: franchiseSummaryPrefix + normalizeScoreMentions(stripAiTerritorySentence(result.executiveSummary)),
             methodology: normalizeScoreMentions(result.methodology),
         };
     }
@@ -852,7 +933,7 @@ export const generateOpportunityReport = async (
         const message = typeof errField === 'string'
             ? errField
             : (errField?.message ?? `Server responded with status ${response.status}`);
-        throw new Error(message);
+        throw new ApiError(message, { code: errorData.code, used: errorData.used, limit: errorData.limit });
     }
 
     return applyEstimatedViabilityScores(await response.json() as OpportunityReport);

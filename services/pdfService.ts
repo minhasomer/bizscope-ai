@@ -198,11 +198,6 @@ export class PDFService {
     doc.setTextColor(20, 25, 30);
     doc.text(sanitizeForPdf(assessmentLabel), 30, 138);
 
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 90, 100);
-    doc.text(`Score: ${report.viabilityScore}/100`, 30, 147);
-
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(60, 65, 70);

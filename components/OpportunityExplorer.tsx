@@ -7,7 +7,7 @@ import {
   ArrowUpDown, X, Sparkles, ArrowRight, ShieldCheck, BarChart2, Briefcase, Layers
 } from 'lucide-react';
 import type { OpportunityReport, BusinessOpportunity } from '../types';
-import { generateOpportunityReport, generateOpportunityDossier } from '../services/geminiService';
+import { generateOpportunityReport, generateOpportunityDossier, ApiError } from '../services/geminiService';
 import { SavedReportsService } from '../services/savedReportsService';
 import { Loader, REPORT_LOADING_MESSAGES } from './Loader';
 import { SubscriptionPlan } from '../src/utils/planUtils';
@@ -93,6 +93,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   // pendingLocation: the location to retry when the user taps Recover Analysis.
   const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<string | null>(null);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
   const [sort, setSort] = useState<SortType>('score');
   const [selectedDossier, setSelectedDossier] = useState<BusinessOpportunity | null>(null);
@@ -264,6 +265,13 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     } catch (err) {
       console.error(err);
       const rawMessage = err instanceof Error ? err.message : 'Failed to analyze opportunities';
+      // Server-side quota rejection (api/opportunities.ts 429) — show the
+      // Market Gap limit modal instead of the generic error banner.
+      if (err instanceof ApiError && err.code === 'QUOTA_EXCEEDED') {
+        sessionStorage.removeItem('bizscope_pending_market_gap');
+        setShowQuotaModal(true);
+        return;
+      }
       // Network interruption (e.g. Android Chrome killed the fetch when the tab was
       // backgrounded): show the recovery banner instead of a permanent failure, and
       // keep the pending key so reload/remount recovery can retry with forceRegenerate=false.
@@ -313,6 +321,13 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
     } catch (err) {
       console.error(err);
       const rawMessage = err instanceof Error ? err.message : 'Failed to analyze opportunities';
+      // Server-side quota rejection (api/opportunities.ts 429) — show the
+      // Market Gap limit modal instead of the generic error banner.
+      if (err instanceof ApiError && err.code === 'QUOTA_EXCEEDED') {
+        sessionStorage.removeItem('bizscope_pending_market_gap');
+        setShowQuotaModal(true);
+        return;
+      }
       // Network interruption (e.g. Android Chrome killed the fetch when the tab was
       // backgrounded): show the recovery banner instead of a permanent failure, and
       // keep the pending key so reload/remount recovery can retry with forceRegenerate=false.
@@ -768,6 +783,44 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Market Gap quota limit modal */}
+      {showQuotaModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="quota-modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity cursor-pointer" onClick={() => setShowQuotaModal(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-gray-150">
+              <div className="bg-white px-5 pt-6 pb-5 sm:p-6 text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-amber-50 text-amber-600 border border-amber-100 mb-4">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <h3 className="text-base font-bold text-gray-900" id="quota-modal-title">
+                  Monthly Market Gap Report Limit Reached
+                </h3>
+                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                  You've used all of your Market Gap reports for this plan this month. Upgrade your plan for additional Market Gap reports.
+                </p>
+              </div>
+              <div className="bg-gray-50 px-4 py-3.5 sm:px-6 flex flex-col sm:flex-row-reverse gap-2 border-t border-gray-100">
+                <button
+                  onClick={() => { setShowQuotaModal(false); onNavigate('pricing'); }}
+                  className="w-full inline-flex justify-center rounded-xl shadow-xs px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition-colors cursor-pointer"
+                >
+                  ⚡ Upgrade Plan
+                </button>
+                <button
+                  onClick={() => setShowQuotaModal(false)}
+                  className="w-full inline-flex justify-center rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Opportunity Dossier Modal */}
       <AnimatePresence>

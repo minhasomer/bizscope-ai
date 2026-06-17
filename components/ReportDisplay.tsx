@@ -760,14 +760,19 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     setShowExportModal(true);
   };
 
-  const getRecommendationStyle = (decision: string) => {
+  const getRecommendationStyle = (decision: string, riskLevel: number) => {
+    // Risk wording is derived from the same scoreToRiskRating() used by the
+    // Risk Level rating elsewhere in this report, so the badge never
+    // contradicts the report's own risk classification (e.g. "Moderate" risk
+    // shown next to a badge that hardcoded "High Risk").
+    const riskLabel = scoreToRiskRating(riskLevel).label;
     switch(decision) {
       case 'Recommended':
         return { bg: 'bg-green-50 text-green-800 border-green-200', label: '✅ Recommended' };
       case 'Caution Advised':
         return { bg: 'bg-amber-50 text-amber-800 border-amber-200', label: '⚠️ Caution Advised — Review Risks First' };
       case 'Not Recommended':
-        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', label: '❌ Not Recommended — High Risk' };
+        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', label: `❌ Not Recommended — ${riskLabel} Risk` };
       case 'Verification Required':
         return { bg: 'bg-orange-50 text-orange-800 border-orange-200', label: '🔍 Verify Territory Before Investing' };
       default:
@@ -793,7 +798,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     }
   };
 
-  const recStyle = getRecommendationStyle(report.recommendation.decision);
+  const recStyle = getRecommendationStyle(report.recommendation.decision, report.riskLevel);
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth">
