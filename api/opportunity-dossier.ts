@@ -6,6 +6,7 @@ import {
   getReportBudget,
   estimateCost,
   wouldExceedHardCap,
+  aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 
@@ -438,11 +439,17 @@ export default async function handler(
     return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
   }
 
+  // Hoisted so the failure-path catch block (outside the try below) can still
+  // report whichever model/usage data was captured before the error occurred.
+  let geminiModelUsed: string | null = null;
+  let dossierUsage: any = null;
+
   try {
     const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
     const normalizedPlan = normalizeTierToBudgetPlan(verifiedPlan);
     const budget = getReportBudget(normalizedPlan, 'standard');
     const model = budget.model;
+    geminiModelUsed = model;
 
     // Build a focused prompt using all available opportunity context
     const oppContext = JSON.stringify({
@@ -499,6 +506,7 @@ Output valid JSON only. No markdown wrappers.
     );
 
     const usage = (result as any).usageMetadata;
+    dossierUsage = usage ?? null;
     const inputTokens: number | null  = usage?.promptTokenCount     ?? null;
     const outputTokens: number | null = usage?.candidatesTokenCount ?? null;
     const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 0);
@@ -540,6 +548,33 @@ Output valid JSON only. No markdown wrappers.
       console.error('[UsageLog] Insert failed (dossier still returned):', logErr.message ?? logErr);
     }
 
+    console.log('[ActivityLog] attempt opportunity-dossier success');
+    try {
+      if (supabaseAdmin) {
+        const aggregatedUsage = aggregateGeminiUsage(model, [dossierUsage]);
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
+          user_id: verifiedUserId,
+          user_email: verifiedEmail,
+          report_type: 'opportunity_dossier',
+          business_type: biz,
+          location,
+          plan_tier: verifiedPlan,
+          success: true,
+          source: 'opportunity_dossier',
+          duration_ms: elapsedMs,
+          ai_model: model,
+          input_tokens: aggregatedUsage.inputTokens,
+          output_tokens: aggregatedUsage.outputTokens,
+          total_tokens: aggregatedUsage.totalTokens,
+          estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+        });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success opportunity-dossier success');
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] failed opportunity-dossier success:', logErr.message ?? logErr);
+    }
+
     return json(res, 200, normalized);
   } catch (err: any) {
     const elapsedMs = Date.now() - startTime;
@@ -564,6 +599,34 @@ Output valid JSON only. No markdown wrappers.
     if (resMessage.includes('API key'))   { httpStatus = 401; resCode = 'MISSING_API_KEY'; }
     else if (isRateLimit)                 { httpStatus = 429; resCode = 'RATE_LIMIT'; resMessage = 'Gemini rate limit hit. Please try again shortly.'; }
     else if (msgLower.includes('timeout')) { httpStatus = 504; resCode = 'TIMEOUT'; resMessage = 'Dossier generation timed out. Please try again.'; }
+
+    console.log('[ActivityLog] attempt opportunity-dossier failure-path');
+    try {
+      if (supabaseAdmin) {
+        const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [dossierUsage]);
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
+          user_id: verifiedUserId,
+          user_email: verifiedEmail,
+          report_type: 'opportunity_dossier',
+          business_type: biz,
+          location,
+          plan_tier: verifiedPlan,
+          success: false,
+          error_message: resMessage?.slice(0, 500),
+          source: 'opportunity_dossier',
+          duration_ms: elapsedMs,
+          ai_model: geminiModelUsed,
+          input_tokens: aggregatedUsage.inputTokens,
+          output_tokens: aggregatedUsage.outputTokens,
+          total_tokens: aggregatedUsage.totalTokens,
+          estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+        });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success opportunity-dossier failure-path');
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] failed opportunity-dossier failure-path:', logErr.message ?? logErr);
+    }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });
   }

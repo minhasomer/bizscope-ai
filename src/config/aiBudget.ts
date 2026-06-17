@@ -274,3 +274,48 @@ export function wouldExceedHardCap(estimatedCostUsd: number, budget: ReportBudge
   if (budget.hardCapUsd === null) return false;
   return estimatedCostUsd > budget.hardCapUsd;
 }
+
+// ─── Multi-call usage aggregation ─────────────────────────────────────────────
+
+export interface AggregatedUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+}
+
+interface GeminiUsageMetadata {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+}
+
+/**
+ * Sums promptTokenCount/candidatesTokenCount/totalTokenCount across multiple
+ * Gemini generateContent responses from the same report (e.g. research +
+ * synthesis calls), and estimates the combined token cost.
+ *
+ * Per call, totalTokenCount falls back to promptTokenCount + candidatesTokenCount
+ * if the SDK omitted it. Null/undefined entries (e.g. a research phase that
+ * failed before producing a response) are skipped.
+ */
+export function aggregateGeminiUsage(
+  model: string,
+  usages: Array<GeminiUsageMetadata | null | undefined>,
+): AggregatedUsage {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let totalTokens = 0;
+
+  for (const usage of usages) {
+    if (!usage) continue;
+    const inTok = usage.promptTokenCount ?? 0;
+    const outTok = usage.candidatesTokenCount ?? 0;
+    inputTokens += inTok;
+    outputTokens += outTok;
+    totalTokens += usage.totalTokenCount ?? (inTok + outTok);
+  }
+
+  const { estimatedCostUsd } = estimateCost(model, inputTokens, outputTokens, 0);
+  return { inputTokens, outputTokens, totalTokens, estimatedCostUsd };
+}

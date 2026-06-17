@@ -6,6 +6,7 @@ import {
   getReportBudget,
   estimateCost,
   wouldExceedHardCap,
+  aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise, findSameBrandCompetitors } from '../src/utils/franchiseDetection.js';
@@ -760,6 +761,11 @@ export default async function handler(
             success: true,
             source: 'dashboard',
             duration_ms: Date.now() - requestStartMs,
+            ai_model: null,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            estimated_ai_cost: 0,
           });
           if (activityLogErr) throw activityLogErr;
           console.log('[ActivityLog] success analyze cache-hit');
@@ -786,11 +792,19 @@ export default async function handler(
     return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
   }
 
+  // Hoisted so the failure-path catch block (outside the try below) can still
+  // report whichever model/usage data was captured before the error occurred.
+  let geminiModelUsed: string | null = null;
+  let phase1Usage: any = null;
+  let phase2Usage: any = null;
+  let phase3Usage: any = null;
+
   try {
     const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
     const normalizedPlan = normalizeTierToBudgetPlan(verifiedPlan);
     const budget = getReportBudget(normalizedPlan, 'standard');
     const model = budget.model;
+    geminiModelUsed = model;
     console.log('[analyze diag] model selected:', { normalizedPlan, model, maxOutputTokens: budget.maxOutputTokens });
     let sources: { title: string; uri: string }[] = [];
     let competitionInfo = 'No competitor data available.';
@@ -839,6 +853,7 @@ Return all results combined, existing same-brand locations listed first. Include
       );
       competitionInfo = mapsRes.text || competitionInfo;
       sources.push(...getGroundingSources(mapsRes));
+      phase1Usage = (mapsRes as any).usageMetadata ?? null;
       console.log('[analyze diag] phase 1 success:', { phase: 1, responseChars: competitionInfo.length });
     } catch (err) {
       console.warn('[analyze] phase 1 (Maps) failed:', geminiErrDiag(err));
@@ -859,6 +874,7 @@ Return all results combined, existing same-brand locations listed first. Include
       );
       marketInfo = searchRes.text || marketInfo;
       sources.push(...getGroundingSources(searchRes));
+      phase2Usage = (searchRes as any).usageMetadata ?? null;
       console.log('[analyze diag] phase 2 success:', { phase: 2, responseChars: marketInfo.length });
     } catch (err) {
       console.warn('[analyze] phase 2 (Search) failed:', geminiErrDiag(err));
@@ -936,6 +952,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     const phase3ElapsedMs = Date.now() - phase3StartMs;
 
     const usage = (synthesis as any).usageMetadata;
+    phase3Usage = usage ?? null;
     const inputTokens: number | null = usage?.promptTokenCount ?? null;
     const outputTokens: number | null = usage?.candidatesTokenCount ?? null;
     const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 2);
@@ -1085,6 +1102,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     console.log('[ActivityLog] attempt analyze success');
     try {
       if (supabaseAdmin) {
+        const aggregatedUsage = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, phase3Usage]);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
@@ -1098,6 +1116,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           success: true,
           source: 'dashboard',
           duration_ms: Date.now() - requestStartMs,
+          ai_model: model,
+          input_tokens: aggregatedUsage.inputTokens,
+          output_tokens: aggregatedUsage.outputTokens,
+          total_tokens: aggregatedUsage.totalTokens,
+          estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success analyze success');
@@ -1150,6 +1173,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     console.log('[ActivityLog] attempt analyze failure-path');
     try {
       if (supabaseAdmin) {
+        const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage, phase3Usage]);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
@@ -1164,6 +1188,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           error_message: resMessage?.slice(0, 500),
           source: 'dashboard',
           duration_ms: Date.now() - requestStartMs,
+          ai_model: geminiModelUsed,
+          input_tokens: aggregatedUsage.inputTokens,
+          output_tokens: aggregatedUsage.outputTokens,
+          total_tokens: aggregatedUsage.totalTokens,
+          estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success analyze failure-path');

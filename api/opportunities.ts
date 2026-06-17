@@ -6,6 +6,7 @@ import {
   getReportBudget,
   estimateCost,
   wouldExceedHardCap,
+  aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
@@ -539,6 +540,11 @@ export default async function handler(
             source: 'market_gap_card',
             duration_ms: Date.now() - requestStartMs,
             metadata: { topOpportunityNames: topNames },
+            ai_model: null,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            estimated_ai_cost: 0,
           });
           if (activityLogErr) throw activityLogErr;
           console.log('[ActivityLog] success opportunities cache-hit');
@@ -566,11 +572,18 @@ export default async function handler(
     return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
   }
 
+  // Hoisted so the failure-path catch block (outside the try below) can still
+  // report whichever model/usage data was captured before the error occurred.
+  let geminiModelUsed: string | null = null;
+  let phase1Usage: any = null;
+  let phase2Usage: any = null;
+
   try {
     const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
     const normalizedPlan = normalizeTierToBudgetPlan(verifiedPlan);
     const budget = getReportBudget(normalizedPlan, 'standard');
     const model = budget.model;
+    geminiModelUsed = model;
     console.log('[opportunities diag] model selected:', { normalizedPlan, model, maxOutputTokens: 8192 });
 
     let sources: { title: string; uri: string }[] = [];
@@ -608,6 +621,7 @@ export default async function handler(
       );
       marketData = searchRes.text || marketData;
       sources.push(...getGroundingSources(searchRes));
+      phase1Usage = (searchRes as any).usageMetadata ?? null;
       console.log('[opportunities diag] phase 1 success:', { phase: 1, responseChars: marketData.length });
     } catch (err) {
       console.warn('[opportunities] phase 1 (Search) failed:', geminiErrDiag(err));
@@ -688,6 +702,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     const phase2ElapsedMs = Date.now() - phase2StartMs;
 
     const usage = (synthesis as any).usageMetadata;
+    phase2Usage = usage ?? null;
     const inputTokens: number | null  = usage?.promptTokenCount      ?? null;
     const outputTokens: number | null = usage?.candidatesTokenCount  ?? null;
     const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 1);
@@ -753,6 +768,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
         const topNames = Array.isArray(parsed?.topOpportunities)
           ? parsed.topOpportunities.slice(0, 5).map((o: any) => o.businessType).filter(Boolean)
           : [];
+        const aggregatedUsage = aggregateGeminiUsage(model, [phase1Usage, phase2Usage]);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
@@ -767,6 +783,11 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           source: 'market_gap_card',
           duration_ms: Date.now() - requestStartMs,
           metadata: { topOpportunityNames: topNames },
+          ai_model: model,
+          input_tokens: aggregatedUsage.inputTokens,
+          output_tokens: aggregatedUsage.outputTokens,
+          total_tokens: aggregatedUsage.totalTokens,
+          estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunities success');
@@ -814,6 +835,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     console.log('[ActivityLog] attempt opportunities failure-path');
     try {
       if (supabaseAdmin) {
+        const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage]);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
@@ -828,6 +850,11 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           error_message: resMessage?.slice(0, 500),
           source: 'market_gap_card',
           duration_ms: Date.now() - requestStartMs,
+          ai_model: geminiModelUsed,
+          input_tokens: aggregatedUsage.inputTokens,
+          output_tokens: aggregatedUsage.outputTokens,
+          total_tokens: aggregatedUsage.totalTokens,
+          estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunities failure-path');
