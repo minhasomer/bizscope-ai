@@ -14,7 +14,7 @@
  */
 
 import type { SubscriptionPlan } from '../utils/planUtils';
-import { getPlanLimits } from './plans';
+import { getPlanLimits } from './plans.js';
 
 /** Month key format used to bucket usage_tracking rows, e.g. "2026-06". */
 export function getCurrentMonthKey(date: Date = new Date()): string {
