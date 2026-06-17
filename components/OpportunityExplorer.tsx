@@ -33,6 +33,21 @@ function resolveViabilityScore(scores: { estimatedViabilityScore?: number; overa
   return scores.estimatedViabilityScore ?? scores.overallPotental;
 }
 
+/** Returns true when an error message is a browser-level network interruption
+ *  (e.g. Android Chrome killed the TCP connection when the tab was backgrounded)
+ *  rather than an API or model error. Mirrors App.tsx's isNetworkInterruption(). */
+function isNetworkInterruption(msg: string): boolean {
+  const m = msg.toLowerCase();
+  return (
+    m.includes('failed to fetch') ||
+    m.includes('networkerror') ||
+    m.includes('network error') ||
+    m.includes('aborterror') ||
+    m.includes('the user aborted') ||
+    m.includes('aborted a request')
+  );
+}
+
 function getOpportunityTier(score: number): OpportunityTier {
   if (score >= 90) return { label: 'Top Opportunity',      emoji: '🥇', badgeBg: 'bg-yellow-50',  badgeBorder: 'border-yellow-200', badgeText: 'text-yellow-800' };
   if (score >= 80) return { label: 'High Potential',       emoji: '🥈', badgeBg: 'bg-slate-50',   badgeBorder: 'border-slate-300',  badgeText: 'text-slate-700'  };
@@ -247,9 +262,18 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
         );
       }
     } catch (err) {
-      sessionStorage.removeItem('bizscope_pending_market_gap');
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze opportunities');
+      const rawMessage = err instanceof Error ? err.message : 'Failed to analyze opportunities';
+      // Network interruption (e.g. Android Chrome killed the fetch when the tab was
+      // backgrounded): show the recovery banner instead of a permanent failure, and
+      // keep the pending key so reload/remount recovery can retry with forceRegenerate=false.
+      if (isNetworkInterruption(rawMessage)) {
+        setPendingLocation(locationStr);
+        setShowRecoveryBanner(true);
+        return;
+      }
+      sessionStorage.removeItem('bizscope_pending_market_gap');
+      setError(rawMessage);
     } finally {
       setIsLoading(false);
       setLoadingMessage('');
@@ -287,9 +311,18 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
         );
       }
     } catch (err) {
-      sessionStorage.removeItem('bizscope_pending_market_gap');
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze opportunities');
+      const rawMessage = err instanceof Error ? err.message : 'Failed to analyze opportunities';
+      // Network interruption (e.g. Android Chrome killed the fetch when the tab was
+      // backgrounded): show the recovery banner instead of a permanent failure, and
+      // keep the pending key so reload/remount recovery can retry with forceRegenerate=false.
+      if (isNetworkInterruption(rawMessage)) {
+        setPendingLocation(location.trim());
+        setShowRecoveryBanner(true);
+        return;
+      }
+      sessionStorage.removeItem('bizscope_pending_market_gap');
+      setError(rawMessage);
     } finally {
       setIsLoading(false);
       setLoadingMessage('');

@@ -183,6 +183,7 @@ const App: React.FC = () => {
     businessType: string;
     location: string;
     forceRegenerate: boolean;
+    isAnonymousPreview?: boolean;
   } | null>(null);
 
   // Effective plan driving all feature gating — preview only active in local dev.
@@ -228,6 +229,40 @@ const App: React.FC = () => {
       }
     } catch {
       sessionStorage.removeItem('bizscope_pending_analysis');
+    }
+  }, []);
+
+  // Same recovery check for the anonymous (not-signed-in) free preview flow, which
+  // uses a separate key since it replays through runAnonymousPreview, not runAnalysis.
+  useEffect(() => {
+    const PENDING_KEY = 'bizscope_pending_preview';
+    const MAX_AGE_MS  = 10 * 60 * 1000; // 10 minutes
+    try {
+      const raw = sessionStorage.getItem(PENDING_KEY);
+      if (!raw) return;
+      const pending = JSON.parse(raw) as {
+        businessType: string;
+        location: string;
+        startedAt: number;
+      };
+      const ageMs = Date.now() - (pending.startedAt ?? 0);
+      if (
+        ageMs < MAX_AGE_MS &&
+        typeof pending.businessType === 'string' &&
+        typeof pending.location    === 'string'
+      ) {
+        lastAnalysisParams.current = {
+          businessType:       pending.businessType,
+          location:           pending.location,
+          forceRegenerate:    false,
+          isAnonymousPreview: true,
+        };
+        setShowRecoveryBanner(true);
+      } else {
+        sessionStorage.removeItem(PENDING_KEY);
+      }
+    } catch {
+      sessionStorage.removeItem('bizscope_pending_preview');
     }
   }, []);
 
@@ -493,6 +528,8 @@ const App: React.FC = () => {
     location: string,
   ) => {
     console.log(`[BizScope] runAnonymousPreview: biz="${businessType}" loc="${location}"`);
+    lastAnalysisParams.current = { businessType, location, forceRegenerate: false, isAnonymousPreview: true };
+    setShowRecoveryBanner(false);
     setIsLoading(true);
     setError(null);
     setReport(null);
@@ -501,6 +538,14 @@ const App: React.FC = () => {
     setTimeout(() => {
       document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
+
+    // Persist params so they survive a tab discard / page reload on Android Chrome.
+    // Cleared on success or on a non-recoverable failure (see catch block below).
+    sessionStorage.setItem('bizscope_pending_preview', JSON.stringify({
+      businessType,
+      location,
+      startedAt: Date.now(),
+    }));
 
     try {
       const previewReport = await generateAnonymousPreviewReport(
@@ -511,12 +556,21 @@ const App: React.FC = () => {
       );
       UsageTrackerService.incrementAnonymousPreviewUsage();
       setReport(previewReport);
+      sessionStorage.removeItem('bizscope_pending_preview');
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (err) {
       console.error(err);
       const rawMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
+      // Network interruption (e.g. Android Chrome killed the fetch when the tab was
+      // backgrounded): show the amber recovery banner instead of a permanent failure,
+      // and keep the pending key so a retry/reload can pick this back up.
+      if (isNetworkInterruption(rawMessage) && lastAnalysisParams.current) {
+        setShowRecoveryBanner(true);
+        return;
+      }
+      sessionStorage.removeItem('bizscope_pending_preview');
       setError(rawMessage);
     } finally {
       setIsLoading(false);
@@ -1332,7 +1386,11 @@ const App: React.FC = () => {
                             <button
                               onClick={() => {
                                 const p = lastAnalysisParams.current!;
-                                runAnalysis(p.businessType, p.location, p.forceRegenerate);
+                                if (p.isAnonymousPreview) {
+                                  runAnonymousPreview(p.businessType, p.location);
+                                } else {
+                                  runAnalysis(p.businessType, p.location, p.forceRegenerate);
+                                }
                               }}
                               className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl transition-colors"
                             >
