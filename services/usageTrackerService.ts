@@ -2,6 +2,7 @@ import { isDemoMode } from '../src/config/appConfig';
 import { SubscriptionPlan } from '../src/utils/planUtils';
 import { assertDemoService } from '../src/lib/guardrails';
 import { getPlanLimits, ANONYMOUS_LIMITS, canGeneratePreviewReport } from '../src/config/plans';
+import { supabase } from './supabaseClient';
 
 export interface UsageState {
   standardUsed: number;
@@ -196,6 +197,53 @@ export class UsageTrackerService {
       standardLimitDescription,
       resetCycleDescription,
     };
+  }
+
+  /**
+   * Fetches usage from the server-side source of truth (/api/usage-summary)
+   * for an authenticated user. Falls back to the existing localStorage-based
+   * getDetails() on any failure (no session, network error, non-200, etc.) —
+   * per rollout requirement, localStorage stays the fallback until the
+   * server-side display is confirmed working.
+   */
+  public static async getServerDetails(plan: SubscriptionPlan): Promise<UsageDetails> {
+    const fallback = () => this.getDetails(plan);
+    try {
+      const sessionResult = await supabase?.auth.getSession();
+      const token = sessionResult?.data?.session?.access_token ?? null;
+      if (!token) return fallback();
+
+      const response = await fetch('/api/usage-summary', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) return fallback();
+
+      const data = await response.json();
+      const limits = getPlanLimits(plan);
+      const standardUsed = data?.standard?.used ?? 0;
+      const standardLimit: number | null = data?.standard?.limit ?? limits.standardReportsPerCycle;
+      const standardRemaining = standardLimit === null ? Infinity : Math.max(0, standardLimit - standardUsed);
+
+      return {
+        plan,
+        standardLimit,
+        standardUsed,
+        standardRemaining,
+        standardResetDate: null, // server tracks by calendar month, not a rolling reset timestamp
+        regionalLimit: limits.regionalReportsPerCycle,
+        regionalUsed: 0, // regional reports are not yet server-tracked by this task
+        regionalRemaining: limits.regionalReportsPerCycle === null ? Infinity : limits.regionalReportsPerCycle,
+        regionalResetDate: null,
+        canRunStandard: standardLimit === null || standardRemaining > 0,
+        canRunRegional: limits.regionalReportsPerCycle === null || limits.regionalReportsPerCycle > 0,
+        standardLimitDescription: standardLimit === null ? 'Unlimited reports' : `${standardLimit} reports per month`,
+        resetCycleDescription: limits.standardResetCycle === 'none' ? 'No reset limits' : 'Monthly reset cycle',
+      };
+    } catch (e) {
+      console.error('[Usage] getServerDetails failed, falling back to localStorage:', e);
+      return fallback();
+    }
   }
 
   /**

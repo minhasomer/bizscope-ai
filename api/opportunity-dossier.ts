@@ -8,6 +8,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
+import { incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 
 export const maxDuration = 60;
@@ -574,6 +575,9 @@ Output valid JSON only. No markdown wrappers.
     } catch (logErr: any) {
       console.error('[ActivityLog] failed opportunity-dossier success:', logErr.message ?? logErr);
     }
+
+    // Visibility-only — not enforced as a quota cap, no separate report_type limit defined yet.
+    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'opportunity_dossier');
 
     return json(res, 200, normalized);
   } catch (err: any) {

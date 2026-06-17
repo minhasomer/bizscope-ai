@@ -346,24 +346,38 @@ const App: React.FC = () => {
 
   const [usage, setUsage] = useState<UsageDetails>(() => UsageTrackerService.getDetails(baseUserPlan));
 
+  // Reads server-side usage (/api/usage-summary) for authenticated users,
+  // falling back to localStorage for anonymous/demo sessions or on any
+  // server-read failure. localStorage stays the fallback until server-side
+  // display is confirmed working in production.
+  const refreshUsage = useCallback(async (plan: SubscriptionPlan): Promise<UsageDetails> => {
+    return currentUser ? UsageTrackerService.getServerDetails(plan) : UsageTrackerService.getDetails(plan);
+  }, [currentUser]);
+
   useEffect(() => {
     // Refresh usage whenever the effective plan changes — this catches the async
     // auth load race where baseUserPlan starts as 'Explorer' then resolves to the
     // real plan (e.g. 'Enterprise'), preventing a stale quota on the Dashboard.
-    const u = UsageTrackerService.getDetails(userPlan);
-    setUsage(u);
-    setReportsRunCount(u.standardUsed);
+    let cancelled = false;
+    refreshUsage(userPlan).then(u => {
+      if (cancelled) return;
+      setUsage(u);
+      setReportsRunCount(u.standardUsed);
+    });
 
     const handleUsageUpdate = () => {
-      const fresh = UsageTrackerService.getDetails(userPlan);
-      setUsage(fresh);
-      setReportsRunCount(fresh.standardUsed);
+      refreshUsage(userPlan).then(fresh => {
+        if (cancelled) return;
+        setUsage(fresh);
+        setReportsRunCount(fresh.standardUsed);
+      });
     };
     window.addEventListener('bizscope_usage_update', handleUsageUpdate);
     return () => {
+      cancelled = true;
       window.removeEventListener('bizscope_usage_update', handleUsageUpdate);
     };
-  }, [userPlan]);
+  }, [userPlan, refreshUsage]);
 
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
   const [savedReports, setSavedReports] = useState<ViabilityReport[]>([]);
@@ -422,9 +436,10 @@ const App: React.FC = () => {
   const handleSelectPlan = (plan: SubscriptionPlan) => {
     setBaseUserPlan(plan);
     setPreviewRole(null);
-    const u = UsageTrackerService.getDetails(plan);
-    setUsage(u);
-    setReportsRunCount(u.standardUsed);
+    refreshUsage(plan).then(u => {
+      setUsage(u);
+      setReportsRunCount(u.standardUsed);
+    });
 
     // In demo mode: persist the switcher choice to localStorage and update the cached user object.
     // In live mode: plan is DB-authoritative — saveUserPlan is a no-op, and currentUser.plan
@@ -632,8 +647,11 @@ const App: React.FC = () => {
       }, 100);
 
       if (fullReport && !fullReport.loadedFromCache) {
+        // Server already incremented usage_tracking on success (api/analyze.ts).
+        // incrementStandardUsage keeps the localStorage fallback in sync for
+        // anonymous/demo sessions and as a safety net during rollout.
         await UsageTrackerService.incrementStandardUsage(userPlan);
-        const u = UsageTrackerService.getDetails(userPlan);
+        const u = await refreshUsage(userPlan);
         setUsage(u);
         setReportsRunCount(u.standardUsed);
       }
@@ -697,7 +715,10 @@ const App: React.FC = () => {
     const role = currentUser?.role ?? '';
     // Admin and Enterprise users have unlimited quota — never hit the client-side limit modal.
     const isUnlimited = isAdmin(role) || userPlan === 'Enterprise';
-    const currentUsage = UsageTrackerService.getDetails(userPlan);
+    // Use the already-loaded `usage` state (server-side for authenticated users via
+    // refreshUsage, localStorage fallback otherwise) instead of re-reading localStorage
+    // directly — keeps this client-side pre-check consistent with the displayed quota.
+    const currentUsage = usage;
 
     console.log(`[BizScope] handleAnalysisRequest: biz="${businessType}" loc="${location}" forceRegen=${forceRegenerate} role="${role}" plan="${userPlan}" betaEnabled=${isBetaRoleEnabled(role)} isUnlimited=${isUnlimited} canRunStandard=${currentUsage.canRunStandard}`);
 

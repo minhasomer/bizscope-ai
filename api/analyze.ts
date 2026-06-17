@@ -8,6 +8,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
+import { checkStandardQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise, findSameBrandCompetitors } from '../src/utils/franchiseDetection.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
@@ -792,6 +793,18 @@ export default async function handler(
     return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
   }
 
+  // ── Server-side quota check — standard reports (after cache, before Gemini) ─
+  const quota = await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  if (!quota.allowed) {
+    console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
+    return json(res, 429, {
+      error: 'Monthly report limit reached for your plan.',
+      code: 'QUOTA_EXCEEDED',
+      used: quota.used,
+      limit: quota.limit,
+    });
+  }
+
   // Hoisted so the failure-path catch block (outside the try below) can still
   // report whichever model/usage data was captured before the error occurred.
   let geminiModelUsed: string | null = null;
@@ -1128,6 +1141,9 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     } catch (logErr: any) {
       console.error('[ActivityLog] failed analyze success:', logErr.message ?? logErr);
     }
+
+    // Quota counter — only fresh, successful, non-cached generations count.
+    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;

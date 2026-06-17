@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, AuthService } from '../services/authService';
 import {
   User,
@@ -12,7 +12,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { UsageTrackerService } from '../services/usageTrackerService';
+import { UsageTrackerService, UsageDetails } from '../services/usageTrackerService';
 
 interface AccountSettingsProps {
   user: UserProfile;
@@ -33,7 +33,17 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
 
-  const usage = UsageTrackerService.getDetails(user.plan);
+  const [usage, setUsage] = useState<UsageDetails>(() => UsageTrackerService.getDetails(user.plan));
+
+  useEffect(() => {
+    let cancelled = false;
+    // AccountSettings only renders for authenticated users — always prefer
+    // server-side usage, falling back to localStorage on failure.
+    UsageTrackerService.getServerDetails(user.plan).then(u => {
+      if (!cancelled) setUsage(u);
+    });
+    return () => { cancelled = true; };
+  }, [user.plan]);
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
