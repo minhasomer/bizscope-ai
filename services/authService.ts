@@ -412,7 +412,14 @@ export class AuthService {
 
     if (this.isSupabaseActive()) {
       const { data, error } = await supabase!.auth.signInWithPassword({ email, password });
-      if (error) throw new Error(error.message);
+      if (error) {
+        if (error.code === 'email_not_confirmed' || error.message.includes('Email not confirmed')) {
+          throw new EmailConfirmationRequiredError(
+            'Please verify your email before signing in. Check your inbox and spam folder.',
+          );
+        }
+        throw new Error(error.message);
+      }
       const user = data.user;
       if (!user) throw new Error('A severe runtime error occurred during sign in.');
 

@@ -80,7 +80,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           throw new Error('You must accept the Terms of Service and Privacy Policy to create an account.');
         }
         const user = await AuthService.signUp(email, password, fullName.trim(), 'Explorer', new Date().toISOString());
-        // Email confirmation is NOT required — sign the user in immediately.
+        // signUp() only resolves (rather than throwing EmailConfirmationRequiredError)
+        // when Supabase returned an active session, i.e. confirmation isn't pending.
         setSuccessMessage('Account created! Signing you in...');
         setTimeout(() => {
           onAuthSuccess(user);
