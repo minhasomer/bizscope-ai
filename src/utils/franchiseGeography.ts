@@ -22,7 +22,11 @@ export function classifySearchGeography(locationInput: string): GeographyType {
   const input = (locationInput || '').trim();
   if (!input) return 'city';
 
-  if (/^\d{5}(-\d{4})?$/.test(input)) return 'zip';
+  // Root cause of the prior bug: this required the ENTIRE trimmed string to
+  // be just the zip digits, so "60031, IL" (the actual format the app sends
+  // — see api/analyze.ts request body) fell through to the 'city' default.
+  // Fix: allow an optional trailing state suffix (", IL" / " IL" / ", Illinois").
+  if (/^\d{5}(-\d{4})?(\s*,?\s*[a-z]{2,})?$/i.test(input)) return 'zip';
   if (/\bcounty\b/i.test(input)) return 'county';
   if (/\b(metro|metropolitan area|metro area)\b/i.test(input)) return 'metro';
   if (/\b(region|area|tri-state|state of)\b/i.test(input)) return 'region';
