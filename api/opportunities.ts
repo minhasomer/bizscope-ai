@@ -496,6 +496,7 @@ export default async function handler(
     });
   }
 
+  const requestStartMs = Date.now();
   const body = req.body ?? {};
   const { location, forceRegenerate } = body;
 
@@ -518,6 +519,30 @@ export default async function handler(
     const cacheHit = await getFromServerCache('market_gaps', canonLocation, 'opportunities', MARKET_GAP_CACHE_MAX_AGE_DAYS);
     if (cacheHit && !cacheHit.isStale) {
       console.log(`[MarketGapCache] HIT — ${canonLocation}`);
+      try {
+        if (supabaseAdmin) {
+          const topNames = Array.isArray((cacheHit.report as any)?.topOpportunities)
+            ? (cacheHit.report as any).topOpportunities.slice(0, 5).map((o: any) => o.businessType).filter(Boolean)
+            : [];
+          await supabaseAdmin.from('report_activity_log').insert({
+            user_id: verifiedUserId,
+            user_email: verifiedEmail,
+            report_type: 'market_gap',
+            business_type: 'market_gaps',
+            location: location.trim(),
+            normalized_location: canonLocation,
+            plan_tier: verifiedPlan,
+            cache_status: 'hit',
+            force_regenerate: false,
+            success: true,
+            source: 'market_gap_card',
+            duration_ms: Date.now() - requestStartMs,
+            metadata: { topOpportunityNames: topNames },
+          });
+        }
+      } catch (logErr: any) {
+        console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+      }
       return json(res, 200, {
         ...cacheHit.report,
         _cached:        true,
@@ -719,6 +744,31 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
 
+    try {
+      if (supabaseAdmin) {
+        const topNames = Array.isArray(parsed?.topOpportunities)
+          ? parsed.topOpportunities.slice(0, 5).map((o: any) => o.businessType).filter(Boolean)
+          : [];
+        await supabaseAdmin.from('report_activity_log').insert({
+          user_id: verifiedUserId,
+          user_email: verifiedEmail,
+          report_type: 'market_gap',
+          business_type: 'market_gaps',
+          location: location.trim(),
+          normalized_location: canonLocation,
+          plan_tier: verifiedPlan,
+          cache_status: forceRegenerate ? 'regenerated' : (cacheWasStale ? 'regenerated' : 'fresh'),
+          force_regenerate: !!forceRegenerate,
+          success: true,
+          source: 'market_gap_card',
+          duration_ms: Date.now() - requestStartMs,
+          metadata: { topOpportunityNames: topNames },
+        });
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+    }
+
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;
 
@@ -753,6 +803,28 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
       resMessage = 'The AI returned an unexpected response format. Please try again — this is usually transient.';
       console.error('[opportunities] Gemini returned unparseable JSON — no opportunities generated.', { location: location?.slice(0, 60) });
+    }
+
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('report_activity_log').insert({
+          user_id: verifiedUserId,
+          user_email: verifiedEmail,
+          report_type: 'market_gap',
+          business_type: 'market_gaps',
+          location: location ? location.trim() : null,
+          normalized_location: location ? canonicalizeLocationForCache(location.trim()) : null,
+          plan_tier: verifiedPlan,
+          cache_status: null,
+          force_regenerate: !!forceRegenerate,
+          success: false,
+          error_message: resMessage?.slice(0, 500),
+          source: 'market_gap_card',
+          duration_ms: Date.now() - requestStartMs,
+        });
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] Insert failed (error path):', logErr.message ?? logErr);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });

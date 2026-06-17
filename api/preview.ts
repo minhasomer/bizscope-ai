@@ -294,6 +294,7 @@ export default async function handler(
     return json(res, 405, { error: 'Method not allowed.', code: 'METHOD_NOT_ALLOWED' });
   }
 
+  const requestStartMs = Date.now();
   const body = req.body ?? {};
   const { businessType, location, userLocation } = body;
 
@@ -543,6 +544,27 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.error('[UsageLog] /preview insert failed (report still returned):', logErr.message ?? logErr);
     }
 
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('report_activity_log').insert({
+          user_id: null,
+          user_email: null,
+          report_type: 'preview',
+          business_type: businessType,
+          location,
+          normalized_location: null,
+          plan_tier: 'Anonymous',
+          cache_status: 'preview',
+          force_regenerate: false,
+          success: true,
+          source: 'homepage',
+          duration_ms: Date.now() - requestStartMs,
+        });
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] /preview insert failed (report still returned):', logErr.message ?? logErr);
+    }
+
     return json(res, 200, parsed);
   } catch (err: any) {
     const errStatus  = err?.status  ?? err?.httpStatus ?? null;
@@ -567,6 +589,28 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     else if (msgLower.includes('malformed_response')) {
       httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
       console.error('[preview] Gemini returned unparseable JSON — no report generated.');
+    }
+
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('report_activity_log').insert({
+          user_id: null,
+          user_email: null,
+          report_type: 'preview',
+          business_type: businessType,
+          location,
+          normalized_location: null,
+          plan_tier: 'Anonymous',
+          cache_status: null,
+          force_regenerate: false,
+          success: false,
+          error_message: resMessage?.slice(0, 500),
+          source: 'homepage',
+          duration_ms: Date.now() - requestStartMs,
+        });
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] /preview insert failed (error path):', logErr.message ?? logErr);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });

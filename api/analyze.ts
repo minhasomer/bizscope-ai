@@ -713,6 +713,7 @@ export default async function handler(
   }
   console.log(`[Analyze] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} betaFullAccess=${_serverBetaFullAccess}`);
 
+  const requestStartMs = Date.now();
   const body = req.body ?? {};
   const { businessType, location, userLocation, forceRegenerate } = body;
 
@@ -743,6 +744,26 @@ export default async function handler(
     const cacheHit = await getFromServerCache(businessType, location, 'standard', VIABILITY_CACHE_MAX_AGE_DAYS);
     if (cacheHit && !cacheHit.isStale) {
       console.log(`[Analyze] Cache hit — returning cached report, no Gemini call for ${businessType} / ${location}`);
+      try {
+        if (supabaseAdmin) {
+          await supabaseAdmin.from('report_activity_log').insert({
+            user_id: verifiedUserId,
+            user_email: verifiedEmail,
+            report_type: 'viability',
+            business_type: businessType,
+            location,
+            normalized_location: normalizeCacheKey(location),
+            plan_tier: verifiedPlan,
+            cache_status: 'hit',
+            force_regenerate: false,
+            success: true,
+            source: 'dashboard',
+            duration_ms: Date.now() - requestStartMs,
+          });
+        }
+      } catch (logErr: any) {
+        console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+      }
       return json(res, 200, {
         ...cacheHit.report,
         _cached:        true,
@@ -1058,6 +1079,27 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
 
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('report_activity_log').insert({
+          user_id: verifiedUserId,
+          user_email: verifiedEmail,
+          report_type: 'viability',
+          business_type: businessType,
+          location,
+          normalized_location: normalizeCacheKey(location),
+          plan_tier: verifiedPlan,
+          cache_status: forceRegenerate ? 'regenerated' : (cacheWasStale ? 'regenerated' : 'fresh'),
+          force_regenerate: !!forceRegenerate,
+          success: true,
+          source: 'dashboard',
+          duration_ms: Date.now() - requestStartMs,
+        });
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+    }
+
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;
 
@@ -1097,6 +1139,28 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
       resMessage = 'The AI returned an unexpected response format. Please try again — this is usually transient.';
       console.error('[analyze] Gemini returned unparseable JSON — no report generated.', { businessType: businessType?.slice(0, 60) });
+    }
+
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('report_activity_log').insert({
+          user_id: verifiedUserId,
+          user_email: verifiedEmail,
+          report_type: 'viability',
+          business_type: businessType,
+          location,
+          normalized_location: location ? normalizeCacheKey(location) : null,
+          plan_tier: verifiedPlan,
+          cache_status: null,
+          force_regenerate: !!forceRegenerate,
+          success: false,
+          error_message: resMessage?.slice(0, 500),
+          source: 'dashboard',
+          duration_ms: Date.now() - requestStartMs,
+        });
+      }
+    } catch (logErr: any) {
+      console.error('[ActivityLog] Insert failed (error path):', logErr.message ?? logErr);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });
