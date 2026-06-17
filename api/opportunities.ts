@@ -105,8 +105,14 @@ function repairTruncatedJSON(s: string): string {
     else if (ch === '[')           closes.push(']');
     else if (ch === '}' || ch === ']') closes.pop();
   }
-  if (closes.length === 0) return s;
+  if (closes.length === 0 && !inString) return s;
   let repaired = s.trimEnd().replace(/,\s*$/, '').replace(/:\s*$/, ': null');
+  // Gemini output can be truncated mid-string-value (e.g. cut off inside a
+  // competitor's "address" field) when it hits maxOutputTokens. If the walk
+  // above ended still inside a string, close that string first — otherwise
+  // every brace/bracket we append below stays inside the unterminated string
+  // and JSON.parse still fails.
+  if (inString) repaired += '"';
   for (let i = closes.length - 1; i >= 0; i--) repaired += closes[i];
   return repaired;
 }
