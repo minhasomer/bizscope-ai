@@ -544,9 +544,10 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.error('[UsageLog] /preview insert failed (report still returned):', logErr.message ?? logErr);
     }
 
+    console.log('[ActivityLog] attempt preview success');
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('report_activity_log').insert({
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: null,
           user_email: null,
           report_type: 'preview',
@@ -560,9 +561,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           source: 'homepage',
           duration_ms: Date.now() - requestStartMs,
         });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success preview success');
       }
     } catch (logErr: any) {
-      console.error('[ActivityLog] /preview insert failed (report still returned):', logErr.message ?? logErr);
+      console.error('[ActivityLog] failed preview success:', logErr.message ?? logErr);
     }
 
     return json(res, 200, parsed);
@@ -591,9 +594,10 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.error('[preview] Gemini returned unparseable JSON — no report generated.');
     }
 
+    console.log('[ActivityLog] attempt preview failure-path');
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('report_activity_log').insert({
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: null,
           user_email: null,
           report_type: 'preview',
@@ -608,9 +612,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           source: 'homepage',
           duration_ms: Date.now() - requestStartMs,
         });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success preview failure-path');
       }
     } catch (logErr: any) {
-      console.error('[ActivityLog] /preview insert failed (error path):', logErr.message ?? logErr);
+      console.error('[ActivityLog] failed preview failure-path:', logErr.message ?? logErr);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });

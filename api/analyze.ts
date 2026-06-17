@@ -744,9 +744,10 @@ export default async function handler(
     const cacheHit = await getFromServerCache(businessType, location, 'standard', VIABILITY_CACHE_MAX_AGE_DAYS);
     if (cacheHit && !cacheHit.isStale) {
       console.log(`[Analyze] Cache hit — returning cached report, no Gemini call for ${businessType} / ${location}`);
+      console.log('[ActivityLog] attempt analyze cache-hit');
       try {
         if (supabaseAdmin) {
-          await supabaseAdmin.from('report_activity_log').insert({
+          const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
             user_id: verifiedUserId,
             user_email: verifiedEmail,
             report_type: 'viability',
@@ -760,9 +761,11 @@ export default async function handler(
             source: 'dashboard',
             duration_ms: Date.now() - requestStartMs,
           });
+          if (activityLogErr) throw activityLogErr;
+          console.log('[ActivityLog] success analyze cache-hit');
         }
       } catch (logErr: any) {
-        console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+        console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
       }
       return json(res, 200, {
         ...cacheHit.report,
@@ -1079,9 +1082,10 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
 
+    console.log('[ActivityLog] attempt analyze success');
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('report_activity_log').insert({
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
           report_type: 'viability',
@@ -1095,9 +1099,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           source: 'dashboard',
           duration_ms: Date.now() - requestStartMs,
         });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success analyze success');
       }
     } catch (logErr: any) {
-      console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+      console.error('[ActivityLog] failed analyze success:', logErr.message ?? logErr);
     }
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
@@ -1141,9 +1147,10 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       console.error('[analyze] Gemini returned unparseable JSON — no report generated.', { businessType: businessType?.slice(0, 60) });
     }
 
+    console.log('[ActivityLog] attempt analyze failure-path');
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('report_activity_log').insert({
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
           report_type: 'viability',
@@ -1158,9 +1165,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           source: 'dashboard',
           duration_ms: Date.now() - requestStartMs,
         });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success analyze failure-path');
       }
     } catch (logErr: any) {
-      console.error('[ActivityLog] Insert failed (error path):', logErr.message ?? logErr);
+      console.error('[ActivityLog] failed analyze failure-path:', logErr.message ?? logErr);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });

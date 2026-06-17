@@ -519,12 +519,13 @@ export default async function handler(
     const cacheHit = await getFromServerCache('market_gaps', canonLocation, 'opportunities', MARKET_GAP_CACHE_MAX_AGE_DAYS);
     if (cacheHit && !cacheHit.isStale) {
       console.log(`[MarketGapCache] HIT — ${canonLocation}`);
+      console.log('[ActivityLog] attempt opportunities cache-hit');
       try {
         if (supabaseAdmin) {
           const topNames = Array.isArray((cacheHit.report as any)?.topOpportunities)
             ? (cacheHit.report as any).topOpportunities.slice(0, 5).map((o: any) => o.businessType).filter(Boolean)
             : [];
-          await supabaseAdmin.from('report_activity_log').insert({
+          const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
             user_id: verifiedUserId,
             user_email: verifiedEmail,
             report_type: 'market_gap',
@@ -539,9 +540,11 @@ export default async function handler(
             duration_ms: Date.now() - requestStartMs,
             metadata: { topOpportunityNames: topNames },
           });
+          if (activityLogErr) throw activityLogErr;
+          console.log('[ActivityLog] success opportunities cache-hit');
         }
       } catch (logErr: any) {
-        console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+        console.error('[ActivityLog] failed opportunities cache-hit:', logErr.message ?? logErr);
       }
       return json(res, 200, {
         ...cacheHit.report,
@@ -744,12 +747,13 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);
     }
 
+    console.log('[ActivityLog] attempt opportunities success');
     try {
       if (supabaseAdmin) {
         const topNames = Array.isArray(parsed?.topOpportunities)
           ? parsed.topOpportunities.slice(0, 5).map((o: any) => o.businessType).filter(Boolean)
           : [];
-        await supabaseAdmin.from('report_activity_log').insert({
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
           report_type: 'market_gap',
@@ -764,9 +768,11 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           duration_ms: Date.now() - requestStartMs,
           metadata: { topOpportunityNames: topNames },
         });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success opportunities success');
       }
     } catch (logErr: any) {
-      console.error('[ActivityLog] Insert failed (report still returned):', logErr.message ?? logErr);
+      console.error('[ActivityLog] failed opportunities success:', logErr.message ?? logErr);
     }
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
@@ -805,9 +811,10 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       console.error('[opportunities] Gemini returned unparseable JSON — no opportunities generated.', { location: location?.slice(0, 60) });
     }
 
+    console.log('[ActivityLog] attempt opportunities failure-path');
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('report_activity_log').insert({
+        const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
           report_type: 'market_gap',
@@ -822,9 +829,11 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           source: 'market_gap_card',
           duration_ms: Date.now() - requestStartMs,
         });
+        if (activityLogErr) throw activityLogErr;
+        console.log('[ActivityLog] success opportunities failure-path');
       }
     } catch (logErr: any) {
-      console.error('[ActivityLog] Insert failed (error path):', logErr.message ?? logErr);
+      console.error('[ActivityLog] failed opportunities failure-path:', logErr.message ?? logErr);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });
