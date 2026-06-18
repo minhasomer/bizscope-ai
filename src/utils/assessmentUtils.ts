@@ -162,25 +162,52 @@ export function viabilityScoreToPdfLabel(score: number): string {
 // ─── Executive Summary render-time normalizer ────────────────────────────────
 
 /**
- * Strips score-first phrasing from AI-generated executive summary text.
- * Applied at render time only — never mutates stored data.
+ * Strips numeric-score phrasing from any AI-generated report prose (executive
+ * summary, recommendation reasoning, etc.). Applied at render time only — never
+ * mutates stored data. This enforces BizScope's scoreless UX (Decision
+ * Framework, Sprint 11): the score lives in the data model and drives
+ * color/labels, but is never surfaced as a number in user-visible text.
  *
- * Replaces patterns such as:
- *   "viability score of 65"              → "overall assessment"
- *   "overall viability score of 65"      → "overall assessment"
- *   "a score of 65/100"                  → "an overall assessment"
- *   "scored 65 out of 100"              → "assessed well"
- *   "65/100 viability"                  → "overall viability"
+ * Replacements are sentiment-neutral so a stripped low score is never reworded
+ * into an unwarranted positive. Examples:
+ *   "a strong viability score of 77"   → "a strong overall assessment"
+ *   "an overall score of 62/100"       → "an overall assessment"
+ *   "scored 68 out of 100"             → "was assessed"
+ *   "rated 62"                         → "was rated"
+ *   "achieves 68 out of 100"           → "achieves a strong overall standing" → neutral: "the overall assessment"
+ *   "62/100 viability"                 → "overall viability"
+ *
+ * Currency and other non-score numbers ("$68,000 / 100 units", "62%") are
+ * protected via digit/comma/$ lookbehind and a 1–3 digit cap (scores are 0–100).
  */
-export function normalizeExecutiveSummary(text: string): string {
-  if (!text) return text;
-  return text
-    .replace(/\b(overall\s+)?viability\s+score\s+of\s+\d+\b/gi, 'overall assessment')
-    .replace(/\ba\s+score\s+of\s+\d+\s*\/\s*100\b/gi, 'an overall assessment')
-    .replace(/\bscored?\s+\d+\s*(?:\/\s*100|out\s+of\s+100)\b/gi, 'assessed well')
-    .replace(/\b\d+\s*\/\s*100\s+viability\b/gi, 'overall viability')
-    .replace(/\bviability\s+score\s+of\s+\d+\s*\/\s*100\b/gi, 'overall assessment')
-    .replace(/\bscore\s+of\s+\d+\s*\/\s*100\b/gi, 'overall assessment');
+export function stripScoreReferences(text: string | undefined | null): string {
+  if (!text) return text ?? '';
+
+  // Optional "/100" or "out of 100" suffix shared by several patterns.
+  const suffix = '(?:\\s*\\/\\s*100|\\s+out\\s+of\\s+100)?';
+
+  let out = text
+    // "(overall) viability score of 68" (+ optional /100 | out of 100)
+    .replace(new RegExp(`\\b(?:overall\\s+)?viability\\s+score\\s+of\\s+\\d{1,3}${suffix}\\b`, 'gi'), 'overall assessment')
+    // "a score of 62/100" / "a score of 62"
+    .replace(new RegExp(`\\ba\\s+score\\s+of\\s+\\d{1,3}${suffix}\\b`, 'gi'), 'an overall assessment')
+    // generic "score of 62/100" / "score of 62"
+    .replace(new RegExp(`\\bscore\\s+of\\s+\\d{1,3}${suffix}\\b`, 'gi'), 'overall assessment')
+    // "scored 68 out of 100" / "scored 68/100" / "scored 68"
+    .replace(new RegExp(`\\bscored\\s+\\d{1,3}${suffix}\\b`, 'gi'), 'was assessed')
+    // "rated 62" (2–3 digits so "rated 4 stars" is untouched; optional /100)
+    .replace(new RegExp(`\\brated\\s+\\d{2,3}${suffix}\\b`, 'gi'), 'was rated')
+    // bare "68 out of 100" (guard currency/large numbers)
+    .replace(/(?<![\d,$])\b\d{1,3}\s+out\s+of\s+100\b/gi, 'the overall assessment')
+    // bare "62/100", optionally trailed by "viability" (guard currency/large numbers)
+    .replace(/(?<![\d,$])\b\d{1,3}\s*\/\s*100(\s+viability)?\b/gi, (_m, v) => (v ? 'overall viability' : 'the overall assessment'));
+
+  // Grammar tidy after substitution.
+  out = out
+    .replace(/\ba\s+(overall|an)\b/gi, 'an $1')   // "a overall" → "an overall"
+    .replace(/\ban\s+an\b/gi, 'an')
+    .replace(/[ \t]{2,}/g, ' ');
+  return out;
 }
 
 /**

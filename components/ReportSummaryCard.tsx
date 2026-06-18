@@ -3,6 +3,7 @@ import React from 'react';
 import type { ViabilityReport } from '../types';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
 import { viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 
 interface ReportSummaryCardProps {
   report: ViabilityReport;
@@ -93,7 +94,7 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
           {stats.map(({ label, value }) => (
             <div key={label} className="px-5 py-3.5">
               <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-0.5">{label}</p>
-              <p className="text-sm font-black text-gray-900">{value}</p>
+              <p className="text-sm font-black text-gray-900">{normalizeRangeSeparator(value)}</p>
             </div>
           ))}
         </div>

@@ -38,7 +38,7 @@ const reportSchema = {
             },
             required: ["marketDemand", "competitionIntensity", "financialFeasibility", "riskLevel"]
         },
-        executiveSummary: { type: Type.STRING, description: "A concise summary of the findings." },
+        executiveSummary: { type: Type.STRING, description: "A concise, qualitative summary of the findings. Do NOT state a numeric viability score in this prose (no 'viability score of 68', '62/100', '68 out of 100', 'rated 62'); describe the opportunity in words only." },
         financialProjections: {
             type: Type.OBJECT,
             properties: {
@@ -169,7 +169,7 @@ const reportSchema = {
                     type: Type.STRING, 
                     description: "The final recommendation. Must be one of: 'Recommended', 'Caution Advised', or 'Not Recommended'." 
                 },
-                reasoning: { type: Type.STRING }
+                reasoning: { type: Type.STRING, description: "Plain-language rationale. Do NOT cite a numeric viability score (no 'score of 62', '62/100', '68 out of 100'); use qualitative terms only." }
             },
             required: ["decision", "reasoning"]
         },

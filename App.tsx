@@ -98,7 +98,12 @@ const App: React.FC = () => {
    * when internal handlers reset to the current view (e.g. runAnalysis → 'home'
    * while already on 'home').
    */
-  const navigate = useCallback((view: string) => {
+  // Which tab the AuthScreen opens on. Set per-navigation so a "Create Free
+  // Account" CTA lands on the signup tab while a plain "Sign In" resets to login.
+  const [pendingAuthMode, setPendingAuthMode] = useState<'login' | 'signup'>('login');
+
+  const navigate = useCallback((view: string, authMode: 'login' | 'signup' = 'login') => {
+    setPendingAuthMode(authMode);
     const currentParam = new URLSearchParams(window.location.search).get('view') ?? 'home';
     if (view !== currentParam) {
       history.pushState({ view }, '', `?view=${view}`);
@@ -326,10 +331,22 @@ const App: React.FC = () => {
           setCurrentUser(prev => prev ?? user);
           setBaseUserPlan(prev => prev !== 'Explorer' ? prev : user.plan as SubscriptionPlan);
           localStorage.setItem('bizscope_user_email', user.email);
+          clearTimeout(loadingTimeout);
+          setAuthLoading(false);
+        } else if (AuthService.hasPersistedSession()) {
+          // getSession() returned no user, but a persisted session token exists —
+          // this is the navigator.locks race, not a logged-out user. Keep the
+          // auth-loading skeleton up (instead of flashing "Sign In / Explorer")
+          // and let the INITIAL_SESSION subscription resolve the real user. The
+          // 5 s safety timeout above stays armed as the backstop.
+          console.log('[Auth] getSession() null but session token present — holding authLoading for subscription to resolve.');
+        } else {
+          // Genuinely signed out — reveal the signed-out UI immediately.
+          clearTimeout(loadingTimeout);
+          setAuthLoading(false);
         }
       } catch (err) {
         console.error('[Auth] Session loading failed:', err);
-      } finally {
         clearTimeout(loadingTimeout);
         setAuthLoading(false);
       }
@@ -820,6 +837,7 @@ const App: React.FC = () => {
       return (
         <div className="max-w-7xl mx-auto py-16 px-4 flex justify-center items-center min-h-[60vh] animate-fade-in">
           <AuthScreen
+            initialMode={pendingAuthMode}
             onAuthSuccess={(user) => {
               setCurrentUser(user);
               setBaseUserPlan(user.plan as SubscriptionPlan);
@@ -1371,7 +1389,7 @@ const App: React.FC = () => {
       default: // Home
         return (
           <>
-            <Hero onSubmit={handleAnalysisRequest} onNavigate={navigate} isLoading={isLoading} hasResults={!!report || isLoading} currentPlan={userPlan} />
+            <Hero onSubmit={handleAnalysisRequest} onNavigate={navigate} isLoading={isLoading} hasResults={!!report || isLoading} currentPlan={userPlan} isAuthenticated={!!currentUser} />
             
             {/* Results output block — compact preview; full report lives at 'report' view */}
             {(isLoading || error || report || showPreviewCTA) && (
@@ -1388,7 +1406,7 @@ const App: React.FC = () => {
                             Create a free account to validate more business ideas, save your reports, and unlock detailed financial projections.
                           </p>
                           <button
-                            onClick={() => navigate('settings')}
+                            onClick={() => navigate('settings', 'signup')}
                             className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
                           >
                             <Sparkles className="w-4 h-4" />

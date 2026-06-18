@@ -428,7 +428,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
             ) : (
               // Search mismatch empty state
               <>
-                <h4 className="text-sm font-bold text-gray-800">No Matching Dossiers Found</h4>
+                <h4 className="text-sm font-bold text-gray-800">No Matching Reports Found</h4>
                 <p className="mt-1 text-xs text-gray-450 max-w-sm mx-auto">
                   Try adjusting your search keywords, disabling the "Favorites Only" switch, or resetting categories.
                 </p>
@@ -467,7 +467,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                         
                         {/* Report type labels & badges */}
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-[9px] font-extrabold uppercase tracking-wide text-gray-400">Dossier Grade</span>
+                          <span className="text-[9px] font-extrabold uppercase tracking-wide text-gray-400">Report Type</span>
                           {report.reportType === 'regional' ? (
                             <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-md">
                               <Globe className="w-2.5 h-2.5" /> Regional Intel (Pro+)
@@ -1076,7 +1076,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
               Compare Features Gated
             </h3>
             <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-              Cross-referencing multiple dossiers, running comparative calculations, and declaring suitability leaders requires a <strong className="text-blue-705 font-bold">Pro</strong>, <strong className="text-purple-700 font-bold">Pro+</strong>, or <strong className="text-green-750 font-bold">Enterprise</strong> tier subscription.
+              Cross-referencing multiple reports, running comparative calculations, and declaring suitability leaders requires a <strong className="text-blue-705 font-bold">Pro</strong>, <strong className="text-purple-700 font-bold">Pro+</strong>, or <strong className="text-green-750 font-bold">Enterprise</strong> tier subscription.
             </p>
             
             {isDemoMode && (

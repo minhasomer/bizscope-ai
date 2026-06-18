@@ -163,6 +163,26 @@ export class AuthService {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
+  /**
+   * True if a persisted Supabase auth token exists in localStorage.
+   *
+   * getSession() can momentarily return null while another tab/context holds the
+   * navigator.locks Web Lock. In that window the user IS signed in — there's just
+   * no resolved session object yet. Callers use this to keep an auth-loading state
+   * up (avoiding a "Sign In / Explorer" flash) instead of treating the user as
+   * logged out. Supabase persists the session under an `sb-<ref>-auth-token` key.
+   */
+  public static hasPersistedSession(): boolean {
+    if (!this.isSupabaseActive()) return false;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && /^sb-.*-auth-token$/.test(key)) return true;
+      }
+    } catch { /* ignore storage access errors */ }
+    return false;
+  }
+
   // ── Session bootstrap ────────────────────────────────────────────────────
 
   /**

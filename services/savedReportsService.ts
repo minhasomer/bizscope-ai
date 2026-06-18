@@ -193,6 +193,34 @@ export class SavedReportsService {
     return loadFromLocalStorage().filter((r) => (r as any).reportType !== 'market_gap');
   }
 
+  /**
+   * Whether a standard/regional report for (businessType, location) is already
+   * saved for the current user. Checks the same source of truth the dashboard
+   * reads (Supabase when authenticated, else localStorage) — the localStorage
+   * mirror is NOT written for Supabase users, so a localStorage-only check would
+   * wrongly report "not saved" after a refresh/navigation.
+   */
+  public static async isReportSaved(businessType: string, location: string): Promise<boolean> {
+    const userId = await getAuthUserId();
+
+    if (userId && supabase) {
+      const { data } = await supabase
+        .from('saved_reports')
+        .select('id')
+        .eq('user_id', userId)
+        .ilike('business_type', businessType.trim())
+        .ilike('location', location.trim())
+        .maybeSingle();
+      return !!data;
+    }
+
+    return loadFromLocalStorage().some(
+      (r) =>
+        r.businessType.toLowerCase().trim() === businessType.toLowerCase().trim() &&
+        r.location.toLowerCase().trim() === location.toLowerCase().trim(),
+    );
+  }
+
   // ── Create ─────────────────────────────────────────────────────────────────
 
   public static async saveReport(report: ViabilityReport): Promise<SavedReport> {

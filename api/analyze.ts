@@ -59,7 +59,7 @@ const reportSchema = {
       },
       required: ['marketDemand', 'competitionIntensity', 'financialFeasibility', 'riskLevel'],
     },
-    executiveSummary: { type: Type.STRING },
+    executiveSummary: { type: Type.STRING, description: 'Qualitative narrative summary. Do NOT state a numeric viability score in this prose (no "viability score of 68", "62/100", "68 out of 100", "rated 62"). Describe the opportunity in words only; the score is shown elsewhere as a qualitative label.' },
     financialProjections: {
       type: Type.OBJECT,
       properties: {
@@ -206,7 +206,7 @@ const reportSchema = {
       type: Type.OBJECT,
       properties: {
         decision: { type: Type.STRING },
-        reasoning: { type: Type.STRING },
+        reasoning: { type: Type.STRING, description: 'Plain-language rationale. Do NOT cite a numeric viability score (no "score of 62", "62/100", "68 out of 100"); use qualitative terms only.' },
       },
       required: ['decision', 'reasoning'],
     },
