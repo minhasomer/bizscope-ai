@@ -100,10 +100,13 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
   const activePlan = subStatus?.plan ?? currentPlan;
   const planColor = PLAN_COLORS[activePlan] ?? PLAN_COLORS.Explorer;
 
-  // Private-beta grant: a paid tier is unlocked without a Stripe customer/subscription.
-  // This is why the status comes back "not_configured" ("Unverified") with no invoices.
+  // Private-beta grant: full access is unlocked without a Stripe customer/subscription,
+  // which is why the status comes back "not_configured" ("Unverified") with no invoices.
+  // The grant is keyed on betaFullAccess + the absence of a real Stripe customer — NOT on
+  // the Stripe-derived plan, which legitimately reads "Explorer"/none for a beta user who
+  // has never subscribed. Billing only renders for signed-in users (protected route).
   const betaGranted =
-    betaFullAccess && !isDemo && activePlan !== 'Explorer' && !subStatus?.customerId;
+    betaFullAccess && !isDemo && !subStatus?.customerId;
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 min-h-[70vh] animate-fade-in space-y-6">
