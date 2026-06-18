@@ -14,6 +14,7 @@ import { SubscriptionPlan } from '../src/utils/planUtils';
 import { filterLocationSuggestions, fetchLocationAutocomplete } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
+import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 
 type FilterType = 'all' | 'low-capital' | 'low-competition' | 'low-overhead';
 type SortType = 'score' | 'startup-cost' | 'competition';
@@ -173,6 +174,9 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
   const handleOpenDossier = useCallback(async (opportunity: BusinessOpportunity, rank: number) => {
     setSelectedDossierRank(rank);
     setDossierError(null);
+    // Clear any stale page-level error (e.g. a prior blocked-category banner) so
+    // it can't linger above an unrelated, already-rendered report.
+    setError(null);
 
     // Blocked category guard
     const blockedCheck = checkBlockedCategory(opportunity.businessType);
@@ -832,8 +836,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             rank={selectedDossierRank}
             isGrounded={(report?.groundingSources.length ?? 0) > 0}
             generationError={dossierError}
-            onClose={() => setSelectedDossier(null)}
-            onUpgrade={() => { setSelectedDossier(null); onNavigate('pricing'); }}
+            onClose={() => { setSelectedDossier(null); setError(null); }}
+            onUpgrade={() => { setSelectedDossier(null); setError(null); onNavigate('pricing'); }}
           />
         )}
       </AnimatePresence>
@@ -1008,17 +1012,17 @@ const OpportunityCard: React.FC<{
 
         {/* Financial quick-stats */}
         <div className="bg-gray-50 rounded-2xl p-4 space-y-2 border border-gray-100 mb-4">
-          <div className="flex justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-gray-500 font-medium">
+          <div className="flex justify-between items-start gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-gray-500 font-medium shrink-0">
               <DollarSign className="w-3.5 h-3.5 text-green-500" />Startup
             </span>
-            <span className="font-black text-gray-900">{opportunity.financials.estimatedStartupCost}</span>
+            <span className="font-black text-gray-900 text-right min-w-0">{normalizeRangeSeparator(opportunity.financials.estimatedStartupCost)}</span>
           </div>
-          <div className="flex justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-gray-500 font-medium">
+          <div className="flex justify-between items-start gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-gray-500 font-medium shrink-0">
               <TrendingUp className="w-3.5 h-3.5 text-purple-500" />Revenue
             </span>
-            <span className="font-black text-gray-900">{opportunity.financials.potentialRevenue}</span>
+            <span className="font-black text-gray-900 text-right min-w-0">{normalizeRangeSeparator(opportunity.financials.potentialRevenue)}</span>
           </div>
           <p className="text-[9px] text-gray-400 pt-1 border-t border-gray-100 leading-snug">
             Estimates based on available market signals. Verify before committing capital.
@@ -1075,11 +1079,11 @@ const ScoreBar: React.FC<{ label: string; score: number; dollarValue?: string }>
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</span>
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${chip}`}>
-          {levelLabel}
-          {dollarValue && <span className="opacity-70">· {dollarValue}</span>}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider shrink-0">{label}</span>
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold max-w-full ${chip}`}>
+          <span className="shrink-0">{levelLabel}</span>
+          {dollarValue && <span className="opacity-70 truncate">· {normalizeRangeSeparator(dollarValue)}</span>}
         </span>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -1316,11 +1320,11 @@ const OpportunityDossierModal: React.FC<{
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Startup Cost</p>
-              <p className="text-sm font-black text-slate-900 leading-tight">{opportunity.financials.estimatedStartupCost}</p>
+              <p className="text-sm font-black text-slate-900 leading-tight">{normalizeRangeSeparator(opportunity.financials.estimatedStartupCost)}</p>
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Revenue Potential</p>
-              <p className="text-xs font-black text-slate-900 leading-tight">{opportunity.financials.potentialRevenue}</p>
+              <p className="text-xs font-black text-slate-900 leading-tight">{normalizeRangeSeparator(opportunity.financials.potentialRevenue)}</p>
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl p-3 text-center">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Target Market</p>
@@ -1489,15 +1493,15 @@ const OpportunityDossierModal: React.FC<{
                     <div className="space-y-3">
                       <div className="flex items-center justify-between rounded-xl px-4 py-3 border bg-emerald-50 border-emerald-100">
                         <p className="text-xs font-semibold text-emerald-800">Lean Launch</p>
-                        <p className="text-sm font-black text-emerald-900">{opportunity.startupCostRange.low}</p>
+                        <p className="text-sm font-black text-emerald-900">{normalizeRangeSeparator(opportunity.startupCostRange.low)}</p>
                       </div>
                       <div className="flex items-center justify-between rounded-xl px-4 py-3 border bg-blue-50 border-blue-100">
                         <p className="text-xs font-semibold text-blue-800">Typical Launch</p>
-                        <p className="text-sm font-black text-blue-900">{opportunity.startupCostRange.expected}</p>
+                        <p className="text-sm font-black text-blue-900">{normalizeRangeSeparator(opportunity.startupCostRange.expected)}</p>
                       </div>
                       <div className="flex items-center justify-between rounded-xl px-4 py-3 border bg-amber-50 border-amber-100">
                         <p className="text-xs font-semibold text-amber-800">Full Buildout</p>
-                        <p className="text-sm font-black text-amber-900">{opportunity.startupCostRange.high}</p>
+                        <p className="text-sm font-black text-amber-900">{normalizeRangeSeparator(opportunity.startupCostRange.high)}</p>
                       </div>
                     </div>
                   </DossierSection>

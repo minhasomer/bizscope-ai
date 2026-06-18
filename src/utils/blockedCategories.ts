@@ -87,6 +87,23 @@ export interface NotBlocked {
 
 export type CategoryCheckResult = BlockedCategoryMatch | NotBlocked;
 
+/** Escape a string for safe interpolation into a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Match a keyword against the input on word boundaries rather than as a raw
+ * substring. Plain `includes()` caused false positives where a short keyword is
+ * a substring of an unrelated word (e.g. "thc" inside "heal**thc**are", "ammo"
+ * inside "ammonia"), which blocked legitimate businesses. Anchoring with `\b`
+ * still matches the keyword as a standalone word or inside a longer phrase
+ * ("open a cannabis dispensary") without matching mid-word.
+ */
+function keywordMatches(normalised: string, keyword: string): boolean {
+  return new RegExp(`\\b${escapeRegExp(keyword)}\\b`, 'i').test(normalised);
+}
+
 /**
  * Check whether an input string matches any blocked category.
  * Returns the first match found, or `{ matched: false }`.
@@ -95,8 +112,7 @@ export function checkBlockedCategory(input: string): CategoryCheckResult {
   const normalised = input.toLowerCase().trim();
   for (const rule of BLOCKED_CATEGORIES) {
     for (const kw of rule.keywords) {
-      // Match whole-word or as a sub-phrase (not just a character prefix)
-      if (normalised.includes(kw.toLowerCase())) {
+      if (keywordMatches(normalised, kw)) {
         return { matched: true, category: rule.label, keyword: kw };
       }
     }
