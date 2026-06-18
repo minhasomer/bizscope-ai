@@ -6,7 +6,7 @@ import {
 import { SubscriptionPlan } from '../src/utils/planUtils';
 import { UserProfile } from '../services/authService';
 import { StripeService, SubscriptionStatus } from '../services/stripeService';
-import { isDemoMode } from '../src/config/appConfig';
+import { isDemoMode, betaFullAccess } from '../src/config/appConfig';
 
 interface BillingPageProps {
   currentPlan: SubscriptionPlan;
@@ -41,7 +41,7 @@ const formatPeriodEnd = (ts: number): string => {
   });
 };
 
-const StatusBadge: React.FC<{ status: SubscriptionStatus['status'] }> = ({ status }) => {
+const StatusBadge: React.FC<{ status: SubscriptionStatus['status']; betaAccess?: boolean }> = ({ status, betaAccess }) => {
   const map: Record<string, { label: string; cls: string }> = {
     active: { label: 'Active', cls: 'bg-green-100 text-green-800 border-green-200' },
     past_due: { label: 'Past Due', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
@@ -51,7 +51,11 @@ const StatusBadge: React.FC<{ status: SubscriptionStatus['status'] }> = ({ statu
     not_configured: { label: 'Unverified', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
     demo: { label: 'Sandbox', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   };
-  const cfg = map[status] ?? map.no_subscription;
+  // During the private beta, paid-tier access is granted without a Stripe
+  // subscription, so the raw "Unverified" status is misleading and alarming.
+  const cfg = betaAccess
+    ? { label: 'Beta Access', cls: 'bg-indigo-100 text-indigo-800 border-indigo-200' }
+    : map[status] ?? map.no_subscription;
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${cfg.cls}`}>
       {cfg.label}
@@ -96,6 +100,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
   const activePlan = subStatus?.plan ?? currentPlan;
   const planColor = PLAN_COLORS[activePlan] ?? PLAN_COLORS.Explorer;
 
+  // Private-beta grant: a paid tier is unlocked without a Stripe customer/subscription.
+  // This is why the status comes back "not_configured" ("Unverified") with no invoices.
+  const betaGranted =
+    betaFullAccess && !isDemo && activePlan !== 'Explorer' && !subStatus?.customerId;
+
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 min-h-[70vh] animate-fade-in space-y-6">
 
@@ -126,7 +135,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Current Plan</h2>
-          {subStatus && <StatusBadge status={subStatus.status} />}
+          {subStatus && <StatusBadge status={subStatus.status} betaAccess={betaGranted} />}
         </div>
 
         <div className="flex items-center gap-4">
@@ -138,6 +147,22 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
             <p className="text-sm text-gray-500">{PLAN_PRICES[activePlan] ?? '—'}</p>
           </div>
         </div>
+
+        {/* Private-beta access explanation — clarifies the "Beta Access" badge and
+            the absence of invoices/payment method, instead of leaving "Unverified" unexplained. */}
+        {betaGranted && (
+          <div className="flex items-start gap-3 bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-sm">
+            <Sparkles className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-indigo-800">Private beta — full access granted</p>
+              <p className="text-indigo-700 text-xs mt-0.5 leading-relaxed">
+                Your <strong>{activePlan}</strong> access is unlocked for the beta at no charge, so there's
+                no payment method, invoice history, or active subscription on file yet. Nothing is wrong with
+                your account. Paid billing begins only if you choose a plan once the beta ends.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Billing cycle details from Stripe */}
         {subStatus?.currentPeriodEnd && (
