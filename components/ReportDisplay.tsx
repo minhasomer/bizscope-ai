@@ -62,7 +62,7 @@ import { formatLocationDisplay } from '../src/utils/locationUtils';
 interface ReportDisplayProps {
   report: ViabilityReport;
   currentPlan: SubscriptionPlan;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, authMode?: 'login' | 'signup') => void;
   onRegenerate?: () => void;
   /**
    * When true, the regional intelligence section shows a live-mode cost confirmation
@@ -332,9 +332,9 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
 
   const points = [
     { year: 'Launch', value: val0, label: '$0' },
-    { year: 'Year 1', value: val1, label: year1 },
+    { year: 'Year 1', value: val1, label: normalizeRangeSeparator(year1) },
     { year: 'Year 2', value: val2, label: showYear2Label ? formatRevLabel(val2) : '' },
-    { year: 'Year 3', value: val3, label: year3 }
+    { year: 'Year 3', value: val3, label: normalizeRangeSeparator(year3) }
   ];
 
   const maxVal = Math.max(...points.map(p => p.value)) * 1.1;
@@ -407,11 +407,20 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
 // Animated Viability Score Circle component
 const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
   const a = viabilityScoreToAssessment(score);
+  // Surface the numeric score the executive summary prose refers to
+  // ("a strong viability score of 77"). Guard against a missing/garbage value.
+  const numeric = Number.isFinite(score) ? Math.round(score) : null;
   return (
     <div className={`flex flex-col items-center justify-center w-36 h-36 md:w-44 md:h-44 rounded-3xl border-2 ${a.bgClass} ${a.borderClass} select-none transition-all duration-300`}>
-      <span className="text-4xl md:text-5xl mb-1.5 leading-none">{a.emoji}</span>
-      <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
-      <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
+      <span className="text-2xl md:text-3xl mb-0.5 leading-none">{a.emoji}</span>
+      {numeric !== null && (
+        <span className={`font-black leading-none ${a.colorClass}`}>
+          <span className="text-3xl md:text-4xl">{numeric}</span>
+          <span className="text-sm font-bold text-gray-400">/100</span>
+        </span>
+      )}
+      <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight mt-1`}>{a.label}</span>
+      <span className="text-[9px] text-gray-400 font-semibold mt-1 uppercase tracking-wider">Viability Score</span>
     </div>
   );
 };
@@ -655,6 +664,19 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
   });
   const [saveSuccess, setSaveSuccess] = useState('');
 
+  // Reconcile saved-state against the real store (Supabase for signed-in users),
+  // not just the localStorage mirror the initializer reads. Without this, the
+  // button reverts to "Save to Dashboard" after navigation/refresh even though
+  // the report is genuinely saved. Upgrade-only (never clears a known-saved
+  // state) so a transient fetch error can't flip a saved report back to unsaved.
+  useEffect(() => {
+    let cancelled = false;
+    SavedReportsService.isReportSaved(report.businessType, report.location)
+      .then((saved) => { if (!cancelled && saved) setIsSaved(true); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [report.businessType, report.location]);
+
   // Active section scroll tracking scrollspy
   useEffect(() => {
     const sections = ['overview', 'financials', 'strategy', 'competition', 'demographics', 'regional'];
@@ -812,7 +834,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               </p>
             </div>
             <button
-              onClick={() => onNavigate('settings')}
+              onClick={() => onNavigate('settings', 'signup')}
               className="shrink-0 px-5 py-2.5 bg-white text-indigo-700 text-xs font-black rounded-xl hover:bg-indigo-50 transition-colors cursor-pointer shadow-sm whitespace-nowrap"
             >
               Create Free Account
@@ -1031,9 +1053,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
         {/* Franchise Territory Check — rendered BEFORE executive summary so it's seen first */}
         {report.franchiseTerritoryCheck && (() => {
           const ftc = report.franchiseTerritoryCheck!;
-          const sameBrandNames = ftc.sameBrandIndices
-            .map(i => report.competitionAnalysis.competitors[i]?.name)
-            .filter(Boolean);
+          // Show distinct location detail (street/address), not the brand name —
+          // mapping same-brand units to .name yields "Great Clips, Great Clips, …"
+          // which reads like broken output. Addresses are the useful, distinguishing
+          // signal; dedupe and omit the parenthetical entirely when none are present.
+          const sameBrandAddresses = Array.from(new Set(
+            ftc.sameBrandIndices
+              .map(i => report.competitionAnalysis.competitors[i]?.address?.trim())
+              .filter((a): a is string => Boolean(a))
+          ));
           return (
             <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
               <div className="flex items-start gap-3">
@@ -1054,7 +1082,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     // AI search actually surfaced same-brand locations
                     <p className="text-sm text-amber-900 leading-relaxed mb-3">
                       <strong>{ftc.sameBrandCount} existing {ftc.brandName} location{ftc.sameBrandCount !== 1 ? 's' : ''}</strong> {ftc.sameBrandCount !== 1 ? 'were' : 'was'} identified near {formatLocationDisplay(report.location)}
-                      {sameBrandNames.length > 0 && <> ({sameBrandNames.join(', ')})</>}.
+                      {sameBrandAddresses.length > 0 && <> ({sameBrandAddresses.join('; ')})</>}.
                       {' '}Nearby units indicate proven consumer demand for this brand but may also mean this territory is already claimed — protected radius rules vary by franchise agreement.
                     </p>
                   ) : (
@@ -1212,15 +1240,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
                                       <div className="flex flex-col border-r border-gray-150 pr-2">
                                           <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Est. Break-Even</span>
-                                          <span className="font-black text-blue-600 text-xs mt-1">{report.financialProjections.breakEvenTime}</span>
+                                          <span className="font-black text-blue-600 text-xs mt-1">{normalizeRangeSeparator(report.financialProjections.breakEvenTime)}</span>
                                       </div>
                                       <div className="flex flex-col border-r border-gray-150 px-2">
                                           <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Est. ROI Payoff</span>
-                                          <span className="font-black text-blue-700 text-xs mt-1">{report.financialProjections.roiTime}</span>
+                                          <span className="font-black text-blue-700 text-xs mt-1">{normalizeRangeSeparator(report.financialProjections.roiTime)}</span>
                                       </div>
                                        <div className="flex flex-col pl-2">
                                           <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Est. Net Margin</span>
-                                          <span className="font-black text-green-600 text-xs mt-1">{report.financialProjections.profitMargin}</span>
+                                          <span className="font-black text-green-600 text-xs mt-1">{normalizeRangeSeparator(report.financialProjections.profitMargin)}</span>
                                       </div>
                                   </div>
                               </div>
@@ -1241,7 +1269,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                           {report.financialProjections.keyStats.map((stat, i) => (
                                               <div key={i} className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
                                                   <p className="text-[10px] text-gray-500 mb-0.5 font-medium">{stat.label}</p>
-                                                  <p className="font-semibold text-gray-950 text-xs">{stat.value}</p>
+                                                  <p className="font-semibold text-gray-950 text-xs">{normalizeRangeSeparator(stat.value)}</p>
                                               </div>
                                           ))}
                                       </div>
@@ -2205,7 +2233,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                       // Pass actual regional intelligence data if unlocked, else pass undefined
                       const rd = canViewRegionalIntelligence(currentPlan) ? regionalData : undefined;
                       await PDFService.generateReportPDF(report, currentPlan, options, rd);
-                      setExportSuccess("PDF Dossier Exported Successfully!");
+                      setExportSuccess("PDF Report Exported Successfully!");
                     } catch (e: any) {
                       console.error(e);
                       setExportError(e?.message || "PDF generation engine experienced exceptions. Retry analysis.");
