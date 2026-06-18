@@ -12,11 +12,13 @@ interface HeroProps {
   hasResults: boolean;
   /** Resolved effective plan from App.tsx — handles Admin, BetaTester, preview roles, and auth. */
   currentPlan: string;
+  /** Whether a real account is signed in. Anonymous visitors get one free preview, not the Explorer monthly quota. */
+  isAuthenticated?: boolean;
 }
 
 // Location suggestions now live in src/data/locationSuggestionsData.ts (shared with OpportunityExplorer)
 
-export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, hasResults, currentPlan }) => {
+export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, hasResults, currentPlan, isAuthenticated = true }) => {
   const [businessType, setBusinessType] = useState('');
   const [location, setLocation] = useState('');
   const [blockedError, setBlockedError] = useState<string | null>(null);
@@ -64,6 +66,10 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
   // Previously Hero read its own stale localStorage copy which never updated on
   // plan switches or auth events, so it always showed Explorer's "3 reports/month".
   const getPlanAccessLabel = (plan: string): string => {
+    // Anonymous visitors don't have the Explorer monthly quota — they get a
+    // single no-account preview. Showing "3 reports/month" here misleads
+    // first-time visitors who then hit the preview paywall on attempt one.
+    if (!isAuthenticated) return '1 free preview · no account needed';
     switch (plan) {
       case 'Pro':        return '20 reports/month';
       case 'Pro+':       return '50 standard + 10 regional/month';

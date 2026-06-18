@@ -197,42 +197,51 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
         </div>
 
         <div className="px-4 pb-5 pt-3 border-t border-gray-100 space-y-3">
-          <button
-            onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold uppercase tracking-wide transition-all cursor-pointer ${planBadgeClass()}`}
-          >
-            <CreditCard className="w-4 h-4" />
-            {demoActive ? 'Sandbox Plan' : 'Plan'}: {currentPlan}
-          </button>
-
-          {user ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl">
-                <img
-                  src={user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`}
-                  alt="avatar"
-                  referrerPolicy="no-referrer"
-                  className="w-9 h-9 rounded-full border border-gray-200 object-cover shrink-0"
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">{user.fullName || 'Member'}</p>
-                  <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => { onSignOut(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 font-bold text-sm rounded-xl transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" /> Sign Out
-              </button>
+          {authLoading ? (
+            <div className="space-y-3">
+              <div className="h-10 w-full rounded-xl bg-slate-100 animate-pulse" />
+              <div className="h-14 w-full rounded-2xl bg-slate-100 animate-pulse" />
             </div>
           ) : (
-            <button
-              onClick={() => { onNavigate('settings'); setMobileMenuOpen(false); }}
-              className="w-full flex items-center justify-center gap-2 py-3.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-bold tracking-wide transition-colors cursor-pointer shadow-sm"
-            >
-              <User className="w-4 h-4" /> Sign In
-            </button>
+            <>
+              <button
+                onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold uppercase tracking-wide transition-all cursor-pointer ${planBadgeClass()}`}
+              >
+                <CreditCard className="w-4 h-4" />
+                {demoActive ? 'Sandbox Plan' : 'Plan'}: {currentPlan}
+              </button>
+
+              {user ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl">
+                    <img
+                      src={user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`}
+                      alt="avatar"
+                      referrerPolicy="no-referrer"
+                      className="w-9 h-9 rounded-full border border-gray-200 object-cover shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-gray-900 truncate">{user.fullName || 'Member'}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { onSignOut(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 font-bold text-sm rounded-xl transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { onNavigate('settings'); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-bold tracking-wide transition-colors cursor-pointer shadow-sm"
+                >
+                  <User className="w-4 h-4" /> Sign In
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
