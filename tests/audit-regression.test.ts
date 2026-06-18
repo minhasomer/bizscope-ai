@@ -15,6 +15,10 @@
 import assert from 'node:assert/strict';
 import { checkBlockedCategory } from '../src/utils/blockedCategories';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
+import { stripScoreReferences, viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+
+/** Matches any user-visible numeric viability-score phrasing. */
+const SCORE_LEAK = /\b\d{1,3}\s*\/\s*100\b|\b(?:viability\s+)?score\s+of\s+\d+\b|\b\d{1,3}\s+out\s+of\s+100\b|\brated\s+\d{2,3}\b/i;
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -60,6 +64,56 @@ check('leaves single values and qualitative text untouched', () => {
   assert.equal(normalizeRangeSeparator('High (multi-million annual potential)'), 'High (multi-million annual potential)');
   assert.equal(normalizeRangeSeparator(''), '');
   assert.equal(normalizeRangeSeparator(undefined), '');
+});
+
+// ── 3. Scoreless UX — numeric viability scores never appear in prose ──────────
+
+check('stripScoreReferences removes numeric scores from prose', () => {
+  const cases = [
+    'This concept earns a strong viability score of 77 in our analysis.',
+    'An overall score of 62/100 reflects a workable opportunity.',
+    'The business scored 68 out of 100 on demand and competition.',
+    'We rated 62 across the core factors.',
+    'Reasoning: a viability score of 68 indicates caution is warranted.',
+  ];
+  for (const c of cases) {
+    const out = stripScoreReferences(c);
+    assert.ok(!SCORE_LEAK.test(out), `score leaked: ${JSON.stringify(out)}`);
+    assert.ok(!/\b(77|62|68)\b/.test(out), `raw score number leaked: ${JSON.stringify(out)}`);
+  }
+});
+
+check('stripScoreReferences preserves grammar', () => {
+  assert.equal(
+    stripScoreReferences('This concept earns a strong viability score of 77 overall.'),
+    'This concept earns a strong overall assessment overall.',
+  );
+  // "a viability score of 68" must not leave the article "a overall"
+  assert.equal(stripScoreReferences('Reasoning: a viability score of 68 here.'), 'Reasoning: an overall assessment here.');
+});
+
+check('stripScoreReferences stays sentiment-neutral on a low score', () => {
+  const out = stripScoreReferences('It scored 30 out of 100.');
+  assert.equal(out, 'It was assessed.');
+  assert.ok(!/\b(excellent|great|strong|favorable|favourable|well)\b/i.test(out), `injected sentiment: ${out}`);
+});
+
+check('stripScoreReferences does NOT touch currency or percentages', () => {
+  assert.equal(stripScoreReferences('Startup cost is $68,000 for the buildout.'), 'Startup cost is $68,000 for the buildout.');
+  assert.equal(stripScoreReferences('Net margins land near 62% at scale.'), 'Net margins land near 62% at scale.');
+  assert.equal(stripScoreReferences(''), '');
+  assert.equal(stripScoreReferences(undefined), '');
+});
+
+check('qualitative assessment labels still render correctly', () => {
+  assert.equal(viabilityScoreToAssessment(85).label, 'Strong Opportunity');
+  assert.equal(viabilityScoreToAssessment(77).label, 'Attractive Market');
+  assert.equal(viabilityScoreToAssessment(62).label, 'Worth Further Investigation');
+  assert.equal(viabilityScoreToAssessment(30).label, 'Not Recommended');
+  // labels carry no digits
+  for (const s of [85, 77, 62, 55, 40, 20]) {
+    assert.ok(!/\d/.test(viabilityScoreToAssessment(s).label), `label has digit at ${s}`);
+  }
 });
 
 console.log(`\n${passed} test group(s) passed.`);

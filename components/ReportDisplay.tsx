@@ -15,7 +15,7 @@ import {
   scoreToRiskRating,
   getNextStep,
   getConfidenceLevel,
-  normalizeExecutiveSummary,
+  stripScoreReferences,
 } from '../src/utils/assessmentUtils';
 import { LiveModeConfirmModal } from './LiveModeConfirmModal';
 import { UsageTrackerService } from '../services/usageTrackerService';
@@ -407,20 +407,14 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
 // Animated Viability Score Circle component
 const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
   const a = viabilityScoreToAssessment(score);
-  // Surface the numeric score the executive summary prose refers to
-  // ("a strong viability score of 77"). Guard against a missing/garbage value.
-  const numeric = Number.isFinite(score) ? Math.round(score) : null;
+  // Scoreless UX (Decision Framework, Sprint 11): the numeric score stays in the
+  // data model and drives color/label, but is NEVER shown as a number. Display
+  // the qualitative assessment only.
   return (
     <div className={`flex flex-col items-center justify-center w-36 h-36 md:w-44 md:h-44 rounded-3xl border-2 ${a.bgClass} ${a.borderClass} select-none transition-all duration-300`}>
-      <span className="text-2xl md:text-3xl mb-0.5 leading-none">{a.emoji}</span>
-      {numeric !== null && (
-        <span className={`font-black leading-none ${a.colorClass}`}>
-          <span className="text-3xl md:text-4xl">{numeric}</span>
-          <span className="text-sm font-bold text-gray-400">/100</span>
-        </span>
-      )}
-      <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight mt-1`}>{a.label}</span>
-      <span className="text-[9px] text-gray-400 font-semibold mt-1 uppercase tracking-wider">Viability Score</span>
+      <span className="text-4xl md:text-5xl mb-1.5 leading-none">{a.emoji}</span>
+      <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
+      <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
     </div>
   );
 };
@@ -934,7 +928,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             </div>
                           )}
                         </div>
-                        <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl">{report.recommendation?.reasoning ?? 'Recommendation reasoning was unavailable for this report.'}</p>
+                        <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl">{report.recommendation?.reasoning ? stripScoreReferences(report.recommendation.reasoning) : 'Recommendation reasoning was unavailable for this report.'}</p>
                         {report.franchiseTerritoryCheck && (
                           <p className="mt-2 text-xs text-amber-700 font-semibold leading-relaxed max-w-2xl">
                             ⚠️ This assessment reflects market conditions only — territory availability is not confirmed. Verify directly with the franchisor before investing.
@@ -1121,7 +1115,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               id="overview"
               icon={<Layers className="w-5 h-5 text-blue-600" />}
             >
-              <p className="leading-relaxed text-sm text-gray-700 whitespace-normal">{normalizeExecutiveSummary(report.executiveSummary)}</p>
+              <p className="leading-relaxed text-sm text-gray-700 whitespace-normal">{stripScoreReferences(report.executiveSummary)}</p>
             </SectionCard>
 
             {/* Financial Outlook Card with Locked Pro indicators */}
@@ -1723,7 +1717,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 <ShieldCheck className="w-4 h-4 text-amber-600" />
                                 Positioning Summary
                             </h4>
-                            <p className="text-sm text-gray-700 leading-relaxed">{report.recommendation?.reasoning ?? 'Recommendation reasoning was unavailable for this report.'}</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{report.recommendation?.reasoning ? stripScoreReferences(report.recommendation.reasoning) : 'Recommendation reasoning was unavailable for this report.'}</p>
                             <div className="mt-3 flex items-center gap-3 flex-wrap">
                                 <span className={`text-xs font-black px-3 py-1 rounded-full ${
                                     report.recommendation?.decision === 'Recommended' ? 'bg-emerald-100 text-emerald-800' :

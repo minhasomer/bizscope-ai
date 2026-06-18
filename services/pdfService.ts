@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { SubscriptionPlan, canViewFullFinancials, canViewRegionalIntelligence } from '../src/utils/planUtils';
 import { ViabilityReport } from '../types';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
-import { viabilityScoreToPdfLabel, factorScoreToPdfLabel, scoreToCompetitionRating, scoreToRiskRating } from '../src/utils/assessmentUtils';
+import { viabilityScoreToPdfLabel, factorScoreToPdfLabel, scoreToCompetitionRating, scoreToRiskRating, stripScoreReferences } from '../src/utils/assessmentUtils';
 
 export interface PDFExportOptions {
   isWhiteLabelMode: boolean;
@@ -271,7 +271,7 @@ export class PDFService {
     doc.setTextColor(60, 65, 70);
     
     // Write summary content
-    currentY = writeWrappedText(report.executiveSummary, 20, currentY, 170);
+    currentY = writeWrappedText(stripScoreReferences(report.executiveSummary), 20, currentY, 170);
 
     currentY += 8;
     currentY = ensureRemainingY(currentY, 60);
@@ -747,7 +747,7 @@ export class PDFService {
     doc.setFont('Helvetica', 'italic');
     doc.setFontSize(8.5);
     doc.setTextColor(50, 55, 60);
-    writeWrappedText(`"${report.recommendation?.reasoning || "Reasoning factors and mitigation elements compiled completely."}"`, 25, currentY + 14, 160, 4.5);
+    writeWrappedText(`"${stripScoreReferences(report.recommendation?.reasoning) || "Reasoning factors and mitigation elements compiled completely."}"`, 25, currentY + 14, 160, 4.5);
 
     // Save final action
     const safeFileName = `BizScope_Viability_Report_${report.businessType.replace(/\s+/g, '_')}_${report.location.replace(/\s+/g, '_')}.pdf`;
