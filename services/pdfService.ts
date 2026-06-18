@@ -151,7 +151,7 @@ export class PDFService {
     doc.setFontSize(24);
     doc.setTextColor(20, 25, 30);
     doc.text("VENTURE FEASIBILITY", 20, 55);
-    doc.text("DOSSIER", 20, 66);
+    doc.text("REPORT", 20, 66);
 
     // Dynamic Line Accent
     doc.setDrawColor(pColor[0], pColor[1], pColor[2]);
@@ -496,7 +496,7 @@ export class PDFService {
         doc.setFont('Helvetica', 'bold');
         doc.text(sanitizeForPdf(item.label), 24, currentY + 45 / 10);
         doc.setFont('Helvetica', 'normal');
-        doc.text(sanitizeForPdf(item.val || "N/A"), 95, currentY + 45 / 10);
+        doc.text(sanitizeForPdf(normalizeRangeSeparator(item.val) || "N/A"), 95, currentY + 45 / 10);
 
         currentY += 8;
       }
@@ -716,7 +716,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'italic');
       doc.setFontSize(9);
       doc.setTextColor(120, 125, 130);
-      doc.text("No specific regional datasets were staged during standard dossier synthesis.", 20, currentY);
+      doc.text("No specific regional datasets were staged during standard report synthesis.", 20, currentY);
     }
 
     currentY = ensureRemainingY(currentY, 65);
@@ -750,7 +750,7 @@ export class PDFService {
     writeWrappedText(`"${report.recommendation?.reasoning || "Reasoning factors and mitigation elements compiled completely."}"`, 25, currentY + 14, 160, 4.5);
 
     // Save final action
-    const safeFileName = `BizScope_Viability_Dossier_${report.businessType.replace(/\s+/g, '_')}_${report.location.replace(/\s+/g, '_')}.pdf`;
+    const safeFileName = `BizScope_Viability_Report_${report.businessType.replace(/\s+/g, '_')}_${report.location.replace(/\s+/g, '_')}.pdf`;
     doc.save(safeFileName);
   }
 }
