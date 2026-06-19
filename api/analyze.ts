@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 import {
   normalizeTierToBudgetPlan,
   getReportBudget,
-  estimateCost,
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
@@ -822,7 +821,7 @@ export default async function handler(
   let geminiModelUsed: string | null = null;
   let phase1Usage: any = null;
   let phase2Usage: any = null;
-  let phase3Usage: any = null;
+  const synthesisUsages: any[] = [];  // every Phase-3 attempt incl. MAX_TOKENS retry — all are billed
 
   try {
     const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
@@ -948,40 +947,59 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     // 60–90 s on internal reasoning before emitting a single output token,
     // which exceeds Vercel's function timeout. Phase 3 is pure JSON assembly
     // (the research was done in phases 1 & 2), so thinking adds no value here.
-    const synthesisMaxTokens = Math.min(budget.maxOutputTokens, 8192);
+    //
+    // 16k covers the full ViabilityReport JSON for the vast majority of
+    // businesses. If the model still hits MAX_TOKENS (e.g. an unusually
+    // long competitor list or executive summary), retry once at 24k rather
+    // than returning a truncated/repaired report.
+    const SYNTHESIS_MAX_TOKENS = 16384;
+    const SYNTHESIS_RETRY_MAX_TOKENS = 24576;
     const synthesisTimeoutMs = budget.synthesisTimeoutMs;
     const phase3StartMs = Date.now();
-    console.log('[analyze diag] phase 3 start:', {
-      phase: 3,
-      model,
-      promptChars: prompt.length,
-      maxOutputTokens: synthesisMaxTokens,
-      thinkingBudget: 0,
-      synthesisTimeoutMs,
-    });
-    const synthesis = await withTimeout(
-      ai.models.generateContent({
+
+    const runSynthesis = (maxOutputTokens: number) => {
+      console.log('[analyze diag] phase 3 start:', {
+        phase: 3,
         model,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: reportSchema,
-          temperature: 0.4,
-          maxOutputTokens: synthesisMaxTokens,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
-      synthesisTimeoutMs,
-      'synthesis timed out',
-    );
+        promptChars: prompt.length,
+        maxOutputTokens,
+        thinkingBudget: 0,
+        synthesisTimeoutMs,
+      });
+      return withTimeout(
+        ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: reportSchema,
+            temperature: 0.4,
+            maxOutputTokens,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+        synthesisTimeoutMs,
+        'synthesis timed out',
+      );
+    };
+
+    let synthesis = await runSynthesis(SYNTHESIS_MAX_TOKENS);
+    synthesisUsages.push((synthesis as any).usageMetadata ?? null);
+    if (synthesis.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+      console.warn(`[analyze] Phase 3 synthesis hit MAX_TOKENS at ${SYNTHESIS_MAX_TOKENS} — retrying at ${SYNTHESIS_RETRY_MAX_TOKENS}.`);
+      synthesis = await runSynthesis(SYNTHESIS_RETRY_MAX_TOKENS);
+      synthesisUsages.push((synthesis as any).usageMetadata ?? null);  // the truncated first attempt was still billed — count both
+    }
     const phase3ElapsedMs = Date.now() - phase3StartMs;
 
-    const usage = (synthesis as any).usageMetadata;
-    phase3Usage = usage ?? null;
-    const inputTokens: number | null = usage?.promptTokenCount ?? null;
-    const outputTokens: number | null = usage?.candidatesTokenCount ?? null;
-    const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 2);
-    console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)} phase3Ms=${phase3ElapsedMs}`);
+    // Single authoritative cost figure for the whole report: both grounded
+    // research phases + every synthesis attempt + grounding. usage_logs and
+    // report_activity_log are both written from this one object so they reconcile.
+    const groundingCalls = (phase1Usage ? 1 : 0) + (phase2Usage ? 1 : 0);
+    const cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, ...synthesisUsages], groundingCalls);
+    const inputTokens = cost.inputTokens;
+    const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking, summed across phases + retry
+    console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens} out=${outputTokens} (thinking=${cost.thinkingTokens} grounding=${cost.groundingCalls}) est=$${cost.estimatedCostUsd.toFixed(5)} phase3Ms=${phase3ElapsedMs}`);
 
     const withinHardCap = !wouldExceedHardCap(cost.estimatedCostUsd, budget);
     if (!withinHardCap) {
@@ -1242,7 +1260,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           model,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
-          grounding_calls: 2,
+          grounding_calls: cost.groundingCalls,
           estimated_cost_usd: cost.estimatedCostUsd,
           within_hard_cap: withinHardCap,
           business_type: businessType,
@@ -1257,7 +1275,8 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     console.log('[ActivityLog] attempt analyze success');
     try {
       if (supabaseAdmin) {
-        const aggregatedUsage = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, phase3Usage]);
+        // Same authoritative figure as usage_logs above — guarantees the two tables reconcile.
+        const aggregatedUsage = cost;
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
@@ -1333,7 +1352,8 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     console.log('[ActivityLog] attempt analyze failure-path');
     try {
       if (supabaseAdmin) {
-        const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage, phase3Usage]);
+        const failGroundingCalls = (phase1Usage ? 1 : 0) + (phase2Usage ? 1 : 0);
+        const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage, ...synthesisUsages], failGroundingCalls);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,

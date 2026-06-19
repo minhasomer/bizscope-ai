@@ -16,6 +16,13 @@ import assert from 'node:assert/strict';
 import { checkBlockedCategory } from '../src/utils/blockedCategories';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 import { stripScoreReferences, viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+import {
+  estimateCost,
+  aggregateGeminiUsage,
+  GEMINI_MODELS,
+  MODEL_PRICING,
+  GROUNDING_CALL_COST_USD,
+} from '../src/config/aiBudget';
 
 /** Matches any user-visible numeric viability-score phrasing. */
 const SCORE_LEAK = /\b\d{1,3}\s*\/\s*100\b|\b(?:viability\s+)?score\s+of\s+\d+\b|\b\d{1,3}\s+out\s+of\s+100\b|\brated\s+\d{2,3}\b/i;
@@ -114,6 +121,60 @@ check('qualitative assessment labels still render correctly', () => {
   for (const s of [85, 77, 62, 55, 40, 20]) {
     assert.ok(!/\d/.test(viabilityScoreToAssessment(s).label), `label has digit at ${s}`);
   }
+});
+
+// ── 4. Authoritative cost accounting (aiBudget aggregateGeminiUsage) ──────────
+// Guards the cost-accounting sprint invariants: grounding is billed, thinking
+// tokens are folded into output exactly once, and every billable call (incl. a
+// MAX_TOKENS retry attempt) is summed.
+
+const STD = GEMINI_MODELS.standard;
+const P = MODEL_PRICING[STD];
+const closeTo = (a: number, b: number, eps = 1e-9) =>
+  assert.ok(Math.abs(a - b) < eps, `expected ${a} ≈ ${b}`);
+
+check('aggregateGeminiUsage bills grounding calls (C-1)', () => {
+  const usages = [
+    { promptTokenCount: 1000, candidatesTokenCount: 2000, thoughtsTokenCount: 500 },
+    { promptTokenCount: 3000, candidatesTokenCount: 4000 },
+  ];
+  const withGrounding = aggregateGeminiUsage(STD, usages, 2);
+  const noGrounding   = aggregateGeminiUsage(STD, usages, 0);
+  assert.equal(withGrounding.inputTokens, 4000);
+  assert.equal(withGrounding.outputTokens, 6500);   // (2000+500) + 4000, thinking folded in
+  assert.equal(withGrounding.thinkingTokens, 500);
+  assert.equal(withGrounding.groundingCalls, 2);
+  // The whole point of C-1: grounding must change the persisted cost.
+  closeTo(withGrounding.estimatedCostUsd - noGrounding.estimatedCostUsd, 2 * GROUNDING_CALL_COST_USD);
+  closeTo(
+    withGrounding.estimatedCostUsd,
+    (4000 / 1000) * P.inputPer1kTokens + (6500 / 1000) * P.outputPer1kTokens + 2 * GROUNDING_CALL_COST_USD,
+  );
+});
+
+check('thinking tokens folded into output exactly once (no double-count)', () => {
+  const usage = { promptTokenCount: 1000, candidatesTokenCount: 1000, thoughtsTokenCount: 1000 };
+  const agg = aggregateGeminiUsage(STD, [usage], 1);
+  // Must equal the per-call primitive given candidates + thoughts passed separately.
+  const direct = estimateCost(STD, 1000, 1000, 1, 1000);
+  assert.equal(agg.outputTokens, 2000);
+  closeTo(agg.estimatedCostUsd, direct.estimatedCostUsd);
+});
+
+check('MAX_TOKENS retry: both synthesis attempts are summed (C-3)', () => {
+  const truncated = { promptTokenCount: 2000, candidatesTokenCount: 16000 }; // first attempt hit the ceiling
+  const final     = { promptTokenCount: 2000, candidatesTokenCount: 8000 };  // retry
+  const agg = aggregateGeminiUsage(STD, [truncated, final], 0);
+  assert.equal(agg.inputTokens, 4000);
+  assert.equal(agg.outputTokens, 24000); // 16000 + 8000 — truncated attempt is NOT dropped
+});
+
+check('null/failed-phase usage entries are skipped', () => {
+  const usage = { promptTokenCount: 1000, candidatesTokenCount: 2000 };
+  const withNulls = aggregateGeminiUsage(STD, [null, usage, undefined], 1);
+  const without   = aggregateGeminiUsage(STD, [usage], 1);
+  closeTo(withNulls.estimatedCostUsd, without.estimatedCostUsd);
+  assert.equal(withNulls.inputTokens, 1000);
 });
 
 console.log(`\n${passed} test group(s) passed.`);

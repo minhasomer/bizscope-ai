@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 import {
   normalizeTierToBudgetPlan,
   getReportBudget,
-  estimateCost,
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
@@ -701,7 +700,11 @@ Reference specific, verifiable characteristics of '${location}': named industrie
 Generate output in JSON adhering to the opportunity schema. No wrapping markdown.
     `.trim();
 
-    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: budget.maxOutputTokens, synthesisTimeoutMs: budget.synthesisTimeoutMs });
+    // Market Gap synthesis covers multiple opportunities per report — fixed
+    // 16k budget regardless of plan tier (see Viability synthesis for the
+    // equivalent 16k/24k-retry budget).
+    const MARKET_GAP_SYNTHESIS_MAX_TOKENS = 16384;
+    console.log('[opportunities diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, maxOutputTokens: MARKET_GAP_SYNTHESIS_MAX_TOKENS, synthesisTimeoutMs: budget.synthesisTimeoutMs });
     const phase2StartMs = Date.now();
     const synthesis = await withTimeout(
       ai.models.generateContent({
@@ -711,7 +714,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           responseMimeType: 'application/json',
           responseSchema: opportunitySchema,
           temperature: 0.6,
-          maxOutputTokens: budget.maxOutputTokens,
+          maxOutputTokens: MARKET_GAP_SYNTHESIS_MAX_TOKENS,
           thinkingConfig: { thinkingBudget: 0 },  // disable thinking — pure JSON assembly, no reasoning needed
         },
       }),
@@ -720,12 +723,15 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     );
     const phase2ElapsedMs = Date.now() - phase2StartMs;
 
-    const usage = (synthesis as any).usageMetadata;
-    phase2Usage = usage ?? null;
-    const inputTokens: number | null  = usage?.promptTokenCount      ?? null;
-    const outputTokens: number | null = usage?.candidatesTokenCount  ?? null;
-    const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 1);
-    console.log(`[AICost] /api/opportunities role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)}`);
+    phase2Usage = (synthesis as any).usageMetadata ?? null;
+    // Single authoritative cost figure: Phase 1 (Search grounding) + Phase 2
+    // (synthesis) + grounding. usage_logs and report_activity_log both consume
+    // this so they reconcile.
+    const groundingCalls = (phase1Usage ? 1 : 0);
+    const cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage], groundingCalls);
+    const inputTokens = cost.inputTokens;
+    const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking, across phases
+    console.log(`[AICost] /api/opportunities role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens} out=${outputTokens} (thinking=${cost.thinkingTokens} grounding=${cost.groundingCalls}) est=$${cost.estimatedCostUsd.toFixed(5)}`);
 
     const withinHardCap = !wouldExceedHardCap(cost.estimatedCostUsd, budget);
     if (!withinHardCap) {
@@ -740,7 +746,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       candidateCount,
       textDefined: rawText !== undefined,
       textLength: rawText?.length ?? 0,
-      candidatesTokenCount: outputTokens,
+      billedOutputTokens: outputTokens,
       phase2ElapsedMs,
     });
 
@@ -770,7 +776,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           model,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
-          grounding_calls: 1,
+          grounding_calls: cost.groundingCalls,
           estimated_cost_usd: cost.estimatedCostUsd,
           within_hard_cap: withinHardCap,
           location,
@@ -787,7 +793,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
         const topNames = Array.isArray(parsed?.topOpportunities)
           ? parsed.topOpportunities.slice(0, 5).map((o: any) => o.businessType).filter(Boolean)
           : [];
-        const aggregatedUsage = aggregateGeminiUsage(model, [phase1Usage, phase2Usage]);
+        const aggregatedUsage = cost;  // same authoritative figure as usage_logs above — reconciles
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
@@ -857,7 +863,8 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     console.log('[ActivityLog] attempt opportunities failure-path');
     try {
       if (supabaseAdmin) {
-        const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage]);
+        const failGroundingCalls = (phase1Usage ? 1 : 0);
+        const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage], failGroundingCalls);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,

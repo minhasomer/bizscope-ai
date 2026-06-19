@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 import {
   normalizeTierToBudgetPlan,
   getReportBudget,
-  estimateCost,
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
@@ -489,7 +488,8 @@ Required sections:
 Output valid JSON only. No markdown wrappers.
     `.trim();
 
-    console.log('[dossier diag] generation start:', { model, biz, location, promptChars: prompt.length, maxOutputTokens: 8192 });
+    const DOSSIER_MAX_TOKENS = 12288;
+    console.log('[dossier diag] generation start:', { model, biz, location, promptChars: prompt.length, maxOutputTokens: DOSSIER_MAX_TOKENS });
 
     const result = await withTimeout(
       ai.models.generateContent({
@@ -499,21 +499,30 @@ Output valid JSON only. No markdown wrappers.
           responseMimeType: 'application/json',
           responseSchema: dossierSchema,
           temperature: 0.5,
-          maxOutputTokens: 8192,
+          maxOutputTokens: DOSSIER_MAX_TOKENS,
         },
       }),
       30000,
       'dossier generation timed out',
     );
 
-    const usage = (result as any).usageMetadata;
-    dossierUsage = usage ?? null;
-    const inputTokens: number | null  = usage?.promptTokenCount     ?? null;
-    const outputTokens: number | null = usage?.candidatesTokenCount ?? null;
-    const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 0);
+    const dossierFinishReason = result.candidates?.[0]?.finishReason ?? 'unknown';
+    if (dossierFinishReason === 'MAX_TOKENS') {
+      // Diagnostic only — flat 12k budget applies to every plan tier by design
+      // (dossier quality must not vary by subscription; see DOSSIER_MAX_TOKENS).
+      // No retry, no plan-specific ceiling increase.
+      console.warn('[dossier diag] MAX_TOKENS hit:', { model, biz, location, maxOutputTokens: DOSSIER_MAX_TOKENS });
+    }
+
+    dossierUsage = (result as any).usageMetadata ?? null;
+    // Single authoritative cost figure (single call, no grounding). usage_logs
+    // and report_activity_log both consume this so they reconcile.
+    const cost = aggregateGeminiUsage(model, [dossierUsage], 0);
+    const inputTokens = cost.inputTokens;
+    const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking
     const elapsedMs = Date.now() - startTime;
 
-    console.log(`[AICost] /api/opportunity-dossier role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)}`);
+    console.log(`[AICost] /api/opportunity-dossier role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens} out=${outputTokens} (thinking=${cost.thinkingTokens} grounding=${cost.groundingCalls}) est=$${cost.estimatedCostUsd.toFixed(5)}`);
     console.log(`[dossier diag] generation complete:`, { elapsedMs, inputTokens, outputTokens, biz, location });
 
     const withinHardCap = !wouldExceedHardCap(cost.estimatedCostUsd, budget);
@@ -537,7 +546,7 @@ Output valid JSON only. No markdown wrappers.
           model,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
-          grounding_calls: 0,
+          grounding_calls: cost.groundingCalls,
           estimated_cost_usd: cost.estimatedCostUsd,
           within_hard_cap: withinHardCap,
           location,
@@ -552,7 +561,7 @@ Output valid JSON only. No markdown wrappers.
     console.log('[ActivityLog] attempt opportunity-dossier success');
     try {
       if (supabaseAdmin) {
-        const aggregatedUsage = aggregateGeminiUsage(model, [dossierUsage]);
+        const aggregatedUsage = cost;  // same authoritative figure as usage_logs above — reconciles
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,

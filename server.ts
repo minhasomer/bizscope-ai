@@ -1185,9 +1185,10 @@ async function startServer() {
         cheaperModel,
         _analyzeUsage?.promptTokenCount ?? 0,
         _analyzeUsage?.candidatesTokenCount ?? 0,
-        2  // Phase 1 (Maps grounding) + Phase 2 (Search grounding)
+        2,  // Phase 1 (Maps grounding) + Phase 2 (Search grounding)
+        _analyzeUsage?.thoughtsTokenCount ?? 0,
       );
-      console.log(`[AICost] /api/analyze plan=${normalizedPlan} in=${_analyzeUsage?.promptTokenCount ?? '?'} out=${_analyzeUsage?.candidatesTokenCount ?? '?'} est=$${_analyzeCost.estimatedCostUsd.toFixed(5)}`);
+      console.log(`[AICost] /api/analyze plan=${normalizedPlan} in=${_analyzeUsage?.promptTokenCount ?? '?'} out=${_analyzeCost.outputTokens} (candidates=${_analyzeUsage?.candidatesTokenCount ?? '?'} thinking=${_analyzeUsage?.thoughtsTokenCount ?? 0}) est=$${_analyzeCost.estimatedCostUsd.toFixed(5)}`);
 
       const parsed = cleanAndParseJSON(proResponse.text || "", fallbackObj);
       // Deduplicate sources by URI to avoid showing the same source twice (#25)
@@ -1491,9 +1492,10 @@ async function startServer() {
         strongerModel,
         _regionalUsage?.promptTokenCount ?? 0,
         _regionalUsage?.candidatesTokenCount ?? 0,
-        0
+        0,
+        _regionalUsage?.thoughtsTokenCount ?? 0,
       );
-      console.log(`[AICost] /api/regional-analysis plan=${normalizedPlan} in=${_regionalUsage?.promptTokenCount ?? '?'} out=${_regionalUsage?.candidatesTokenCount ?? '?'} est=$${_regionalCost.estimatedCostUsd.toFixed(5)}`);
+      console.log(`[AICost] /api/regional-analysis plan=${normalizedPlan} in=${_regionalUsage?.promptTokenCount ?? '?'} out=${_regionalCost.outputTokens} (candidates=${_regionalUsage?.candidatesTokenCount ?? '?'} thinking=${_regionalUsage?.thoughtsTokenCount ?? 0}) est=$${_regionalCost.estimatedCostUsd.toFixed(5)}`);
 
       const parsed = cleanAndParseJSON(response.text || "", fallbackObj);
       parsed.targetLocation = location;

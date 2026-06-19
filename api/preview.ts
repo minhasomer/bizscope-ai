@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
   AI_BUDGET,
-  estimateCost,
+  aggregateGeminiUsage,
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
@@ -360,6 +360,8 @@ export default async function handler(
     let sources: { title: string; uri: string }[] = [];
     let competitionInfo = 'No competitor data available.';
     let marketInfo = 'No trend data available.';
+    let phase1Usage: any = null;  // Maps grounding — billable, must be counted
+    let phase2Usage: any = null;  // Search grounding — billable, must be counted
 
     function geminiErrDiag(err: unknown): Record<string, unknown> {
       if (!err || typeof err !== 'object') return { raw: String(err) };
@@ -396,6 +398,7 @@ Return all results combined, existing same-brand locations listed first. Include
       );
       competitionInfo = mapsRes.text || competitionInfo;
       sources.push(...getGroundingSources(mapsRes));
+      phase1Usage = (mapsRes as any).usageMetadata ?? null;
     } catch (err) {
       console.warn('[preview] phase 1 (Maps) failed:', geminiErrDiag(err));
     }
@@ -414,6 +417,7 @@ Return all results combined, existing same-brand locations listed first. Include
       );
       marketInfo = searchRes.text || marketInfo;
       sources.push(...getGroundingSources(searchRes));
+      phase2Usage = (searchRes as any).usageMetadata ?? null;
     } catch (err) {
       console.warn('[preview] phase 2 (Search) failed:', geminiErrDiag(err));
     }
@@ -476,11 +480,14 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     );
     const phase3ElapsedMs = Date.now() - phase3StartMs;
 
-    const usage = (synthesis as any).usageMetadata;
-    const inputTokens: number | null = usage?.promptTokenCount ?? null;
-    const outputTokens: number | null = usage?.candidatesTokenCount ?? null;
-    const cost = estimateCost(model, inputTokens ?? 0, outputTokens ?? 0, 2);
-    console.log(`[AICost] /api/preview model=${model} in=${inputTokens ?? '?'} out=${outputTokens ?? '?'} est=$${cost.estimatedCostUsd.toFixed(5)} phase3Ms=${phase3ElapsedMs}`);
+    const synthesisUsage = (synthesis as any).usageMetadata ?? null;
+    // Single authoritative cost figure: both grounded research phases + synthesis
+    // + grounding. usage_logs and report_activity_log both consume this so they reconcile.
+    const groundingCalls = (phase1Usage ? 1 : 0) + (phase2Usage ? 1 : 0);
+    const cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, synthesisUsage], groundingCalls);
+    const inputTokens = cost.inputTokens;
+    const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking, summed across phases
+    console.log(`[AICost] /api/preview model=${model} in=${inputTokens} out=${outputTokens} (thinking=${cost.thinkingTokens} grounding=${cost.groundingCalls}) est=$${cost.estimatedCostUsd.toFixed(5)} phase3Ms=${phase3ElapsedMs}`);
 
     const withinHardCap = !wouldExceedHardCap(cost.estimatedCostUsd, budget);
     if (!withinHardCap) {
@@ -533,7 +540,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           model,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
-          grounding_calls: 2,
+          grounding_calls: cost.groundingCalls,
           estimated_cost_usd: cost.estimatedCostUsd,
           within_hard_cap: withinHardCap,
           business_type: businessType,
@@ -561,6 +568,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           success: true,
           source: 'homepage',
           duration_ms: Date.now() - requestStartMs,
+          ai_model: model,
+          input_tokens: cost.inputTokens,
+          output_tokens: cost.outputTokens,
+          total_tokens: cost.totalTokens,
+          estimated_ai_cost: cost.estimatedCostUsd,  // same figure as usage_logs above — reconciles
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success preview success');
