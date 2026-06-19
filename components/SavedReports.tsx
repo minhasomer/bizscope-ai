@@ -3,7 +3,7 @@ import { SavedReport, SavedMarketGapReport, OpportunityReport } from '../types';
 import { SavedReportsService } from '../services/savedReportsService';
 import { isDemoMode } from '../src/config/appConfig';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
-import { viabilityScoreToAssessment, scoreToRiskRating, scoreToCompetitionRating } from '../src/utils/assessmentUtils';
+import { viabilityScoreToAssessment, scoreToRiskRating, scoreToCompetitionRating, stripScoreReferences } from '../src/utils/assessmentUtils';
 import { 
   Briefcase, 
   MapPin, 
@@ -85,7 +85,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
 
   const getRiskLabel = (rep: SavedReport) => {
     if (rep.riskAssessment && rep.riskAssessment.summary) {
-      return rep.riskAssessment.summary;
+      return stripScoreReferences(rep.riskAssessment.summary);
     }
     const score = rep.scoreBreakdown?.riskLevel ?? 50;
     if (score < 35) return "Low Risk Level";
@@ -95,7 +95,8 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
 
   const getCompetitionLabel = (rep: SavedReport) => {
     if (rep.competitionAnalysis && rep.competitionAnalysis.summary) {
-      return rep.competitionAnalysis.summary.slice(0, 120) + (rep.competitionAnalysis.summary.length > 120 ? '...' : '');
+      const cleaned = stripScoreReferences(rep.competitionAnalysis.summary);
+      return cleaned.slice(0, 120) + (cleaned.length > 120 ? '...' : '');
     }
     const intensity = rep.scoreBreakdown?.competitionIntensity ?? 50;
     if (intensity < 40) return "Low Local Competition Flow";
@@ -1001,7 +1002,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                         {reportA.recommendation?.decision || 'No Decision'}
                       </span>
                       <p className="text-xs text-gray-500 leading-relaxed italic">
-                        "{reportA.recommendation?.reasoning || 'Reasoning text omitted'}"
+                        "{reportA.recommendation?.reasoning ? stripScoreReferences(reportA.recommendation.reasoning) : 'Reasoning text omitted'}"
                       </p>
                     </div>
                     <div className="p-4 space-y-2">
@@ -1012,7 +1013,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                         {reportB.recommendation?.decision || 'No Decision'}
                       </span>
                       <p className="text-xs text-gray-500 leading-relaxed italic">
-                        "{reportB.recommendation?.reasoning || 'Reasoning text omitted'}"
+                        "{reportB.recommendation?.reasoning ? stripScoreReferences(reportB.recommendation.reasoning) : 'Reasoning text omitted'}"
                       </p>
                     </div>
                   </div>

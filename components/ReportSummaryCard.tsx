@@ -2,7 +2,7 @@
 import React from 'react';
 import type { ViabilityReport } from '../types';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
-import { viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+import { viabilityScoreToAssessment, stripScoreReferences } from '../src/utils/assessmentUtils';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 
 interface ReportSummaryCardProps {
@@ -31,7 +31,8 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
   } = report;
 
   const assessment = viabilityScoreToAssessment(score);
-  const truncated = summary.length > 220 ? summary.slice(0, 220).trimEnd() + '…' : summary;
+  const cleanedSummary = stripScoreReferences(summary);
+  const truncated = cleanedSummary.length > 220 ? cleanedSummary.slice(0, 220).trimEnd() + '…' : cleanedSummary;
 
   const stats = [
     { label: 'Est. Startup Cost',   value: fp.startupCostRange },

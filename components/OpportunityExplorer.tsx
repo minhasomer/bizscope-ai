@@ -15,6 +15,7 @@ import { filterLocationSuggestions, fetchLocationAutocomplete } from '../src/dat
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
+import { stripScoreReferences } from '../src/utils/assessmentUtils';
 
 type FilterType = 'all' | 'low-capital' | 'low-competition' | 'low-overhead';
 type SortType = 'score' | 'startup-cost' | 'competition';
@@ -985,7 +986,7 @@ const OpportunityCard: React.FC<{
           {opportunity.businessType}
         </h3>
         <p className="text-gray-500 text-xs leading-relaxed mb-4 line-clamp-2">
-          {opportunity.description}
+          {stripScoreReferences(opportunity.description)}
         </p>
 
         {/* Why #1 banner */}
@@ -995,7 +996,7 @@ const OpportunityCard: React.FC<{
               <Trophy className="w-3 h-3 text-yellow-600 shrink-0" />
               <span className="text-[10px] font-black text-yellow-700 uppercase tracking-wider">Why it ranks #1</span>
             </div>
-            <p className="text-xs text-yellow-900 leading-relaxed">{opportunity.whyItsGood}</p>
+            <p className="text-xs text-yellow-900 leading-relaxed">{stripScoreReferences(opportunity.whyItsGood)}</p>
           </div>
         )}
 
@@ -1312,7 +1313,7 @@ const OpportunityDossierModal: React.FC<{
                 <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
                 <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Opportunity Overview</span>
               </div>
-              <p className="text-sm leading-relaxed text-indigo-50">{opportunity.executiveSummary}</p>
+              <p className="text-sm leading-relaxed text-indigo-50">{stripScoreReferences(opportunity.executiveSummary)}</p>
             </div>
           )}
 
@@ -1366,7 +1367,7 @@ const OpportunityDossierModal: React.FC<{
               {/* 1. Market Demand Analysis */}
               {opportunity.marketDemand && (
                 <DossierSection title="Market Demand Analysis" icon={<TrendingUp className="w-4 h-4" />}>
-                  <p className="text-sm text-slate-700 leading-relaxed mb-4">{opportunity.marketDemand.summary}</p>
+                  <p className="text-sm text-slate-700 leading-relaxed mb-4">{stripScoreReferences(opportunity.marketDemand.summary)}</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     {opportunity.marketDemand.drivers && opportunity.marketDemand.drivers.length > 0 && (
                       <div>
@@ -1374,7 +1375,7 @@ const OpportunityDossierModal: React.FC<{
                         <ul className="space-y-2">
                           {opportunity.marketDemand.drivers.map((d, i) => (
                             <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
-                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />{d}
+                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />{stripScoreReferences(d)}
                             </li>
                           ))}
                         </ul>
@@ -1386,7 +1387,7 @@ const OpportunityDossierModal: React.FC<{
                         <ul className="space-y-2">
                           {opportunity.marketDemand.consumerTrends.map((t, i) => (
                             <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />{t}
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />{stripScoreReferences(t)}
                             </li>
                           ))}
                         </ul>
@@ -1397,13 +1398,13 @@ const OpportunityDossierModal: React.FC<{
                     {opportunity.marketDemand.targetAudience && (
                       <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Target Audience</p>
-                        <p className="text-xs text-slate-700 leading-relaxed">{opportunity.marketDemand.targetAudience}</p>
+                        <p className="text-xs text-slate-700 leading-relaxed">{stripScoreReferences(opportunity.marketDemand.targetAudience)}</p>
                       </div>
                     )}
                     {opportunity.marketDemand.localMarketConditions && (
                       <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Local Market Conditions</p>
-                        <p className="text-xs text-slate-700 leading-relaxed">{opportunity.marketDemand.localMarketConditions}</p>
+                        <p className="text-xs text-slate-700 leading-relaxed">{stripScoreReferences(opportunity.marketDemand.localMarketConditions)}</p>
                       </div>
                     )}
                   </div>
@@ -1422,7 +1423,7 @@ const OpportunityDossierModal: React.FC<{
                     ].filter(({ value }) => !!value).map(({ label, value }) => (
                       <div key={label} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-                        <p className="text-xs text-slate-700 leading-relaxed">{value}</p>
+                        <p className="text-xs text-slate-700 leading-relaxed">{stripScoreReferences(value)}</p>
                       </div>
                     ))}
                   </div>
@@ -1433,7 +1434,7 @@ const OpportunityDossierModal: React.FC<{
               {opportunity.competitiveLandscape && (
                 <DossierSection title="Competitive Landscape" icon={<ShieldCheck className="w-4 h-4" />}>
                   <div className="flex items-start gap-3 mb-3 flex-wrap">
-                    <p className="text-sm text-slate-700 leading-relaxed flex-grow">{opportunity.competitiveLandscape.summary}</p>
+                    <p className="text-sm text-slate-700 leading-relaxed flex-grow">{stripScoreReferences(opportunity.competitiveLandscape.summary)}</p>
                     {opportunity.competitiveLandscape.marketSaturation && (
                       <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${SATURATION_STYLES[opportunity.competitiveLandscape.marketSaturation] ?? 'bg-slate-100 text-slate-700'}`}>
                         {opportunity.competitiveLandscape.marketSaturation} Competition
@@ -1443,7 +1444,7 @@ const OpportunityDossierModal: React.FC<{
                   {opportunity.competitiveLandscape.existingCompetitors && (
                     <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mb-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Existing Competitors</p>
-                      <p className="text-xs text-slate-700 leading-relaxed">{opportunity.competitiveLandscape.existingCompetitors}</p>
+                      <p className="text-xs text-slate-700 leading-relaxed">{stripScoreReferences(opportunity.competitiveLandscape.existingCompetitors)}</p>
                     </div>
                   )}
                   {opportunity.competitiveLandscape.competitiveAdvantages && opportunity.competitiveLandscape.competitiveAdvantages.length > 0 && (
@@ -1452,7 +1453,7 @@ const OpportunityDossierModal: React.FC<{
                       <ul className="space-y-2">
                         {opportunity.competitiveLandscape.competitiveAdvantages.map((adv, i) => (
                           <li key={i} className="flex items-start gap-2 text-xs text-slate-700 leading-relaxed bg-emerald-50 rounded-lg p-2.5 border border-emerald-100">
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />{adv}
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />{stripScoreReferences(adv)}
                           </li>
                         ))}
                       </ul>
@@ -1473,7 +1474,7 @@ const OpportunityDossierModal: React.FC<{
                       ].filter(({ value }) => !!value).map(({ label, value }) => (
                         <div key={label}>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
-                          <p className="text-xs text-slate-700 leading-relaxed">{value}</p>
+                          <p className="text-xs text-slate-700 leading-relaxed">{stripScoreReferences(value)}</p>
                         </div>
                       ))}
                       {opportunity.startupRequirements.operationalComplexity && (
@@ -1511,14 +1512,14 @@ const OpportunityDossierModal: React.FC<{
               {/* 6. Revenue Model */}
               {opportunity.revenueModel && (
                 <DossierSection title="Revenue Potential & Business Model" icon={<BarChart2 className="w-4 h-4" />}>
-                  <p className="text-sm text-slate-700 leading-relaxed mb-4">{opportunity.revenueModel.summary}</p>
+                  <p className="text-sm text-slate-700 leading-relaxed mb-4">{stripScoreReferences(opportunity.revenueModel.summary)}</p>
                   {opportunity.revenueModel.monetizationMethods && opportunity.revenueModel.monetizationMethods.length > 0 && (
                     <div className="mb-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Revenue Streams</p>
                       <ul className="space-y-2">
                         {opportunity.revenueModel.monetizationMethods.map((m, i) => (
                           <li key={i} className="flex items-start gap-2 text-xs text-slate-700 leading-relaxed bg-blue-50 rounded-lg p-2.5 border border-blue-100">
-                            <DollarSign className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />{m}
+                            <DollarSign className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />{stripScoreReferences(m)}
                           </li>
                         ))}
                       </ul>
@@ -1527,7 +1528,7 @@ const OpportunityDossierModal: React.FC<{
                   {opportunity.revenueModel.scalabilityPotential && (
                     <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Scalability Potential</p>
-                      <p className="text-xs text-slate-700 leading-relaxed">{opportunity.revenueModel.scalabilityPotential}</p>
+                      <p className="text-xs text-slate-700 leading-relaxed">{stripScoreReferences(opportunity.revenueModel.scalabilityPotential)}</p>
                     </div>
                   )}
                 </DossierSection>
@@ -1543,12 +1544,12 @@ const OpportunityDossierModal: React.FC<{
                           <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${RISK_CATEGORY_COLORS[r.category] ?? 'bg-slate-100 text-slate-700'}`}>
                             {r.category}
                           </span>
-                          <p className="text-xs font-semibold text-slate-800 leading-relaxed">{r.risk}</p>
+                          <p className="text-xs font-semibold text-slate-800 leading-relaxed">{stripScoreReferences(r.risk)}</p>
                         </div>
                         <div className="flex items-start gap-2">
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
                           <p className="text-xs text-slate-600 leading-relaxed">
-                            <strong className="text-slate-700">Mitigation: </strong>{r.mitigation}
+                            <strong className="text-slate-700">Mitigation: </strong>{stripScoreReferences(r.mitigation)}
                           </p>
                         </div>
                       </div>
@@ -1613,7 +1614,7 @@ const OpportunityDossierModal: React.FC<{
                     {opportunity.strategicRecommendation.decision}
                   </div>
                   <p className={`text-sm leading-relaxed ${decisionStyle.text}`}>
-                    {opportunity.strategicRecommendation.rationale}
+                    {stripScoreReferences(opportunity.strategicRecommendation.rationale)}
                   </p>
                 </div>
               )}

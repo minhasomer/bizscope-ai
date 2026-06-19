@@ -13,9 +13,15 @@
  *      ("$150,000 $350,000" rendered with no separator).
  */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { checkBlockedCategory } from '../src/utils/blockedCategories';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 import { stripScoreReferences, viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..');
 
 /** Matches any user-visible numeric viability-score phrasing. */
 const SCORE_LEAK = /\b\d{1,3}\s*\/\s*100\b|\b(?:viability\s+)?score\s+of\s+\d+\b|\b\d{1,3}\s+out\s+of\s+100\b|\brated\s+\d{2,3}\b/i;
@@ -113,6 +119,68 @@ check('qualitative assessment labels still render correctly', () => {
   // labels carry no digits
   for (const s of [85, 77, 62, 55, 40, 20]) {
     assert.ok(!/\d/.test(viabilityScoreToAssessment(s).label), `label has digit at ${s}`);
+  }
+});
+
+// ── Market Gap scoreless-UX regression (production incident, June 18) ─────────
+// "View Full Analysis" on a Market Gap opportunity rendered raw model prose
+// containing "...with an estimated market demand of 78 and a viability score
+// of 72, this niche offers..." — stripScoreReferences was never wired into
+// OpportunityExplorer.tsx, only into ReportDisplay.tsx.
+
+check('stripScoreReferences cleans the exact Market Gap production leak', () => {
+  const leaked = 'With an estimated market demand of 78 and a viability score of 72, this niche offers significant potential.';
+  const cleaned = stripScoreReferences(leaked);
+  assert.ok(!SCORE_LEAK.test(cleaned), `score leak survived cleaning: ${cleaned}`);
+  assert.equal(cleaned, 'With an estimated market demand of 78 and an overall assessment, this niche offers significant potential.');
+});
+
+// Static source guard: every known AI-prose render site for these fields must
+// route through stripScoreReferences(...). This is a regex source-scan, not a
+// render test (no JSX runtime in this standalone script) — it exists to make
+// "added a new raw {opportunity.executiveSummary} render" fail CI instead of
+// silently shipping a leak the way the original regression did.
+check('all known AI-prose render sites are wrapped in stripScoreReferences', () => {
+  const targets: Array<{ file: string; fields: string[] }> = [
+    {
+      file: 'components/OpportunityExplorer.tsx',
+      fields: [
+        'opportunity.description', 'opportunity.whyItsGood', 'opportunity.executiveSummary',
+        'opportunity.marketDemand.summary', 'opportunity.marketDemand.targetAudience',
+        'opportunity.marketDemand.localMarketConditions', 'opportunity.competitiveLandscape.summary',
+        'opportunity.competitiveLandscape.existingCompetitors', 'opportunity.revenueModel.summary',
+        'opportunity.revenueModel.scalabilityPotential', 'opportunity.strategicRecommendation.rationale',
+      ],
+    },
+    {
+      file: 'components/ReportDisplay.tsx',
+      fields: [
+        'report.executiveSummary', 'report.competitionAnalysis.summary', 'report.marketTrends.summary',
+        'report.demographicInsights.summary', 'regionalData.countyContext', 'regionalData.regionalRecommendation',
+      ],
+    },
+    { file: 'components/ReportSummaryCard.tsx', fields: ['summary'] },
+    {
+      file: 'components/SavedReports.tsx',
+      fields: ['rep.riskAssessment.summary', 'rep.competitionAnalysis.summary'],
+    },
+    {
+      file: 'services/pdfService.ts',
+      fields: ['report.demographicInsights.summary', 'report.riskAssessment.summary', 'report.competitionAnalysis.summary'],
+    },
+  ];
+
+  for (const { file, fields } of targets) {
+    const src = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+    for (const field of fields) {
+      const escaped = field.replace(/[.[\]]/g, '\\$&');
+      // Require the field to appear at least once immediately preceded by
+      // "stripScoreReferences(" (allowing for `cleanedSummary`/`summary` local
+      // aliases is out of scope for this regex — those are checked by field
+      // name on their own line in ReportSummaryCard above).
+      const wrapped = new RegExp(`stripScoreReferences\\([^)]*\\b${escaped}\\b`);
+      assert.ok(wrapped.test(src), `${file}: "${field}" does not appear wrapped in stripScoreReferences(...)`);
+    }
   }
 });
 
