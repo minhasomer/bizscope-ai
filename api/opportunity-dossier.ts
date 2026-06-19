@@ -32,7 +32,7 @@ enum Type {
 const dossierSchema = {
   type: Type.OBJECT,
   properties: {
-    executiveSummary: { type: Type.STRING, description: '3-4 sentence executive summary of this opportunity' },
+    executiveSummary: { type: Type.STRING, description: '3-4 sentence executive summary of this opportunity. Do NOT state a numeric score in this prose (no "viability score of 68", "62/100", "68 out of 100", "rated 62"); describe the opportunity in words only — the score is shown elsewhere as a qualitative label.' },
     marketDemand: {
       type: Type.OBJECT,
       properties: {
@@ -120,7 +120,7 @@ const dossierSchema = {
       type: Type.OBJECT,
       properties: {
         decision: { type: Type.STRING, description: 'Proceed | Proceed with Caution | High Potential | Limited Opportunity' },
-        rationale: { type: Type.STRING },
+        rationale: { type: Type.STRING, description: 'Plain-language rationale. Do NOT cite a numeric score (no "score of 62", "62/100", "68 out of 100"); use qualitative terms only.' },
       },
       required: ['decision', 'rationale'],
     },
@@ -471,7 +471,7 @@ You are a senior business intelligence analyst. Generate a comprehensive full do
 **Opportunity Summary:**
 ${oppContext}
 
-Produce a detailed analysis covering all 10 required dossier sections for "${biz}" specifically in "${location}". Use the opportunity context above to inform all sections — reference specific scores, financial figures, and risks where relevant.
+Produce a detailed analysis covering all 10 required dossier sections for "${biz}" specifically in "${location}". Use the opportunity context above to inform all sections — reference specific financial figures and risks where relevant. Do NOT state any numeric score (e.g. "viability score of 68", "62/100", "rated 62") in any prose field; numeric ratings belong only in the opportunityScorecard object, never in narrative text.
 
 Required sections:
 - executiveSummary: 3-4 sentences explaining why this specific opportunity is strong in this specific location.
