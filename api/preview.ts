@@ -362,6 +362,8 @@ export default async function handler(
     let marketInfo = 'No trend data available.';
     let phase1Usage: any = null;  // Maps grounding — billable, must be counted
     let phase2Usage: any = null;  // Search grounding — billable, must be counted
+    let phase1Grounded = false;   // true once Maps grounding returns — counts the billed grounded prompt even if usageMetadata is null
+    let phase2Grounded = false;   // true once Search grounding returns
 
     function geminiErrDiag(err: unknown): Record<string, unknown> {
       if (!err || typeof err !== 'object') return { raw: String(err) };
@@ -399,6 +401,7 @@ Return all results combined, existing same-brand locations listed first. Include
       competitionInfo = mapsRes.text || competitionInfo;
       sources.push(...getGroundingSources(mapsRes));
       phase1Usage = (mapsRes as any).usageMetadata ?? null;
+      phase1Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
     } catch (err) {
       console.warn('[preview] phase 1 (Maps) failed:', geminiErrDiag(err));
     }
@@ -418,6 +421,7 @@ Return all results combined, existing same-brand locations listed first. Include
       marketInfo = searchRes.text || marketInfo;
       sources.push(...getGroundingSources(searchRes));
       phase2Usage = (searchRes as any).usageMetadata ?? null;
+      phase2Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
     } catch (err) {
       console.warn('[preview] phase 2 (Search) failed:', geminiErrDiag(err));
     }
@@ -483,7 +487,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     const synthesisUsage = (synthesis as any).usageMetadata ?? null;
     // Single authoritative cost figure: both grounded research phases + synthesis
     // + grounding. usage_logs and report_activity_log both consume this so they reconcile.
-    const groundingCalls = (phase1Usage ? 1 : 0) + (phase2Usage ? 1 : 0);
+    const groundingCalls = (phase1Grounded ? 1 : 0) + (phase2Grounded ? 1 : 0);
     const cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, synthesisUsage], groundingCalls);
     const inputTokens = cost.inputTokens;
     const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking, summed across phases

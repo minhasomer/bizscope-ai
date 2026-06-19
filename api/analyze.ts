@@ -821,6 +821,8 @@ export default async function handler(
   let geminiModelUsed: string | null = null;
   let phase1Usage: any = null;
   let phase2Usage: any = null;
+  let phase1Grounded = false;  // true once Maps grounding returns — counts the billed grounded prompt even if usageMetadata is null
+  let phase2Grounded = false;  // true once Search grounding returns
   const synthesisUsages: any[] = [];  // every Phase-3 attempt incl. MAX_TOKENS retry — all are billed
 
   try {
@@ -878,6 +880,7 @@ Return all results combined, existing same-brand locations listed first. Include
       competitionInfo = mapsRes.text || competitionInfo;
       sources.push(...getGroundingSources(mapsRes));
       phase1Usage = (mapsRes as any).usageMetadata ?? null;
+      phase1Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
       console.log('[analyze diag] phase 1 success:', { phase: 1, responseChars: competitionInfo.length });
     } catch (err) {
       console.warn('[analyze] phase 1 (Maps) failed:', geminiErrDiag(err));
@@ -899,6 +902,7 @@ Return all results combined, existing same-brand locations listed first. Include
       marketInfo = searchRes.text || marketInfo;
       sources.push(...getGroundingSources(searchRes));
       phase2Usage = (searchRes as any).usageMetadata ?? null;
+      phase2Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
       console.log('[analyze diag] phase 2 success:', { phase: 2, responseChars: marketInfo.length });
     } catch (err) {
       console.warn('[analyze] phase 2 (Search) failed:', geminiErrDiag(err));
@@ -995,7 +999,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     // Single authoritative cost figure for the whole report: both grounded
     // research phases + every synthesis attempt + grounding. usage_logs and
     // report_activity_log are both written from this one object so they reconcile.
-    const groundingCalls = (phase1Usage ? 1 : 0) + (phase2Usage ? 1 : 0);
+    const groundingCalls = (phase1Grounded ? 1 : 0) + (phase2Grounded ? 1 : 0);
     const cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, ...synthesisUsages], groundingCalls);
     const inputTokens = cost.inputTokens;
     const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking, summed across phases + retry
@@ -1356,7 +1360,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     console.log('[ActivityLog] attempt analyze failure-path');
     try {
       if (supabaseAdmin) {
-        const failGroundingCalls = (phase1Usage ? 1 : 0) + (phase2Usage ? 1 : 0);
+        const failGroundingCalls = (phase1Grounded ? 1 : 0) + (phase2Grounded ? 1 : 0);
         const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage, ...synthesisUsages], failGroundingCalls);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,

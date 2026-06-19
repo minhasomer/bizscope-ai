@@ -595,6 +595,7 @@ export default async function handler(
   let geminiModelUsed: string | null = null;
   let phase1Usage: any = null;
   let phase2Usage: any = null;
+  let phase1Grounded = false;  // true once the Search-grounding call returns — counts the billed grounded prompt even if usageMetadata is null
 
   try {
     const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
@@ -640,6 +641,7 @@ export default async function handler(
       marketData = searchRes.text || marketData;
       sources.push(...getGroundingSources(searchRes));
       phase1Usage = (searchRes as any).usageMetadata ?? null;
+      phase1Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
       console.log('[opportunities diag] phase 1 success:', { phase: 1, responseChars: marketData.length });
     } catch (err) {
       console.warn('[opportunities] phase 1 (Search) failed:', geminiErrDiag(err));
@@ -727,7 +729,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     // Single authoritative cost figure: Phase 1 (Search grounding) + Phase 2
     // (synthesis) + grounding. usage_logs and report_activity_log both consume
     // this so they reconcile.
-    const groundingCalls = (phase1Usage ? 1 : 0);
+    const groundingCalls = phase1Grounded ? 1 : 0;
     const cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage], groundingCalls);
     const inputTokens = cost.inputTokens;
     const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking, across phases
@@ -868,7 +870,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     console.log('[ActivityLog] attempt opportunities failure-path');
     try {
       if (supabaseAdmin) {
-        const failGroundingCalls = (phase1Usage ? 1 : 0);
+        const failGroundingCalls = phase1Grounded ? 1 : 0;
         const aggregatedUsage = aggregateGeminiUsage(geminiModelUsed ?? 'unknown', [phase1Usage, phase2Usage], failGroundingCalls);
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: verifiedUserId,
