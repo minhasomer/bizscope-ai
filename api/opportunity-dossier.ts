@@ -537,7 +537,7 @@ Output valid JSON only. No markdown wrappers.
 
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('usage_logs').insert({
+        const { error: usageLogError } = await supabaseAdmin.from('usage_logs').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
           user_role: verifiedRole,
@@ -552,7 +552,11 @@ Output valid JSON only. No markdown wrappers.
           location,
           business_type: biz,
         });
-        console.log(`[UsageLog] Logged: ${verifiedEmail} plan=${normalizedPlan} biz="${biz}" cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        if (usageLogError) {
+          console.error('[UsageLog] insert failed:', usageLogError);
+        } else {
+          console.log(`[UsageLog] Logged: ${verifiedEmail} plan=${normalizedPlan} biz="${biz}" cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        }
       }
     } catch (logErr: any) {
       console.error('[UsageLog] Insert failed (dossier still returned):', logErr.message ?? logErr);

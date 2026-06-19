@@ -1251,7 +1251,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('usage_logs').insert({
+        const { error: usageLogError } = await supabaseAdmin.from('usage_logs').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
           user_role: verifiedRole,
@@ -1266,7 +1266,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           business_type: businessType,
           location,
         });
-        console.log(`[UsageLog] Logged: ${verifiedEmail} plan=${normalizedPlan} cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        if (usageLogError) {
+          console.error('[UsageLog] insert failed:', usageLogError);
+        } else {
+          console.log(`[UsageLog] Logged: ${verifiedEmail} plan=${normalizedPlan} cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        }
       }
     } catch (logErr: any) {
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);

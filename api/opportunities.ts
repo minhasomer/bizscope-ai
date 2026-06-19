@@ -767,7 +767,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
 
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('usage_logs').insert({
+        const { error: usageLogError } = await supabaseAdmin.from('usage_logs').insert({
           user_id: verifiedUserId,
           user_email: verifiedEmail,
           user_role: verifiedRole,
@@ -779,9 +779,14 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           grounding_calls: cost.groundingCalls,
           estimated_cost_usd: cost.estimatedCostUsd,
           within_hard_cap: withinHardCap,
+          business_type: 'market_gaps',
           location,
         });
-        console.log(`[UsageLog] Logged: ${verifiedEmail} plan=${normalizedPlan} cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        if (usageLogError) {
+          console.error('[UsageLog] insert failed:', usageLogError);
+        } else {
+          console.log(`[UsageLog] Logged: ${verifiedEmail} plan=${normalizedPlan} cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        }
       }
     } catch (logErr: any) {
       console.error('[UsageLog] Insert failed (report still returned):', logErr.message ?? logErr);

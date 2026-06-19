@@ -531,7 +531,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     // Log to usage_logs for cost tracking (non-fatal if insert fails).
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('usage_logs').insert({
+        const { error: usageLogError } = await supabaseAdmin.from('usage_logs').insert({
           user_id: null,
           user_email: 'anonymous@bizscope.ai',
           user_role: 'anonymous',
@@ -546,7 +546,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           business_type: businessType,
           location,
         });
-        console.log(`[UsageLog] /preview logged: cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        if (usageLogError) {
+          console.error('[UsageLog] /preview insert failed:', usageLogError);
+        } else {
+          console.log(`[UsageLog] /preview logged: cost=$${cost.estimatedCostUsd.toFixed(5)}`);
+        }
       }
     } catch (logErr: any) {
       console.error('[UsageLog] /preview insert failed (report still returned):', logErr.message ?? logErr);
