@@ -1294,15 +1294,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   {report.riskAssessment.risks.length > 0 && (
                                       <div className="bg-amber-50/20 p-4 rounded-2xl border border-amber-100/80">
                                           <div className="flex justify-between items-start mb-2 gap-2">
-                                              <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{report.riskAssessment.risks[0].risk}</span>
+                                              <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{stripScoreReferences(report.riskAssessment.risks[0].risk)}</span>
                                               <span className={`text-[9px] px-2 py-0.5 rounded-full border shrink-0 ${getSeverityColor(report.riskAssessment.risks[0].severity)}`}>
                                                   {report.riskAssessment.risks[0].severity} Severity
                                               </span>
                                           </div>
-                                          <p className="text-xs text-gray-650 mb-2 leading-relaxed">{report.riskAssessment.risks[0].impact}</p>
+                                          <p className="text-xs text-gray-650 mb-2 leading-relaxed">{stripScoreReferences(report.riskAssessment.risks[0].impact)}</p>
                                           <p className="text-xs text-gray-500 font-semibold flex items-center gap-1 border-t border-gray-100 pt-2">
                                             <Info className="w-3 h-3 text-amber-500" />
-                                            <span>Mitigation: {report.riskAssessment.risks[0].mitigation}</span>
+                                            <span>Mitigation: {stripScoreReferences(report.riskAssessment.risks[0].mitigation)}</span>
                                           </p>
                                       </div>
                                   )}
@@ -1320,15 +1320,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                         {report.riskAssessment.risks.slice(1).map((risk, i) => (
                                             <div key={i} className="bg-amber-50/20 p-4 rounded-2xl border border-amber-100/80">
                                                 <div className="flex justify-between items-start mb-2 gap-2">
-                                                    <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{risk.risk}</span>
+                                                    <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{stripScoreReferences(risk.risk)}</span>
                                                     <span className={`text-[9px] px-2 py-0.5 rounded-full border shrink-0 ${getSeverityColor(risk.severity)}`}>
                                                         {risk.severity} Severity
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-gray-650 mb-2 leading-relaxed">{risk.impact}</p>
+                                                <p className="text-xs text-gray-650 mb-2 leading-relaxed">{stripScoreReferences(risk.impact)}</p>
                                                 <p className="text-xs text-gray-500 font-semibold flex items-center gap-1 border-t border-grey-100 pt-2">
                                                     <Info className="w-3 h-3 text-amber-500" />
-                                                    <span>Mitigation: {risk.mitigation}</span>
+                                                    <span>Mitigation: {stripScoreReferences(risk.mitigation)}</span>
                                                 </p>
                                             </div>
                                         ))}
@@ -1404,13 +1404,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Competitors in this area</p>
                   {report.generationMeta?.isLiveGenerated ? (
                     <>
-                      <p className="mb-4 text-sm text-gray-700 leading-relaxed">{report.competitionAnalysis.summary}</p>
+                      <p className="mb-4 text-sm text-gray-700 leading-relaxed">{stripScoreReferences(report.competitionAnalysis.summary)}</p>
                       <ul className="space-y-4">
                         {report.competitionAnalysis.competitors.map((comp, index) => (
                           <li key={index} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-150 transition-colors hover:bg-white">
                             <div className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{comp.name}</div>
                             <div className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wide">{comp.address || 'Address documented'}</div>
-                            <p className="text-xs text-gray-600 leading-relaxed">{comp.details}</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(comp.details)}</p>
                           </li>
                         ))}
                       </ul>
@@ -1424,19 +1424,19 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 </SectionCard>
 
                 {/* Market Trends */}
-                <SectionCard 
+                <SectionCard
                   title="Market Trends"
                   icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
                 >
                   <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">What's driving demand</p>
-                  <p className="mb-4 text-sm text-gray-750 leading-relaxed">{report.marketTrends.summary}</p>
+                  <p className="mb-4 text-sm text-gray-750 leading-relaxed">{stripScoreReferences(report.marketTrends.summary)}</p>
                   <ul className="space-y-4">
                     {report.marketTrends.trends.map((item, index) => (
                       <li key={index} className="flex items-start gap-3">
                         <span className="flex-shrink-0 w-2 h-2 mt-2 bg-emerald-500 rounded-full"></span>
                         <div>
                           <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide block">{item.trend}</span>
-                          <span className="text-xs text-gray-600 leading-relaxed mt-0.5 block">{item.impact}</span>
+                          <span className="text-xs text-gray-600 leading-relaxed mt-0.5 block">{stripScoreReferences(item.impact)}</span>
                         </div>
                       </li>
                     ))}
@@ -1445,13 +1445,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             </div>
 
             {/* Demographics Insight snapshot card - Always fully visible */}
-            <SectionCard 
+            <SectionCard
               title="Local Demographics"
               id="demographics"
               icon={<Building className="w-5 h-5 text-rose-500" />}
             >
               <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Local population & income</p>
-              <p className="mb-6 text-sm text-gray-750 leading-relaxed">{report.demographicInsights.summary}</p>
+              <p className="mb-6 text-sm text-gray-750 leading-relaxed">{stripScoreReferences(report.demographicInsights.summary)}</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {report.demographicInsights.demographics.map((demo, index) => (
                   <div key={index} className="border-l-3 border-purple-500 pl-4 py-3 bg-gray-50/50 rounded-r-2xl pr-4 border border-gray-200/40 relative overflow-hidden transition-all duration-300 hover:bg-white hover:border-purple-250">
@@ -1640,7 +1640,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                         <Building className="w-4 h-4 text-blue-500" />
                                         <span>County-Level Market Context</span>
                                     </h4>
-                                    <p className="text-xs text-gray-600 leading-relaxed">{regionalData.countyContext}</p>
+                                    <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(regionalData.countyContext)}</p>
                                 </div>
 
                                 <div className="bg-purple-50/30 border border-purple-100 p-5 rounded-2xl">
@@ -1648,7 +1648,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                         <Compass className="w-4 h-4 text-purple-500" />
                                         <span>{regionalData.specificObservationTitle || "Radius Observations"}</span>
                                     </h4>
-                                    <p className="text-xs text-gray-600 leading-relaxed">{regionalData.specificObservationText}</p>
+                                    <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(regionalData.specificObservationText)}</p>
                                 </div>
                             </div>
 
@@ -1659,7 +1659,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                         <Globe className="w-4 h-4 text-indigo-500" />
                                         <span>Wider Economic Region (15–25 miles)</span>
                                     </h4>
-                                    <p className="text-xs text-gray-600 leading-relaxed">{regionalData.economicRadius}</p>
+                                    <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(regionalData.economicRadius)}</p>
                                 </div>
 
                                 <div className="bg-gray-50/80 border border-gray-200 p-5 rounded-2xl">
@@ -1667,7 +1667,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                         <AlertTriangle className="w-4 h-4 text-amber-500" />
                                         <span>Nearby Market Competition</span>
                                     </h4>
-                                    <p className="text-xs text-gray-600 leading-relaxed">{regionalData.competitiveSpillover}</p>
+                                    <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(regionalData.competitiveSpillover)}</p>
                                 </div>
                             </div>
 
@@ -1677,7 +1677,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     <Layers className="w-4 h-4 text-indigo-500" />
                                     <span>Expansion Plan (Next 12 Months)</span>
                                 </p>
-                                <p className="text-xs text-gray-600 leading-relaxed">{regionalData.expansionPotential}</p>
+                                <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(regionalData.expansionPotential)}</p>
                             </div>
 
                             {/* 6. Regional Recommendation Highlight */}
@@ -1687,7 +1687,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                 </div>
                                 <div className="text-left">
                                     <h5 className="font-extrabold text-emerald-900 text-xs uppercase tracking-wider mb-1">Expansion Recommendation</h5>
-                                    <p className="text-xs text-emerald-800 leading-relaxed">{regionalData.regionalRecommendation}</p>
+                                    <p className="text-xs text-emerald-800 leading-relaxed">{stripScoreReferences(regionalData.regionalRecommendation)}</p>
                                 </div>
                             </div>
                         </div>
@@ -1787,8 +1787,8 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                         <div key={i} className="flex items-start gap-2.5 bg-red-50/40 border border-red-100 p-3 rounded-xl">
                                             <ShieldCheck className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
                                             <div>
-                                                <span className="font-extrabold text-gray-900 text-xs block">{risk.risk}</span>
-                                                <span className="text-xs text-gray-600 mt-0.5 block">{risk.mitigation}</span>
+                                                <span className="font-extrabold text-gray-900 text-xs block">{stripScoreReferences(risk.risk)}</span>
+                                                <span className="text-xs text-gray-600 mt-0.5 block">{stripScoreReferences(risk.mitigation)}</span>
                                             </div>
                                         </div>
                                     ))}

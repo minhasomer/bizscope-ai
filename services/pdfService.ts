@@ -292,7 +292,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(60, 65, 70);
-      currentY = writeWrappedText(report.demographicInsights.summary, 20, currentY, 170);
+      currentY = writeWrappedText(stripScoreReferences(report.demographicInsights.summary), 20, currentY, 170);
 
       // Demographic Indicators Grid Table
       if (report.demographicInsights.demographics && report.demographicInsights.demographics.length > 0) {
@@ -534,7 +534,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(60, 65, 70);
-      currentY = writeWrappedText(report.riskAssessment.summary, 20, currentY, 170);
+      currentY = writeWrappedText(stripScoreReferences(report.riskAssessment.summary), 20, currentY, 170);
 
       currentY += 4;
       currentY = ensureRemainingY(currentY, 45);
@@ -551,13 +551,13 @@ export class PDFService {
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(153, 27, 27);
-        doc.text(sanitizeForPdf(`RISK THREAT: ${r.risk.toUpperCase()} [SEVERITY: ${r.severity}]`), 24, currentY + 6);
+        doc.text(sanitizeForPdf(`RISK THREAT: ${stripScoreReferences(r.risk).toUpperCase()} [SEVERITY: ${r.severity}]`), 24, currentY + 6);
 
         doc.setFont('Helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(50, 55, 60);
-        writeWrappedText(`Impact: ${r.impact}`, 24, currentY + 11, 160, 4);
-        writeWrappedText(`Proposed Active Mitigation: ${r.mitigation}`, 24, currentY + 17, 160, 4);
+        writeWrappedText(`Impact: ${stripScoreReferences(r.impact)}`, 24, currentY + 11, 160, 4);
+        writeWrappedText(`Proposed Active Mitigation: ${stripScoreReferences(r.mitigation)}`, 24, currentY + 17, 160, 4);
 
         currentY += 27;
       }
@@ -576,7 +576,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(60, 65, 70);
-      currentY = writeWrappedText(report.competitionAnalysis.summary, 20, currentY, 170);
+      currentY = writeWrappedText(stripScoreReferences(report.competitionAnalysis.summary), 20, currentY, 170);
 
       currentY += 4;
 
@@ -600,7 +600,7 @@ export class PDFService {
 
           doc.setFontSize(8.5);
           doc.setTextColor(60, 65, 70);
-          doc.text(sanitizeForPdf(comp.details || "Direct catalog competitor focus profile matches."), 24, currentY + 12);
+          doc.text(sanitizeForPdf(stripScoreReferences(comp.details) || "Direct catalog competitor focus profile matches."), 24, currentY + 12);
 
           currentY += 16;
         }
@@ -661,7 +661,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(60, 65, 70);
-      currentY = writeWrappedText(rd.countyContext || "Regional adjacent neighborhood characteristics modeled correctly.", 20, currentY, 170);
+      currentY = writeWrappedText(stripScoreReferences(rd.countyContext) || "Regional adjacent neighborhood characteristics modeled correctly.", 20, currentY, 170);
 
       if (rd.nearbyRegions && rd.nearbyRegions.length > 0) {
         currentY += 6;
@@ -710,7 +710,7 @@ export class PDFService {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(80, 85, 90);
-      currentY = writeWrappedText(rd.regionalRecommendation || rd.expansionPotential, 20, currentY, 170, 4.5);
+      currentY = writeWrappedText(stripScoreReferences(rd.regionalRecommendation || rd.expansionPotential), 20, currentY, 170, 4.5);
     } else {
       currentY += 8;
       doc.setFont('Helvetica', 'italic');
