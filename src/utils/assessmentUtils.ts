@@ -33,10 +33,54 @@ export function viabilityScoreToAssessment(score: number): Assessment {
  */
 export function viabilityScoreToPlainExplanation(score: number): string {
   if (score >= 70) return 'The market appears favorable. Continue validating details before investing.';
-  if (score >= 60) return 'There are encouraging signs. This opportunity deserves deeper research.';
+  if (score >= 60) return 'There are encouraging signs. This opportunity deserves deeper research before investing.';
   if (score >= 50) return 'The opportunity may work, but several risks need closer review.';
   if (score >= 35) return 'Significant concerns were identified. Investigate thoroughly before proceeding.';
   return 'Current market conditions do not appear favorable for this opportunity.';
+}
+
+/**
+ * Second line of the local explanation: where THIS result sits relative to the
+ * overall BizScope framework. Scoreless — describes position, never a number.
+ */
+export function viabilityScoreToFrameworkContext(score: number): string {
+  if (score >= 70) return "This is BizScope's most favorable assessment.";
+  if (score >= 60) return 'This is a positive outcome and is generally more favorable than Proceed Carefully.';
+  if (score >= 50) return 'This sits in the middle of the assessment range and indicates meaningful risks.';
+  if (score >= 35) return 'This indicates more concerns than Proceed Carefully and requires deeper validation.';
+  return "This is BizScope's least favorable assessment.";
+}
+
+// ─── Assessment Framework (the "How BizScope ratings work" legend) ─────────────
+
+export interface FrameworkTier {
+  key: string;
+  emoji: string;
+  label: string;
+  blurb: string;
+}
+
+/** The BizScope assessment framework, ordered most → least favorable. */
+export const ASSESSMENT_FRAMEWORK: FrameworkTier[] = [
+  { key: 'strong',  emoji: '🟢', label: 'Strong Opportunity',          blurb: 'Favorable overall signal.' },
+  { key: 'worth',   emoji: '🟢', label: 'Worth Further Investigation', blurb: 'Promising signals that justify deeper research.' },
+  { key: 'proceed', emoji: '🟡', label: 'Proceed Carefully',           blurb: 'Viable but risk-sensitive.' },
+  { key: 'caution', emoji: '🟠', label: 'Caution Advised',             blurb: 'Meaningful concerns identified.' },
+  { key: 'notrec',  emoji: '🔴', label: 'Not Recommended',             blurb: 'Current conditions appear unfavorable.' },
+];
+
+/**
+ * Index into ASSESSMENT_FRAMEWORK for a given viability score — drives the
+ * "You are here" highlight. Collapses the six assessment bands onto the five
+ * public framework tiers (the two favorable bands map to Strong Opportunity;
+ * the Significant Concerns band maps to Caution Advised).
+ */
+export function viabilityScoreToFrameworkIndex(score: number): number {
+  if (score >= 70) return 0; // Strong Opportunity (incl. Attractive Market band)
+  if (score >= 60) return 1; // Worth Further Investigation
+  if (score >= 50) return 2; // Proceed Carefully
+  if (score >= 35) return 3; // Caution Advised (incl. Significant Concerns band)
+  return 4;                  // Not Recommended
 }
 
 // ─── Category Ratings ─────────────────────────────────────────────────────────

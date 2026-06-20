@@ -8,6 +8,9 @@ import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 import {
   viabilityScoreToAssessment,
   viabilityScoreToPlainExplanation,
+  viabilityScoreToFrameworkContext,
+  viabilityScoreToFrameworkIndex,
+  ASSESSMENT_FRAMEWORK,
   scoreToMarketDemandRating,
   scoreToCompetitionRating,
   scoreToCapitalRating,
@@ -409,6 +412,7 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
 const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
   const a = viabilityScoreToAssessment(score);
   const plain = viabilityScoreToPlainExplanation(score);
+  const context = viabilityScoreToFrameworkContext(score);
   // Scoreless UX (Decision Framework, Sprint 11): the numeric score stays in the
   // data model and drives color/label, but is NEVER shown as a number. Display
   // the qualitative assessment only.
@@ -419,23 +423,69 @@ const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
         <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
         <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
       </div>
-      {/* Compact, outcome-specific explanation right under the badge — replaces the
-          generic framework legend so beta users understand THEIR result first.
-          print:hidden; the PDF is generated independently via jsPDF. */}
+      {/* Compact, outcome-specific explanation attached to the badge — what THIS
+          result means + where it sits in the framework. The full framework legend
+          lives separately below Confidence Level. print:hidden (PDF via jsPDF). */}
       <details className="mt-3 group w-44 md:w-52 print:hidden">
         <summary className="flex items-center justify-center gap-1.5 cursor-pointer select-none text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
           <HelpCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          <span>What this rating means</span>
+          <span>What does this rating mean?</span>
           <ChevronDown className="w-3 h-3 text-gray-400 shrink-0 transition-transform group-open:rotate-180" />
         </summary>
         <div className="mt-2 rounded-xl border border-gray-150 bg-gray-50/70 px-3 py-2.5 text-left">
           <p className="text-xs leading-snug text-gray-700">{plain}</p>
-          <p className="text-[10px] leading-snug text-gray-400 mt-2">
-            BizScope uses market demand, competition, startup cost, operating complexity, growth potential, and risk signals to form this assessment.
-          </p>
+          <p className="text-[10px] leading-snug text-gray-400 mt-2">{context}</p>
         </div>
       </details>
     </>
+  );
+};
+
+// Framework legend (Part 2/3) — explains the full BizScope assessment scale and
+// marks where the current report landed ("You are here"). Lives below Confidence
+// Level, separate from the per-result explanation on the badge. print:hidden —
+// the PDF is generated independently via jsPDF.
+const AssessmentFramework: React.FC<{ score: number }> = ({ score }) => {
+  const currentIdx = viabilityScoreToFrameworkIndex(score);
+  return (
+    <details className="mt-5 group print:hidden rounded-2xl border border-gray-150 bg-gray-50/60 open:bg-gray-50/90 transition-colors">
+      <summary className="flex items-center gap-2 cursor-pointer select-none px-4 py-2.5 text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
+        <Info className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+        <span className="uppercase tracking-wider">How BizScope ratings work</span>
+        <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-auto shrink-0 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="px-3 pb-3 pt-2 border-t border-gray-100">
+        <p className="text-[10px] text-gray-400 px-1 pb-2 leading-snug">
+          Assessments range from most to least favorable. Your report's outcome is highlighted.
+        </p>
+        <ul className="space-y-1">
+          {ASSESSMENT_FRAMEWORK.map((tier, i) => {
+            const isCurrent = i === currentIdx;
+            return (
+              <li
+                key={tier.key}
+                className={`flex items-start gap-2.5 rounded-xl px-3 py-2 ${
+                  isCurrent ? 'bg-white border border-blue-200 shadow-xs' : 'border border-transparent'
+                }`}
+              >
+                <span className="text-sm leading-none mt-0.5 shrink-0">{tier.emoji}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[11px] font-black ${isCurrent ? 'text-blue-800' : 'text-gray-700'}`}>{tier.label}</span>
+                    {isCurrent && (
+                      <span className="text-[9px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">
+                        Current assessment
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-[10px] leading-snug ${isCurrent ? 'text-gray-600' : 'text-gray-400'}`}>{tier.blurb}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </details>
   );
 };
 
@@ -1004,6 +1054,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 </div>
               );
             })()}
+
+            {/* Framework legend with "You are here" — below Confidence Level, above actions */}
+            <AssessmentFramework score={report.viabilityScore} />
 
             {/* Print Friendly Meta Block */}
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
