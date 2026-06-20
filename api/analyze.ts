@@ -411,6 +411,14 @@ const _serverBetaFullAccess: boolean = process.env.BETA_FULL_ACCESS === 'true';
 const CACHE_VERSION = 'v1';
 const VIABILITY_CACHE_MAX_AGE_DAYS = 90;
 
+// Consistency-guardrail version tags — persisted into report.generationMeta so two
+// runs of the same business/location can be compared to explain output drift.
+// Bump PROMPT_VERSION when the synthesis prompt text changes; bump
+// MODEL_CONFIG_VERSION when the model, token budgets, temperature, or thinking
+// config change.
+const PROMPT_VERSION = '2026-06-19';
+const MODEL_CONFIG_VERSION = 'flash-synth16k-t0.4';
+
 function normalizeCacheKey(s: string): string {
   return s.toLowerCase().trim();
 }
@@ -1251,6 +1259,17 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       inputTokens,
       outputTokens,
       generatedAt: new Date().toISOString(),
+      // Consistency-guardrail tracking — lets a later run be compared to this one.
+      promptVersion: PROMPT_VERSION,
+      modelConfigVersion: MODEL_CONFIG_VERSION,
+      synthesisInputTokenCount: synthesisUsages[0]?.promptTokenCount ?? null,
+      grounding: {
+        mapsGrounded: phase1Grounded,
+        searchGrounded: phase2Grounded,
+        groundingCalls: cost.groundingCalls,
+      },
+      competitorCount: parsed.competitionAnalysis?.competitors?.length ?? null,
+      sourceCount: sources.length,
     };
 
     try {

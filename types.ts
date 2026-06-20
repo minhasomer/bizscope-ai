@@ -363,6 +363,18 @@ export interface ViabilityReport {
     inputTokens: number | null;
     outputTokens: number | null;
     generatedAt: string;
+    // Consistency-guardrail tracking (optional — present on live viability reports).
+    // Lets two runs of the same report be compared to explain output drift.
+    promptVersion?: string;
+    modelConfigVersion?: string;
+    synthesisInputTokenCount?: number | null;
+    grounding?: {
+      mapsGrounded: boolean;
+      searchGrounded: boolean;
+      groundingCalls: number;
+    };
+    competitorCount?: number | null;
+    sourceCount?: number | null;
   };
   // Cache freshness metadata — added by the server cache layer
   _cached?: boolean;

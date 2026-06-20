@@ -479,6 +479,65 @@ const RatingsGrid: React.FC<{ report: ViabilityReport }> = ({ report }) => {
   );
 };
 
+// Compact, collapsible "What this means" legend for the scoreless UX. Explains
+// the qualitative outcome labels and the rating-pill color scale without ever
+// reintroducing a numeric score. print:hidden — the PDF is built independently
+// via jsPDF, and this keeps browser print output clean too.
+const ASSESSMENT_OUTCOMES: Array<{ label: string; meaning: string; dotClass: string }> = [
+  { label: 'Strong Opportunity',          meaning: 'Favorable overall signal. Still validate costs, competition, and local demand.', dotClass: 'bg-emerald-500' },
+  { label: 'Worth Further Investigation', meaning: 'Promising signals, but key assumptions need validation before investing.',       dotClass: 'bg-amber-500'   },
+  { label: 'Proceed Carefully',           meaning: 'Viable but risk-sensitive. Review weak areas before moving forward.',             dotClass: 'bg-orange-400'  },
+  { label: 'Caution Advised',             meaning: 'Material risks present. Do not proceed without deeper validation.',               dotClass: 'bg-orange-500'  },
+  { label: 'Not Recommended',             meaning: 'Weak or unfavorable signal based on current market, competition, or economics.',  dotClass: 'bg-rose-500'    },
+];
+
+const RATING_SCALE: Array<{ label: string; dotClass: string }> = [
+  { label: 'Exceptional · Strong · Low Risk', dotClass: 'bg-emerald-500' },
+  { label: 'Moderate · Mixed',                dotClass: 'bg-amber-500'   },
+  { label: 'High · Elevated',                 dotClass: 'bg-orange-500'  },
+  { label: 'Very High · Severe',              dotClass: 'bg-rose-500'    },
+  { label: 'Unknown · Limited Data',          dotClass: 'bg-gray-400'    },
+];
+
+const AssessmentLegend: React.FC = () => (
+  <details className="mt-5 group print:hidden rounded-2xl border border-gray-150 bg-gray-50/60 open:bg-gray-50/90 transition-colors">
+    <summary className="flex items-center gap-2 cursor-pointer select-none px-4 py-2.5 text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
+      <Info className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+      <span className="uppercase tracking-wider">What this means</span>
+      <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-auto shrink-0 transition-transform group-open:rotate-180" />
+    </summary>
+    <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 border-t border-gray-100">
+      <div className="pt-3">
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Overall Assessment</p>
+        <ul className="space-y-2">
+          {ASSESSMENT_OUTCOMES.map(({ label, meaning, dotClass }) => (
+            <li key={label} className="flex items-start gap-2.5">
+              <span className={`mt-1 h-2 w-2 rounded-full shrink-0 ${dotClass}`} />
+              <span className="text-[11px] leading-snug text-gray-600">
+                <strong className="text-gray-800 font-bold">{label}</strong> — {meaning}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="md:pt-3">
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Rating Scale</p>
+        <ul className="space-y-2">
+          {RATING_SCALE.map(({ label, dotClass }) => (
+            <li key={label} className="flex items-center gap-2.5">
+              <span className={`h-2 w-2 rounded-full shrink-0 ${dotClass}`} />
+              <span className="text-[11px] text-gray-600">{label}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-[10px] text-gray-400 mt-3 leading-snug">
+          Qualitative AI estimates across Market Demand, Competition, Growth Potential, Risk Level, and Capital Requirements — directional guidance, not guarantees.
+        </p>
+      </div>
+    </div>
+  </details>
+);
+
 // Scrolling Subnav component for easy navigation on mobile / desktops
 const ReportSubNav: React.FC<{ activeSection: string; setActiveSection: (id: string) => void }> = ({ activeSection, setActiveSection }) => {
   const items = [
@@ -876,10 +935,21 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   onClick={handleRegenerateClick}
                   className="shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  Run Fresh Analysis
+                  Refresh with new market research
                 </button>
               )}
             </div>
+          );
+        })()}
+        {/* Report freshness note — consistency guardrail (always shown for dated reports) */}
+        {(() => {
+          const rawDate = report._generatedAt ?? report.generationMeta?.generatedAt;
+          if (!rawDate) return null;
+          return (
+            <p className="text-[11px] text-gray-400 leading-relaxed px-1 print:hidden">
+              Generated on {new Date(rawDate).toLocaleDateString()}. Market signals and competitor data may change.
+              Refreshing the report may produce updated conclusions.
+            </p>
           );
         })()}
         {/* Header and Score Card */}
@@ -974,6 +1044,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               );
             })()}
 
+            {/* Qualitative outcome / rating legend — scoreless-UX explainer */}
+            <AssessmentLegend />
+
             {/* Print Friendly Meta Block */}
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
               <span>BizScope Study &bull; Confidentially Generated</span>
@@ -987,13 +1060,13 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     <div className="flex flex-col gap-1">
                       <button
                         onClick={handleRegenerateClick}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-extrabold text-xs shadow-md cursor-pointer border border-transparent"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-xl transition-colors font-extrabold text-xs cursor-pointer"
                       >
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span>Run Fresh Analysis</span>
+                          <span>Refresh with new market research</span>
                       </button>
-                      <span className="text-[10px] text-gray-400 leading-tight max-w-[200px]">
-                        Creates a new report using current data and may count against your report limit.
+                      <span className="text-[10px] text-gray-400 leading-tight max-w-[220px]">
+                        Runs new market research and may change your results, since sources and market evidence can change. Counts against your report limit.
                       </span>
                     </div>
                 )}
@@ -1857,29 +1930,31 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     <AlertTriangle className="h-6 w-6" />
                   </div>
                   <h3 className="text-lg font-black text-gray-900 tracking-tight" id="regen-modal-title">
-                    Run Fresh Analysis?
+                    Refresh with new market research?
                   </h3>
                 </div>
 
                 <p className="text-xs text-gray-500 leading-relaxed mb-6">
-                  This will run a new AI analysis for this business and location using current data.
+                  Your latest saved analysis is already shown. Refreshing runs new market research
+                  and <strong className="text-gray-700">may change your results</strong> — sources and
+                  market evidence can shift between runs.
                   <br />
                   <br />
-                  It bypasses the shared cache and will count against your report limit. Do you wish to proceed?
+                  It bypasses the shared cache and will count against your report limit.
                 </p>
 
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={() => setShowRegenConfirm(false)}
-                    className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
+                <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                   <button
                     onClick={handleRegenerateConfirm}
+                    className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    Refresh with new market research
+                  </button>
+                  <button
+                    onClick={() => setShowRegenConfirm(false)}
                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
                   >
-                    Yes, Run Fresh Analysis
+                    View latest saved analysis
                   </button>
                 </div>
               </div>
