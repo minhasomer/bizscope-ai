@@ -624,6 +624,16 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
   const [activeSection, setActiveSection] = useState('overview');
 
+  // Open every report at the top so the Overall Assessment (and Recommended
+  // Posture / Confidence Level) is the first thing seen. navigate('report')
+  // only swaps the conditionally-rendered view, so the browser preserves the
+  // previous screen's scrollY — reset it here. Keyed to report identity so
+  // switching from one report to another also returns to the top. Instant
+  // (behavior:'auto') to avoid a visible scroll jump.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [report.businessType, report.location]);
+
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExportLoading, setIsExportLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
