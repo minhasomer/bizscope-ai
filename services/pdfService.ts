@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { SubscriptionPlan, canViewFullFinancials, canViewRegionalIntelligence } from '../src/utils/planUtils';
 import { ViabilityReport } from '../types';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
-import { viabilityScoreToPdfLabel, factorScoreToPdfLabel, scoreToCompetitionRating, scoreToRiskRating, stripScoreReferences } from '../src/utils/assessmentUtils';
+import { viabilityScoreToPdfLabel, factorScoreToPdfLabel, scoreToCompetitionRating, scoreToRiskRating, stripScoreReferences, getRecommendedPosture } from '../src/utils/assessmentUtils';
 
 export interface PDFExportOptions {
   isWhiteLabelMode: boolean;
@@ -201,7 +201,7 @@ export class PDFService {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(60, 65, 70);
-    doc.text(sanitizeForPdf(`Verdict: ${report.recommendation?.decision || "Caution Advised"}`), 30, 158);
+    doc.text(sanitizeForPdf(`Recommended Posture: ${getRecommendedPosture(report.recommendation?.decision ?? 'Verification Required')}`), 30, 158);
 
     // Score breakdown block side elements with plain-English labels
     if (report.scoreBreakdown) {
@@ -721,11 +721,12 @@ export class PDFService {
 
     currentY = ensureRemainingY(currentY, 65);
 
-    // Ultimate Venture Recommendation Verdict
+    // Final recommendation — action guidance, not a second verdict (the scoreless
+    // Overall Assessment on the cover is the only headline verdict).
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-    doc.text("6. FINAL CORPORATE VENTURE VERDICT", 20, currentY);
+    doc.text("6. FINAL RECOMMENDATION", 20, currentY);
     
     currentY += 4;
     doc.setDrawColor(pColor[0], pColor[1], pColor[2]);
@@ -742,7 +743,7 @@ export class PDFService {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-    doc.text(sanitizeForPdf(`VERDICT DECISION: ${report.recommendation?.decision?.toUpperCase() || "CAUTION ADVISED"}`), 25, currentY + 8);
+    doc.text(sanitizeForPdf(`RECOMMENDED POSTURE: ${getRecommendedPosture(report.recommendation?.decision ?? 'Verification Required').toUpperCase()}`), 25, currentY + 8);
 
     doc.setFont('Helvetica', 'italic');
     doc.setFontSize(8.5);

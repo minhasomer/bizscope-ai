@@ -83,6 +83,22 @@ export function viabilityScoreToFrameworkIndex(score: number): number {
   return 4;                  // Not Recommended
 }
 
+/**
+ * Action-guidance posture for a recommendation.decision — the plain "next move"
+ * shown as "Recommended Posture" in both the report header and the PDF export.
+ * This is NOT a verdict; the scoreless Overall Assessment is the only headline
+ * verdict. Single source of truth so the UI and PDF never drift.
+ */
+export function getRecommendedPosture(decision: string): string {
+  switch (decision) {
+    case 'Recommended':           return 'Good candidate for deeper validation';
+    case 'Caution Advised':       return 'Review key risks before proceeding';
+    case 'Not Recommended':       return 'Avoid or reassess before investing';
+    case 'Verification Required': return 'Verify assumptions before proceeding';
+    default:                      return 'Review details before proceeding';
+  }
+}
+
 // ─── Category Ratings ─────────────────────────────────────────────────────────
 
 export interface Rating {

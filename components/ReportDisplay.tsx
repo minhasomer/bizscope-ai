@@ -11,6 +11,7 @@ import {
   viabilityScoreToFrameworkContext,
   viabilityScoreToFrameworkIndex,
   ASSESSMENT_FRAMEWORK,
+  getRecommendedPosture,
   scoreToMarketDemandRating,
   scoreToCompetitionRating,
   scoreToCapitalRating,
@@ -852,17 +853,18 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
   // "Worth Further Investigation" assessment can pair with "Review key risks
   // before proceeding" without looking like two competing conclusions).
   const getRecommendationStyle = (decision: string) => {
+    const action = getRecommendedPosture(decision);  // shared with PDF export — single source of truth
     switch(decision) {
       case 'Recommended':
-        return { bg: 'bg-green-50 text-green-800 border-green-200', action: 'Good candidate for deeper validation' };
+        return { bg: 'bg-green-50 text-green-800 border-green-200', action };
       case 'Caution Advised':
-        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', action: 'Review key risks before proceeding' };
+        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', action };
       case 'Not Recommended':
-        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', action: 'Avoid or reassess before investing' };
+        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', action };
       case 'Verification Required':
-        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', action: 'Verify assumptions before proceeding' };
+        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', action };
       default:
-        return { bg: 'bg-gray-50 text-gray-800 border-gray-200', action: 'Review details before proceeding' };
+        return { bg: 'bg-gray-50 text-gray-800 border-gray-200', action };
     }
   };
 
