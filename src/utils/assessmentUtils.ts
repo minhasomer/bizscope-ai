@@ -45,9 +45,9 @@ export function viabilityScoreToPlainExplanation(score: number): string {
  */
 export function viabilityScoreToFrameworkContext(score: number): string {
   if (score >= 70) return "This is BizScope's most favorable assessment.";
-  if (score >= 60) return 'This is a positive outcome and is generally more favorable than Proceed Carefully.';
-  if (score >= 50) return 'This sits in the middle of the assessment range and indicates meaningful risks.';
-  if (score >= 35) return 'This indicates more concerns than Proceed Carefully and requires deeper validation.';
+  if (score >= 60) return 'This is a positive outcome, more favorable than Proceed Carefully but still requiring validation.';
+  if (score >= 50) return 'This is a middle-range assessment, more favorable than Caution Advised but less favorable than Worth Further Investigation.';
+  if (score >= 35) return 'This indicates more concern than Proceed Carefully and requires deeper validation.';
   return "This is BizScope's least favorable assessment.";
 }
 
@@ -58,15 +58,19 @@ export interface FrameworkTier {
   emoji: string;
   label: string;
   blurb: string;
+  /** Tier label text colour — builds a tasteful most→least-favorable colour ladder. */
+  labelClass: string;
+  /** Thin left accent-bar colour for the same ladder. */
+  barClass: string;
 }
 
 /** The BizScope assessment framework, ordered most → least favorable. */
 export const ASSESSMENT_FRAMEWORK: FrameworkTier[] = [
-  { key: 'strong',  emoji: '🟢', label: 'Strong Opportunity',          blurb: 'Favorable overall signal.' },
-  { key: 'worth',   emoji: '🟢', label: 'Worth Further Investigation', blurb: 'Promising signals that justify deeper research.' },
-  { key: 'proceed', emoji: '🟡', label: 'Proceed Carefully',           blurb: 'Viable but risk-sensitive.' },
-  { key: 'caution', emoji: '🟠', label: 'Caution Advised',             blurb: 'Meaningful concerns identified.' },
-  { key: 'notrec',  emoji: '🔴', label: 'Not Recommended',             blurb: 'Current conditions appear unfavorable.' },
+  { key: 'strong',  emoji: '🟢', label: 'Strong Opportunity',          blurb: 'Favorable overall signal.',                      labelClass: 'text-emerald-700', barClass: 'bg-emerald-400' },
+  { key: 'worth',   emoji: '🟢', label: 'Worth Further Investigation', blurb: 'Promising signals that justify deeper research.', labelClass: 'text-green-700',   barClass: 'bg-green-400'   },
+  { key: 'proceed', emoji: '🟡', label: 'Proceed Carefully',           blurb: 'Viable but risk-sensitive.',                     labelClass: 'text-amber-700',   barClass: 'bg-amber-400'   },
+  { key: 'caution', emoji: '🟠', label: 'Caution Advised',             blurb: 'Meaningful concerns identified.',                labelClass: 'text-orange-700',  barClass: 'bg-orange-400'  },
+  { key: 'notrec',  emoji: '🔴', label: 'Not Recommended',             blurb: 'Current conditions appear unfavorable.',         labelClass: 'text-rose-700',    barClass: 'bg-rose-400'    },
 ];
 
 /**

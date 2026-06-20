@@ -427,7 +427,7 @@ const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
       {/* Compact, outcome-specific explanation attached to the badge — what THIS
           result means + where it sits in the framework. The full framework legend
           lives separately below Confidence Level. print:hidden (PDF via jsPDF). */}
-      <details className="mt-3 group w-44 md:w-52 print:hidden">
+      <details className="mt-3 group w-64 max-w-[88vw] md:w-60 print:hidden">
         <summary className="flex items-center justify-center gap-1.5 cursor-pointer select-none text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
           <HelpCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
           <span>What does this rating mean?</span>
@@ -443,21 +443,21 @@ const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
 };
 
 // Framework legend (Part 2/3) — explains the full BizScope assessment scale and
-// marks where the current report landed ("You are here"). Lives below Confidence
-// Level, separate from the per-result explanation on the badge. print:hidden —
-// the PDF is generated independently via jsPDF.
+// marks where the current report landed ("You are here"). Sits directly under the
+// Overall Assessment card + "What does this rating mean?" so it's visually tied to
+// the verdict. Collapsed by default. print:hidden — PDF is generated via jsPDF.
 const AssessmentFramework: React.FC<{ score: number }> = ({ score }) => {
   const currentIdx = viabilityScoreToFrameworkIndex(score);
   return (
-    <details className="mt-5 group print:hidden rounded-2xl border border-gray-150 bg-gray-50/60 open:bg-gray-50/90 transition-colors">
-      <summary className="flex items-center gap-2 cursor-pointer select-none px-4 py-2.5 text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
+    <details className="mt-3 group w-64 max-w-[88vw] md:w-60 print:hidden rounded-2xl border border-gray-150 bg-gray-50/60 open:bg-gray-50/90 transition-colors text-left">
+      <summary className="flex items-center gap-2 cursor-pointer select-none px-3.5 py-2.5 text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
         <Info className="w-3.5 h-3.5 text-gray-400 shrink-0" />
         <span className="uppercase tracking-wider">How BizScope ratings work</span>
         <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-auto shrink-0 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="px-3 pb-3 pt-2 border-t border-gray-100">
+      <div className="px-2.5 pb-2.5 pt-2 border-t border-gray-100">
         <p className="text-[10px] text-gray-400 px-1 pb-2 leading-snug">
-          Assessments range from most to least favorable. Your report's outcome is highlighted.
+          Ordered most to least favorable. Your report's outcome is highlighted.
         </p>
         <ul className="space-y-1">
           {ASSESSMENT_FRAMEWORK.map((tier, i) => {
@@ -465,16 +465,18 @@ const AssessmentFramework: React.FC<{ score: number }> = ({ score }) => {
             return (
               <li
                 key={tier.key}
-                className={`flex items-start gap-2.5 rounded-xl px-3 py-2 ${
+                className={`flex items-start gap-2 rounded-lg pr-2 py-1.5 overflow-hidden ${
                   isCurrent ? 'bg-white border border-blue-200 shadow-xs' : 'border border-transparent'
                 }`}
               >
+                {/* Tier colour-ladder accent bar */}
+                <span className={`self-stretch w-1 rounded-full shrink-0 ${tier.barClass}`} />
                 <span className="text-sm leading-none mt-0.5 shrink-0">{tier.emoji}</span>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[11px] font-black ${isCurrent ? 'text-blue-800' : 'text-gray-700'}`}>{tier.label}</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`text-[11px] font-black ${tier.labelClass}`}>{tier.label}</span>
                     {isCurrent && (
-                      <span className="text-[9px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">
+                      <span className="text-[8px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-1.5 py-0.5">
                         Current assessment
                       </span>
                     )}
@@ -973,6 +975,8 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <div className="flex flex-col md:flex-row gap-8 mb-8 items-center md:items-start text-center md:text-left">
                 <div className="flex flex-col items-center flex-shrink-0 relative">
                     <AssessmentBadge score={report.viabilityScore} />
+                    {/* Framework legend grouped with the assessment card (was below Confidence Level) */}
+                    <AssessmentFramework score={report.viabilityScore} />
                 </div>
                 
                 <div className="flex-grow flex flex-col md:flex-row gap-6 w-full md:items-start">
@@ -1058,9 +1062,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 </div>
               );
             })()}
-
-            {/* Framework legend with "You are here" — below Confidence Level, above actions */}
-            <AssessmentFramework score={report.viabilityScore} />
 
             {/* Print Friendly Meta Block */}
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
