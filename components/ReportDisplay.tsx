@@ -846,23 +846,23 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     setShowExportModal(true);
   };
 
-  const getRecommendationStyle = (decision: string, riskLevel: number) => {
-    // Risk wording is derived from the same scoreToRiskRating() used by the
-    // Risk Level rating elsewhere in this report, so the badge never
-    // contradicts the report's own risk classification (e.g. "Moderate" risk
-    // shown next to a badge that hardcoded "High Risk").
-    const riskLabel = scoreToRiskRating(riskLevel).label;
+  // Action-guidance posture derived from recommendation.decision. Framed as a
+  // recommended NEXT MOVE, not a second verdict — the Overall Assessment badge
+  // is the only headline verdict, so this never repeats/contradicts it (e.g. a
+  // "Worth Further Investigation" assessment can pair with "Review key risks
+  // before proceeding" without looking like two competing conclusions).
+  const getRecommendationStyle = (decision: string) => {
     switch(decision) {
       case 'Recommended':
-        return { bg: 'bg-green-50 text-green-800 border-green-200', label: '✅ Recommended' };
+        return { bg: 'bg-green-50 text-green-800 border-green-200', action: 'Good candidate for deeper validation' };
       case 'Caution Advised':
-        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', label: '⚠️ Caution Advised — Review Risks First' };
+        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', action: 'Review key risks before proceeding' };
       case 'Not Recommended':
-        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', label: `❌ Not Recommended — ${riskLabel} Risk` };
+        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', action: 'Avoid or reassess before investing' };
       case 'Verification Required':
-        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', label: '🔍 Verify Territory Before Investing' };
+        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', action: 'Verify assumptions before proceeding' };
       default:
-        return { bg: 'bg-gray-50 text-gray-800 border-gray-200', label: 'Analysis Complete' };
+        return { bg: 'bg-gray-50 text-gray-800 border-gray-200', action: 'Review details before proceeding' };
     }
   };
 
@@ -884,7 +884,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     }
   };
 
-  const recStyle = getRecommendationStyle(report.recommendation?.decision ?? 'Verification Required', report.riskLevel);
+  const recStyle = getRecommendationStyle(report.recommendation?.decision ?? 'Verification Required');
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth">
@@ -999,8 +999,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         </p>
                         
                         <div className="flex flex-wrap items-center gap-2 mb-4">
-                          <div className={`inline-block px-3.5 py-1.5 rounded-xl border font-black text-xs uppercase tracking-wider ${recStyle.bg}`}>
-                              {recStyle.label}
+                          <div className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border font-black text-xs uppercase tracking-wider ${recStyle.bg}`}>
+                              <Compass className="w-3 h-3 shrink-0 opacity-70" />
+                              <span className="opacity-60">Recommended Posture:</span>
+                              <span>{recStyle.action}</span>
                           </div>
                           {report.franchiseTerritoryCheck && (
                             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 font-black text-xs uppercase tracking-wider">
