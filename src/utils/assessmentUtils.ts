@@ -25,6 +25,20 @@ export function viabilityScoreToAssessment(score: number): Assessment {
   return             { label: 'Not Recommended',                 emoji: '🔴', colorClass: 'text-rose-700',    bgClass: 'bg-rose-50',     borderClass: 'border-rose-200'    };
 }
 
+/**
+ * Plain-language, scoreless explanation of THIS report's overall assessment.
+ * Shown next to the Overall Assessment badge so beta users immediately
+ * understand their specific outcome without reading the full rating framework.
+ * Bands mirror viabilityScoreToAssessment (the two favorable bands share copy).
+ */
+export function viabilityScoreToPlainExplanation(score: number): string {
+  if (score >= 70) return 'The market appears favorable. Continue validating details before investing.';
+  if (score >= 60) return 'There are encouraging signs. This opportunity deserves deeper research.';
+  if (score >= 50) return 'The opportunity may work, but several risks need closer review.';
+  if (score >= 35) return 'Significant concerns were identified. Investigate thoroughly before proceeding.';
+  return 'Current market conditions do not appear favorable for this opportunity.';
+}
+
 // ─── Category Ratings ─────────────────────────────────────────────────────────
 
 export interface Rating {

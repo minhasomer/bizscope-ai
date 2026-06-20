@@ -7,6 +7,7 @@ import { isDemoMode } from '../src/config/appConfig';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 import {
   viabilityScoreToAssessment,
+  viabilityScoreToPlainExplanation,
   scoreToMarketDemandRating,
   scoreToCompetitionRating,
   scoreToCapitalRating,
@@ -407,15 +408,34 @@ const RevenueChart: React.FC<{ year1: string; year3: string }> = ({ year1, year3
 // Animated Viability Score Circle component
 const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
   const a = viabilityScoreToAssessment(score);
+  const plain = viabilityScoreToPlainExplanation(score);
   // Scoreless UX (Decision Framework, Sprint 11): the numeric score stays in the
   // data model and drives color/label, but is NEVER shown as a number. Display
   // the qualitative assessment only.
   return (
-    <div className={`flex flex-col items-center justify-center w-36 h-36 md:w-44 md:h-44 rounded-3xl border-2 ${a.bgClass} ${a.borderClass} select-none transition-all duration-300`}>
-      <span className="text-4xl md:text-5xl mb-1.5 leading-none">{a.emoji}</span>
-      <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
-      <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
-    </div>
+    <>
+      <div className={`flex flex-col items-center justify-center w-36 h-36 md:w-44 md:h-44 rounded-3xl border-2 ${a.bgClass} ${a.borderClass} select-none transition-all duration-300`}>
+        <span className="text-4xl md:text-5xl mb-1.5 leading-none">{a.emoji}</span>
+        <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
+        <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
+      </div>
+      {/* Compact, outcome-specific explanation right under the badge — replaces the
+          generic framework legend so beta users understand THEIR result first.
+          print:hidden; the PDF is generated independently via jsPDF. */}
+      <details className="mt-3 group w-44 md:w-52 print:hidden">
+        <summary className="flex items-center justify-center gap-1.5 cursor-pointer select-none text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
+          <HelpCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          <span>What this rating means</span>
+          <ChevronDown className="w-3 h-3 text-gray-400 shrink-0 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-2 rounded-xl border border-gray-150 bg-gray-50/70 px-3 py-2.5 text-left">
+          <p className="text-xs leading-snug text-gray-700">{plain}</p>
+          <p className="text-[10px] leading-snug text-gray-400 mt-2">
+            BizScope uses market demand, competition, startup cost, operating complexity, growth potential, and risk signals to form this assessment.
+          </p>
+        </div>
+      </details>
+    </>
   );
 };
 
@@ -478,65 +498,6 @@ const RatingsGrid: React.FC<{ report: ViabilityReport }> = ({ report }) => {
     </div>
   );
 };
-
-// Compact, collapsible "What this means" legend for the scoreless UX. Explains
-// the qualitative outcome labels and the rating-pill color scale without ever
-// reintroducing a numeric score. print:hidden — the PDF is built independently
-// via jsPDF, and this keeps browser print output clean too.
-const ASSESSMENT_OUTCOMES: Array<{ label: string; meaning: string; dotClass: string }> = [
-  { label: 'Strong Opportunity',          meaning: 'Favorable overall signal. Still validate costs, competition, and local demand.', dotClass: 'bg-emerald-500' },
-  { label: 'Worth Further Investigation', meaning: 'Promising signals, but key assumptions need validation before investing.',       dotClass: 'bg-amber-500'   },
-  { label: 'Proceed Carefully',           meaning: 'Viable but risk-sensitive. Review weak areas before moving forward.',             dotClass: 'bg-orange-400'  },
-  { label: 'Caution Advised',             meaning: 'Material risks present. Do not proceed without deeper validation.',               dotClass: 'bg-orange-500'  },
-  { label: 'Not Recommended',             meaning: 'Weak or unfavorable signal based on current market, competition, or economics.',  dotClass: 'bg-rose-500'    },
-];
-
-const RATING_SCALE: Array<{ label: string; dotClass: string }> = [
-  { label: 'Exceptional · Strong · Low Risk', dotClass: 'bg-emerald-500' },
-  { label: 'Moderate · Mixed',                dotClass: 'bg-amber-500'   },
-  { label: 'High · Elevated',                 dotClass: 'bg-orange-500'  },
-  { label: 'Very High · Severe',              dotClass: 'bg-rose-500'    },
-  { label: 'Unknown · Limited Data',          dotClass: 'bg-gray-400'    },
-];
-
-const AssessmentLegend: React.FC = () => (
-  <details className="mt-5 group print:hidden rounded-2xl border border-gray-150 bg-gray-50/60 open:bg-gray-50/90 transition-colors">
-    <summary className="flex items-center gap-2 cursor-pointer select-none px-4 py-2.5 text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
-      <Info className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-      <span className="uppercase tracking-wider">What this means</span>
-      <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-auto shrink-0 transition-transform group-open:rotate-180" />
-    </summary>
-    <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 border-t border-gray-100">
-      <div className="pt-3">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Overall Assessment</p>
-        <ul className="space-y-2">
-          {ASSESSMENT_OUTCOMES.map(({ label, meaning, dotClass }) => (
-            <li key={label} className="flex items-start gap-2.5">
-              <span className={`mt-1 h-2 w-2 rounded-full shrink-0 ${dotClass}`} />
-              <span className="text-[11px] leading-snug text-gray-600">
-                <strong className="text-gray-800 font-bold">{label}</strong> — {meaning}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="md:pt-3">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Rating Scale</p>
-        <ul className="space-y-2">
-          {RATING_SCALE.map(({ label, dotClass }) => (
-            <li key={label} className="flex items-center gap-2.5">
-              <span className={`h-2 w-2 rounded-full shrink-0 ${dotClass}`} />
-              <span className="text-[11px] text-gray-600">{label}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="text-[10px] text-gray-400 mt-3 leading-snug">
-          Qualitative AI estimates across Market Demand, Competition, Growth Potential, Risk Level, and Capital Requirements — directional guidance, not guarantees.
-        </p>
-      </div>
-    </div>
-  </details>
-);
 
 // Scrolling Subnav component for easy navigation on mobile / desktops
 const ReportSubNav: React.FC<{ activeSection: string; setActiveSection: (id: string) => void }> = ({ activeSection, setActiveSection }) => {
@@ -1043,9 +1004,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 </div>
               );
             })()}
-
-            {/* Qualitative outcome / rating legend — scoreless-UX explainer */}
-            <AssessmentLegend />
 
             {/* Print Friendly Meta Block */}
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
