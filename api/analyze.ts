@@ -868,53 +868,60 @@ export default async function handler(
 2. The top ${Math.max(competitorTarget - 3, 6)} other direct competitors (different brands) for a new '${businessType}' in '${location}'. For each, provide the business name and full street address.
 Return all results combined, existing same-brand locations listed first. Include as many real, verified businesses as you can find — do not truncate the list.`
       : `List up to ${competitorTarget} real, currently operating direct competitors for a new '${businessType}' in or very near '${location}'. For each business provide: the real business name and full street address. Use Google Maps data to find actual businesses — do not use generic placeholder names. Include as many as are genuinely present; if fewer than ${competitorTarget} exist in the area, list all you can find.`;
-    console.log('[analyze diag] phase 1 start:', { phase: 1, model, promptChars: phase1Prompt.length, tool: 'googleMaps' });
-    try {
-      const mapsConfig: any = { tools: [{ googleMaps: {} }] };
-      if (userLocation?.latitude && userLocation?.longitude) {
-        mapsConfig.toolConfig = {
-          retrievalConfig: { latLng: { latitude: userLocation.latitude, longitude: userLocation.longitude } },
-        };
-      }
-      const mapsRes = await withTimeout(
-        ai.models.generateContent({
-          model,
-          contents: phase1Prompt,
-          config: mapsConfig,
-        }),
-        20000,
-        'competitor research timed out',
-      );
-      competitionInfo = mapsRes.text || competitionInfo;
-      sources.push(...getGroundingSources(mapsRes));
-      phase1Usage = (mapsRes as any).usageMetadata ?? null;
-      phase1Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
-      console.log('[analyze diag] phase 1 success:', { phase: 1, responseChars: competitionInfo.length });
-    } catch (err) {
-      console.warn('[analyze] phase 1 (Maps) failed:', geminiErrDiag(err));
-    }
-
-    // Phase 2: census + trends via Search grounding
+    // Phase 2 prompt (built up-front so phases 1 & 2 can run concurrently below).
     const phase2Prompt = `Find the latest US Census data for '${location}': specifically Total Population and Median Household Income. Also research market trends and financial benchmarks for opening a '${businessType}' in '${location}'.`;
-    console.log('[analyze diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, tool: 'googleSearch' });
-    try {
-      const searchRes = await withTimeout(
-        ai.models.generateContent({
-          model,
-          contents: phase2Prompt,
-          config: { tools: [{ googleSearch: {} }] },
-        }),
-        20000,
-        'census/trends lookup timed out',
-      );
-      marketInfo = searchRes.text || marketInfo;
-      sources.push(...getGroundingSources(searchRes));
-      phase2Usage = (searchRes as any).usageMetadata ?? null;
-      phase2Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
-      console.log('[analyze diag] phase 2 success:', { phase: 2, responseChars: marketInfo.length });
-    } catch (err) {
-      console.warn('[analyze] phase 2 (Search) failed:', geminiErrDiag(err));
-    }
+
+    // Phases 1 & 2 are INDEPENDENT grounded research calls. Run them concurrently
+    // so their latencies overlap — previously sequential, this could burn up to
+    // 20s + 20s ≈ 40s of the 60s Vercel budget before synthesis even started.
+    // Each phase keeps its own try/catch: a failure or timeout in one must not
+    // fail the report or block the other — synthesis still runs on whatever
+    // research succeeded (fallback strings remain if both fail).
+    const runPhase1 = async () => {
+      console.log('[analyze diag] phase 1 start:', { phase: 1, model, promptChars: phase1Prompt.length, tool: 'googleMaps' });
+      try {
+        const mapsConfig: any = { tools: [{ googleMaps: {} }] };
+        if (userLocation?.latitude && userLocation?.longitude) {
+          mapsConfig.toolConfig = {
+            retrievalConfig: { latLng: { latitude: userLocation.latitude, longitude: userLocation.longitude } },
+          };
+        }
+        const mapsRes = await withTimeout(
+          ai.models.generateContent({ model, contents: phase1Prompt, config: mapsConfig }),
+          20000,
+          'competitor research timed out',
+        );
+        competitionInfo = mapsRes.text || competitionInfo;
+        sources.push(...getGroundingSources(mapsRes));
+        phase1Usage = (mapsRes as any).usageMetadata ?? null;
+        phase1Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
+        console.log('[analyze diag] phase 1 success:', { phase: 1, responseChars: competitionInfo.length });
+      } catch (err) {
+        console.warn('[analyze] phase 1 (Maps) failed:', geminiErrDiag(err));
+      }
+    };
+
+    const runPhase2 = async () => {
+      console.log('[analyze diag] phase 2 start:', { phase: 2, model, promptChars: phase2Prompt.length, tool: 'googleSearch' });
+      try {
+        const searchRes = await withTimeout(
+          ai.models.generateContent({ model, contents: phase2Prompt, config: { tools: [{ googleSearch: {} }] } }),
+          20000,
+          'census/trends lookup timed out',
+        );
+        marketInfo = searchRes.text || marketInfo;
+        sources.push(...getGroundingSources(searchRes));
+        phase2Usage = (searchRes as any).usageMetadata ?? null;
+        phase2Grounded = true;  // grounded prompt was issued and billed, regardless of usageMetadata
+        console.log('[analyze diag] phase 2 success:', { phase: 2, responseChars: marketInfo.length });
+      } catch (err) {
+        console.warn('[analyze] phase 2 (Search) failed:', geminiErrDiag(err));
+      }
+    };
+
+    // allSettled: both phases run to completion. Their internal try/catch already
+    // swallow failures, so this never rejects (no unhandled promise rejection).
+    await Promise.allSettled([runPhase1(), runPhase2()]);
 
     // Phase 3: synthesis
     const prompt = `
@@ -964,12 +971,31 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     // businesses. If the model still hits MAX_TOKENS (e.g. an unusually
     // long competitor list or executive summary), retry once at 24k rather
     // than returning a truncated/repaired report.
+    // ── Overall report deadline ──────────────────────────────────────────────
+    // Vercel hard-kills the function at maxDuration (60s) with NO chance for our
+    // catch/failure-logging to run. Enforce our own deadline a few seconds under
+    // that, measured from requestStartMs, so a slow run returns a clean app-level
+    // 504 (and records a report_activity_log failure row) BEFORE Vercel kills it.
+    // Research (phases 1 & 2) has already consumed part of this budget.
+    const OVERALL_DEADLINE_MS = 55_000;
+    const remainingMs = () => OVERALL_DEADLINE_MS - (Date.now() - requestStartMs);
+    const SYNTHESIS_FLOOR_MS = 8_000;  // min time needed to attempt synthesis at all
+
     const SYNTHESIS_MAX_TOKENS = 16384;
     const SYNTHESIS_RETRY_MAX_TOKENS = 24576;
     const synthesisTimeoutMs = budget.synthesisTimeoutMs;
     const phase3StartMs = Date.now();
 
+    // If research consumed almost the whole budget, fail cleanly NOW rather than
+    // starting a synthesis we can't finish before the Vercel hard-kill.
+    if (remainingMs() < SYNTHESIS_FLOOR_MS) {
+      throw new Error('Analysis timed out while gathering market data');
+    }
+
     const runSynthesis = (maxOutputTokens: number) => {
+      // Bound each attempt by the smaller of the plan synthesis budget and the
+      // time left before the overall deadline, so synthesis never runs past ~55s.
+      const attemptMs = Math.min(synthesisTimeoutMs, Math.max(remainingMs() - 1_000, 1_000));
       console.log('[analyze diag] phase 3 start:', {
         phase: 3,
         model,
@@ -977,6 +1003,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
         maxOutputTokens,
         thinkingBudget: 0,
         synthesisTimeoutMs,
+        attemptMs,
       });
       return withTimeout(
         ai.models.generateContent({
@@ -990,14 +1017,16 @@ Include ALL competitors found in the Competition Analysis above in the competiti
             thinkingConfig: { thinkingBudget: 0 },
           },
         }),
-        synthesisTimeoutMs,
+        attemptMs,
         'synthesis timed out',
       );
     };
 
     let synthesis = await runSynthesis(SYNTHESIS_MAX_TOKENS);
     synthesisUsages.push((synthesis as any).usageMetadata ?? null);
-    if (synthesis.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+    // Retry on truncation only if the overall deadline still allows another
+    // attempt; otherwise fall through to the truncated-JSON repair downstream.
+    if (synthesis.candidates?.[0]?.finishReason === 'MAX_TOKENS' && remainingMs() > SYNTHESIS_FLOOR_MS) {
       console.warn(`[analyze] Phase 3 synthesis hit MAX_TOKENS at ${SYNTHESIS_MAX_TOKENS} — retrying at ${SYNTHESIS_RETRY_MAX_TOKENS}.`);
       synthesis = await runSynthesis(SYNTHESIS_RETRY_MAX_TOKENS);
       synthesisUsages.push((synthesis as any).usageMetadata ?? null);  // the truncated first attempt was still billed — count both
@@ -1369,7 +1398,14 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     if (resMessage.includes('API key'))  { httpStatus = 401; resCode = 'MISSING_API_KEY'; }
     else if (isRateLimit)                { httpStatus = 429; resCode = 'RATE_LIMIT'; resMessage = 'Gemini rate limit hit. Please try again shortly.'; }
-    else if (msgLower.includes('timeout')) { httpStatus = 504; resCode = 'TIMEOUT'; resMessage = 'Analysis timed out. Please try again.'; }
+    else if (msgLower.includes('timeout') || msgLower.includes('timed out')) {
+      // Matches both our own deadline/withTimeout messages ("…timed out") and any
+      // SDK/socket "timeout" error, so a slow run maps to a clean 504 instead of
+      // a generic 502. No report credit is consumed (incrementUsageTracking only
+      // runs on the success path).
+      httpStatus = 504; resCode = 'TIMEOUT';
+      resMessage = 'Analysis timed out while gathering market data. Please try again — no report credit was used.';
+    }
     else if (msgLower.includes('malformed_response')) {
       httpStatus = 502; resCode = 'MALFORMED_RESPONSE';
       resMessage = 'The AI returned an unexpected response format. Please try again — this is usually transient.';
