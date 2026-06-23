@@ -877,6 +877,10 @@ Return all results combined, existing same-brand locations listed first. Include
     // Each phase keeps its own try/catch: a failure or timeout in one must not
     // fail the report or block the other — synthesis still runs on whatever
     // research succeeded (fallback strings remain if both fail).
+    //
+    // Tightened 20s → 14s: grounding that hasn't returned by 14s rarely yields
+    // useful data, and the smaller cap leaves more of the 55s deadline for synthesis.
+    const RESEARCH_TIMEOUT_MS = 14_000;
     const runPhase1 = async () => {
       console.log('[analyze diag] phase 1 start:', { phase: 1, model, promptChars: phase1Prompt.length, tool: 'googleMaps' });
       try {
@@ -888,7 +892,7 @@ Return all results combined, existing same-brand locations listed first. Include
         }
         const mapsRes = await withTimeout(
           ai.models.generateContent({ model, contents: phase1Prompt, config: mapsConfig }),
-          20000,
+          RESEARCH_TIMEOUT_MS,
           'competitor research timed out',
         );
         competitionInfo = mapsRes.text || competitionInfo;
@@ -906,7 +910,7 @@ Return all results combined, existing same-brand locations listed first. Include
       try {
         const searchRes = await withTimeout(
           ai.models.generateContent({ model, contents: phase2Prompt, config: { tools: [{ googleSearch: {} }] } }),
-          20000,
+          RESEARCH_TIMEOUT_MS,
           'census/trends lookup timed out',
         );
         marketInfo = searchRes.text || marketInfo;
@@ -983,7 +987,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     const SYNTHESIS_MAX_TOKENS = 16384;
     const SYNTHESIS_RETRY_MAX_TOKENS = 24576;
-    const synthesisTimeoutMs = budget.synthesisTimeoutMs;
+    const SYNTHESIS_RESERVE_MS = 3_000;  // headroom left for parse/cache/log within the deadline
     const phase3StartMs = Date.now();
 
     // If research consumed almost the whole budget, fail cleanly NOW rather than
@@ -993,16 +997,20 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     }
 
     const runSynthesis = (maxOutputTokens: number) => {
-      // Bound each attempt by the smaller of the plan synthesis budget and the
-      // time left before the overall deadline, so synthesis never runs past ~55s.
-      const attemptMs = Math.min(synthesisTimeoutMs, Math.max(remainingMs() - 1_000, 1_000));
+      // Give synthesis ALL the time left before the overall deadline — not the
+      // smaller per-plan budget. Now that research runs in parallel (≤14s) there
+      // is usually ~40s left; the old per-plan cap (25–40s) was throttling
+      // synthesis and timing out reports that would otherwise have completed.
+      // Bounded by the 55s deadline (minus reserve) so we still return before
+      // Vercel's 60s hard-kill. Output volume — and thus cost — stays bounded by
+      // maxOutputTokens, so the extra time only lets slow generation finish.
+      const attemptMs = Math.max(remainingMs() - SYNTHESIS_RESERVE_MS, 1_000);
       console.log('[analyze diag] phase 3 start:', {
         phase: 3,
         model,
         promptChars: prompt.length,
         maxOutputTokens,
         thinkingBudget: 0,
-        synthesisTimeoutMs,
         attemptMs,
       });
       return withTimeout(
