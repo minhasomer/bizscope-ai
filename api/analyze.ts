@@ -18,7 +18,7 @@ import {
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 import { normalizeViabilityReport } from '../src/utils/reportNormalization.js';
 
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 // ─── Response helper ──────────────────────────────────────────────────────────
 
@@ -873,13 +873,13 @@ Return all results combined, existing same-brand locations listed first. Include
 
     // Phases 1 & 2 are INDEPENDENT grounded research calls. Run them concurrently
     // so their latencies overlap — previously sequential, this could burn up to
-    // 20s + 20s ≈ 40s of the 60s Vercel budget before synthesis even started.
+    // 20s + 20s ≈ 40s of the 90s Vercel budget before synthesis even started.
     // Each phase keeps its own try/catch: a failure or timeout in one must not
     // fail the report or block the other — synthesis still runs on whatever
     // research succeeded (fallback strings remain if both fail).
     //
     // Tightened 20s → 14s: grounding that hasn't returned by 14s rarely yields
-    // useful data, and the smaller cap leaves more of the 55s deadline for synthesis.
+    // useful data, and the smaller cap leaves more of the 82s deadline for synthesis.
     const RESEARCH_TIMEOUT_MS = 14_000;
     const runPhase1 = async () => {
       console.log('[analyze diag] phase 1 start:', { phase: 1, model, promptChars: phase1Prompt.length, tool: 'googleMaps' });
@@ -976,12 +976,12 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     // long competitor list or executive summary), retry once at 24k rather
     // than returning a truncated/repaired report.
     // ── Overall report deadline ──────────────────────────────────────────────
-    // Vercel hard-kills the function at maxDuration (60s) with NO chance for our
+    // Vercel hard-kills the function at maxDuration (90s) with NO chance for our
     // catch/failure-logging to run. Enforce our own deadline a few seconds under
     // that, measured from requestStartMs, so a slow run returns a clean app-level
     // 504 (and records a report_activity_log failure row) BEFORE Vercel kills it.
     // Research (phases 1 & 2) has already consumed part of this budget.
-    const OVERALL_DEADLINE_MS = 55_000;
+    const OVERALL_DEADLINE_MS = 82_000;
     const remainingMs = () => OVERALL_DEADLINE_MS - (Date.now() - requestStartMs);
     const SYNTHESIS_FLOOR_MS = 8_000;  // min time needed to attempt synthesis at all
 
@@ -1001,8 +1001,8 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       // smaller per-plan budget. Now that research runs in parallel (≤14s) there
       // is usually ~40s left; the old per-plan cap (25–40s) was throttling
       // synthesis and timing out reports that would otherwise have completed.
-      // Bounded by the 55s deadline (minus reserve) so we still return before
-      // Vercel's 60s hard-kill. Output volume — and thus cost — stays bounded by
+      // Bounded by the 82s deadline (minus reserve) so we still return before
+      // Vercel's 90s hard-kill. Output volume — and thus cost — stays bounded by
       // maxOutputTokens, so the extra time only lets slow generation finish.
       const attemptMs = Math.max(remainingMs() - SYNTHESIS_RESERVE_MS, 1_000);
       console.log('[analyze diag] phase 3 start:', {
