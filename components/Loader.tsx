@@ -1,33 +1,55 @@
 
 import React, { useEffect, useState } from 'react';
 
+/** A loading message and the elapsed-second mark at which it starts showing. */
+interface LoadingPhase {
+  at: number;
+  text: string;
+}
+
 interface LoaderProps {
   message?: string;
-  messages?: string[];
+  messages?: LoadingPhase[];
   durationCopy?: string;
 }
 
-export const REPORT_LOADING_MESSAGES = [
-  "Looking for opportunities before everyone else finds them.",
-  "Digging into the numbers so you don't have to dig deeper into your pockets.",
-  "Good business decisions take a little longer than bad ones.",
-  "Checking market signals, competition, and local data.",
-  "Turning research into something you can actually use.",
+// Time-phased loading copy: concrete research steps early, calm reassurance as
+// the wait lengthens. Tone is professional and lightly human — no jokes or
+// anthropomorphised AI — so a user evaluating a six-figure decision feels
+// reassured, not entertained. Shared by the viability and Market Gap loaders.
+export const REPORT_LOADING_MESSAGES: LoadingPhase[] = [
+  { at: 0,  text: "Checking market signals, competition, and local data." },
+  { at: 9,  text: "Analyzing competitors and local demand." },
+  { at: 20, text: "Researching financial benchmarks and demographics." },
+  { at: 32, text: "Turning the research into projections and risk factors." },
+  { at: 44, text: "Compiling your detailed market analysis." },
+  { at: 56, text: "Still working — we'd rather be thorough than confidently wrong." },
+  { at: 72, text: "Almost there — double-checking assumptions before we finalize recommendations." },
 ];
 
 export const Loader: React.FC<LoaderProps> = ({ message, messages, durationCopy }) => {
-  const [msgIndex, setMsgIndex] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
 
+  // Drive messaging from real elapsed time so it progresses logically as the
+  // wait grows (rather than cycling on a fixed loop regardless of duration).
   useEffect(() => {
     if (!messages?.length) return;
+    const start = Date.now();
     const id = setInterval(() => {
-      setMsgIndex(i => (i + 1) % messages.length);
-    }, 3000);
+      setElapsedSec(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
     return () => clearInterval(id);
   }, [messages]);
 
-  const displayMessage = messages?.length
-    ? messages[msgIndex]
+  // Latest phase whose start time has passed; holds on the final reassurance
+  // message for long runs.
+  const phases = messages ?? [];
+  const activePhase: LoadingPhase | null = phases.length
+    ? phases.reduce((current, phase) => (elapsedSec >= phase.at ? phase : current), phases[0])
+    : null;
+
+  const displayMessage = activePhase
+    ? activePhase.text
     : (message || 'Evaluating demand, competition & revenue potential...');
 
   return (
@@ -45,13 +67,13 @@ export const Loader: React.FC<LoaderProps> = ({ message, messages, durationCopy 
         Analyzing Market Conditions
       </h3>
       <p
-        key={messages?.length ? msgIndex : 'static'}
-        className={`text-xs text-gray-400 font-medium text-center max-w-xs leading-relaxed min-h-[32px] ${messages?.length ? 'animate-fade-in' : 'animate-pulse'}`}
+        key={activePhase ? activePhase.at : 'static'}
+        className={`text-sm text-gray-600 font-medium text-center max-w-sm leading-relaxed min-h-[40px] ${activePhase ? 'animate-fade-in' : 'animate-pulse'}`}
       >
         {displayMessage}
       </p>
       {durationCopy && (
-        <p className="mt-1.5 text-xs text-gray-300 text-center font-medium">
+        <p className="mt-1.5 text-xs text-gray-500 text-center font-medium">
           {durationCopy}
         </p>
       )}
