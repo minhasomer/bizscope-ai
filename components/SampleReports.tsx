@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+import { AssessmentDot } from './AssessmentDot';
 
 interface SampleReportsProps {
   onNavigate: (page: string) => void;
@@ -131,7 +132,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                 {/* Assessment badge + decision badge */}
                 <div className="px-5 py-4 flex items-center gap-4 border-b border-gray-100">
                   <div className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl border ${assessment.bgClass} ${assessment.borderClass} shrink-0`}>
-                    <span className="text-xl leading-none">{assessment.emoji}</span>
+                    <AssessmentDot color={assessment.dotColor} variant={assessment.indicatorVariant} size={20} />
                     <span className={`text-[7px] font-black uppercase tracking-wide ${assessment.colorClass} text-center leading-tight mt-0.5 px-1`}>{assessment.label}</span>
                   </div>
                   <div>

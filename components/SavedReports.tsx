@@ -4,6 +4,7 @@ import { SavedReportsService } from '../services/savedReportsService';
 import { isDemoMode } from '../src/config/appConfig';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
 import { viabilityScoreToAssessment, scoreToRiskRating, scoreToCompetitionRating, stripScoreReferences } from '../src/utils/assessmentUtils';
+import { AssessmentDot } from './AssessmentDot';
 import { 
   Briefcase, 
   MapPin, 
@@ -515,8 +516,8 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                         {(() => {
                           const a = viabilityScoreToAssessment(report.viabilityScore);
                           return (
-                            <div className={`px-2 py-1 text-xs font-black rounded-lg border tracking-tight ${a.bgClass} ${a.borderClass} ${a.colorClass}`}>
-                              {a.emoji} {a.label}
+                            <div className={`px-2 py-1 text-xs font-black rounded-lg border tracking-tight inline-flex items-center gap-1.5 ${a.bgClass} ${a.borderClass} ${a.colorClass}`}>
+                              <AssessmentDot color={a.dotColor} variant={a.indicatorVariant} size={13} /> {a.label}
                             </div>
                           );
                         })()}
@@ -802,7 +803,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                     const a = viabilityScoreToAssessment(reportA.viabilityScore);
                     return (
                       <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border font-black text-xs ${a.bgClass} ${a.borderClass} ${a.colorClass}`}>
-                        {a.emoji} {a.label}
+                        <AssessmentDot color={a.dotColor} variant={a.indicatorVariant} size={13} /> {a.label}
                       </div>
                     );
                   })()}
@@ -826,7 +827,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                     const b = viabilityScoreToAssessment(reportB.viabilityScore);
                     return (
                       <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border font-black text-xs ${b.bgClass} ${b.borderClass} ${b.colorClass}`}>
-                        {b.emoji} {b.label}
+                        <AssessmentDot color={b.dotColor} variant={b.indicatorVariant} size={13} /> {b.label}
                       </div>
                     );
                   })()}

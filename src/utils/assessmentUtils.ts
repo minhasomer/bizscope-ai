@@ -10,19 +10,24 @@ import type { ViabilityReport } from '../../types';
 
 export interface Assessment {
   label: string;
+  /** Retained for compatibility (PDF, tests). No longer used in UI rendering. */
   emoji: string;
   colorClass: string;
   bgClass: string;
   borderClass: string;
+  /** Color family key for AssessmentDot — matches keys in AssessmentDot's COLOR_HEX map. */
+  dotColor: string;
+  /** 'filled' for all tiers except Worth Further Investigation ('outlined'). */
+  indicatorVariant: 'filled' | 'outlined';
 }
 
 export function viabilityScoreToAssessment(score: number): Assessment {
-  if (score >= 80) return { label: 'Strong Opportunity',          emoji: '🟢', colorClass: 'text-emerald-700', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-300' };
-  if (score >= 70) return { label: 'Attractive Market',           emoji: '🟢', colorClass: 'text-emerald-600', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-200' };
-  if (score >= 60) return { label: 'Worth Further Investigation', emoji: '⭕', colorClass: 'text-green-700',   bgClass: 'bg-green-50',    borderClass: 'border-green-300'   };
-  if (score >= 50) return { label: 'Proceed Carefully',           emoji: '🟡', colorClass: 'text-amber-700',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-300'   };
-  if (score >= 35) return { label: 'Significant Concerns',        emoji: '🟠', colorClass: 'text-orange-700',  bgClass: 'bg-orange-50',   borderClass: 'border-orange-300'  };
-  return             { label: 'Not Recommended',                 emoji: '🔴', colorClass: 'text-rose-700',    bgClass: 'bg-rose-50',     borderClass: 'border-rose-200'    };
+  if (score >= 80) return { label: 'Strong Opportunity',          emoji: '🟢', colorClass: 'text-emerald-700', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-300', dotColor: 'emerald', indicatorVariant: 'filled'   };
+  if (score >= 70) return { label: 'Attractive Market',           emoji: '🟢', colorClass: 'text-emerald-600', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-200', dotColor: 'emerald', indicatorVariant: 'filled'   };
+  if (score >= 60) return { label: 'Worth Further Investigation', emoji: '🟢', colorClass: 'text-green-700',   bgClass: 'bg-green-50',    borderClass: 'border-green-300',   dotColor: 'green',   indicatorVariant: 'outlined' };
+  if (score >= 50) return { label: 'Proceed Carefully',           emoji: '🟡', colorClass: 'text-amber-700',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-300',   dotColor: 'amber',   indicatorVariant: 'filled'   };
+  if (score >= 35) return { label: 'Significant Concerns',        emoji: '🟠', colorClass: 'text-orange-700',  bgClass: 'bg-orange-50',   borderClass: 'border-orange-300',  dotColor: 'orange',  indicatorVariant: 'filled'   };
+  return             { label: 'Not Recommended',                 emoji: '🔴', colorClass: 'text-rose-700',    bgClass: 'bg-rose-50',     borderClass: 'border-rose-200',    dotColor: 'rose',    indicatorVariant: 'filled'   };
 }
 
 /**
@@ -55,6 +60,7 @@ export function viabilityScoreToFrameworkContext(score: number): string {
 
 export interface FrameworkTier {
   key: string;
+  /** Retained for compatibility. No longer used in UI rendering. */
   emoji: string;
   label: string;
   blurb: string;
@@ -62,15 +68,19 @@ export interface FrameworkTier {
   labelClass: string;
   /** Thin left accent-bar colour for the same ladder. */
   barClass: string;
+  /** Color family key for AssessmentDot. */
+  dotColor: string;
+  /** 'filled' for all tiers except Worth Further Investigation ('outlined'). */
+  indicatorVariant: 'filled' | 'outlined';
 }
 
 /** The BizScope assessment framework, ordered most → least favorable. */
 export const ASSESSMENT_FRAMEWORK: FrameworkTier[] = [
-  { key: 'strong',  emoji: '🟢', label: 'Strong Opportunity',          blurb: 'Favorable overall signal.',                      labelClass: 'text-emerald-700', barClass: 'bg-emerald-400' },
-  { key: 'worth',   emoji: '⭕', label: 'Worth Further Investigation', blurb: 'Promising signals that justify deeper research.', labelClass: 'text-green-700',   barClass: 'bg-green-400'   },
-  { key: 'proceed', emoji: '🟡', label: 'Proceed Carefully',           blurb: 'Viable but risk-sensitive.',                     labelClass: 'text-amber-700',   barClass: 'bg-amber-400'   },
-  { key: 'caution', emoji: '🟠', label: 'Caution Advised',             blurb: 'Meaningful concerns identified.',                labelClass: 'text-orange-700',  barClass: 'bg-orange-400'  },
-  { key: 'notrec',  emoji: '🔴', label: 'Not Recommended',             blurb: 'Current conditions appear unfavorable.',         labelClass: 'text-rose-700',    barClass: 'bg-rose-400'    },
+  { key: 'strong',  emoji: '🟢', label: 'Strong Opportunity',          blurb: 'Favorable overall signal.',                      labelClass: 'text-emerald-700', barClass: 'bg-emerald-400', dotColor: 'emerald', indicatorVariant: 'filled'   },
+  { key: 'worth',   emoji: '🟢', label: 'Worth Further Investigation', blurb: 'Promising signals that justify deeper research.', labelClass: 'text-green-700',   barClass: 'bg-green-400',   dotColor: 'green',   indicatorVariant: 'outlined' },
+  { key: 'proceed', emoji: '🟡', label: 'Proceed Carefully',           blurb: 'Viable but risk-sensitive.',                     labelClass: 'text-amber-700',   barClass: 'bg-amber-400',   dotColor: 'amber',   indicatorVariant: 'filled'   },
+  { key: 'caution', emoji: '🟠', label: 'Caution Advised',             blurb: 'Meaningful concerns identified.',                labelClass: 'text-orange-700',  barClass: 'bg-orange-400',  dotColor: 'orange',  indicatorVariant: 'filled'   },
+  { key: 'notrec',  emoji: '🔴', label: 'Not Recommended',             blurb: 'Current conditions appear unfavorable.',         labelClass: 'text-rose-700',    barClass: 'bg-rose-400',    dotColor: 'rose',    indicatorVariant: 'filled'   },
 ];
 
 /**

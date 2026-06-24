@@ -5,6 +5,7 @@ import { SavedReportsService } from '../services/savedReportsService';
 import { generateRegionalAnalysis, generateMockRegionalData } from '../services/geminiService';
 import { isDemoMode } from '../src/config/appConfig';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
+import { AssessmentDot } from './AssessmentDot';
 import {
   viabilityScoreToAssessment,
   viabilityScoreToPlainExplanation,
@@ -420,7 +421,9 @@ const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
   return (
     <>
       <div className={`flex flex-col items-center justify-center w-36 h-36 md:w-44 md:h-44 rounded-3xl border-2 ${a.bgClass} ${a.borderClass} select-none transition-all duration-300`}>
-        <span className="text-4xl md:text-5xl mb-1.5 leading-none">{a.emoji}</span>
+        <span className="mb-1.5 leading-none">
+          <AssessmentDot color={a.dotColor} variant={a.indicatorVariant} size={36} />
+        </span>
         <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
         <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
       </div>
@@ -471,7 +474,9 @@ const AssessmentFramework: React.FC<{ score: number }> = ({ score }) => {
               >
                 {/* Tier colour-ladder accent bar */}
                 <span className={`self-stretch w-1 rounded-full shrink-0 ${tier.barClass}`} />
-                <span className="text-sm leading-none mt-0.5 shrink-0">{tier.emoji}</span>
+                <span className="mt-0.5 shrink-0">
+                  <AssessmentDot color={tier.dotColor} variant={tier.indicatorVariant} size={14} />
+                </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`text-[11px] font-black ${tier.labelClass}`}>{tier.label}</span>

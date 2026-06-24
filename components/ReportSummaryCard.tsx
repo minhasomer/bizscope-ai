@@ -3,6 +3,7 @@ import React from 'react';
 import type { ViabilityReport } from '../types';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
 import { viabilityScoreToAssessment, stripScoreReferences } from '../src/utils/assessmentUtils';
+import { AssessmentDot } from './AssessmentDot';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 
 interface ReportSummaryCardProps {
@@ -58,7 +59,7 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
           <div className="flex items-center gap-3 shrink-0">
             {/* Assessment tier badge */}
             <div className={`flex flex-col items-center justify-center w-20 h-14 rounded-xl border ${assessment.bgClass} ${assessment.borderClass} px-2`}>
-              <span className="text-xl leading-none">{assessment.emoji}</span>
+              <AssessmentDot color={assessment.dotColor} variant={assessment.indicatorVariant} size={20} />
               <span className={`text-[8px] font-black uppercase tracking-wide ${assessment.colorClass} text-center leading-tight mt-0.5`}>{assessment.label}</span>
             </div>
             {/* Decision badge */}
