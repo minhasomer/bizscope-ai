@@ -20,6 +20,7 @@ import { DevAdminPanel, PreviewRole } from './components/DevAdminPanel';
 import { UsageTrackerService, UsageDetails } from './services/usageTrackerService';
 import { ReportCacheService } from './services/reportCacheService';
 import { AuthScreen } from './components/AuthScreen';
+import { TosGate } from './components/TosGate';
 import { AccountSettings } from './components/AccountSettings';
 import { BillingPage } from './components/BillingPage';
 import { AuthService, UserProfile } from './services/authService';
@@ -846,6 +847,25 @@ const App: React.FC = () => {
             onNavigate={navigate}
           />
         </div>
+      );
+    }
+
+    // TOS gate — authenticated users who have not yet accepted TOS must do so
+    // before accessing protected pages. Covers Google OAuth users (no checkbox in
+    // the OAuth flow) and any email/password signup where the DB write failed.
+    // Admin users are never blocked here.
+    if (
+      isProtected &&
+      currentUser &&
+      !currentUser.tos_accepted_at &&
+      !isAdmin(currentUser.role) &&
+      !isDemoMode
+    ) {
+      return (
+        <TosGate
+          user={currentUser}
+          onAccepted={(timestamp) => setCurrentUser({ ...currentUser, tos_accepted_at: timestamp })}
+        />
       );
     }
 

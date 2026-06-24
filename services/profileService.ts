@@ -7,6 +7,7 @@ export interface SupabaseProfile {
   avatar_url: string | null;
   role: string;
   subscription_tier: string;
+  tos_accepted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -266,6 +267,22 @@ export class ProfileService {
       console.warn('[Profile] Refetch after create returned null for user:', userId);
     }
     return confirmed;
+  }
+
+  /**
+   * Record Terms of Service acceptance for a user.
+   * Best-effort — non-fatal if Supabase is unavailable.
+   */
+  static async acceptTos(userId: string): Promise<void> {
+    if (!this.isActive()) return;
+    const { error } = await supabase!
+      .from('profiles')
+      .update({ tos_accepted_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) {
+      console.error('[ProfileService] acceptTos error:', error.message);
+      throw new Error(error.message);
+    }
   }
 
   /**

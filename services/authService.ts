@@ -58,6 +58,8 @@ export interface UserProfile {
   role: string;
   /** Raw subscription_tier from the Supabase profiles table. Defaults to 'Explorer' in mock mode. */
   subscription_tier: string;
+  /** ISO timestamp of TOS acceptance, or null if not yet accepted (incl. Google OAuth users). */
+  tos_accepted_at: string | null;
 }
 
 export interface AuthState {
@@ -98,7 +100,7 @@ async function resolvePlanFromSession(
   userId: string,
   email: string,
   authMeta: Record<string, unknown>,
-): Promise<{ plan: string; role: string; subscription_tier: string }> {
+): Promise<{ plan: string; role: string; subscription_tier: string; tos_accepted_at: string | null }> {
   console.log('[Auth] Resolving profile — userId:', userId, '| email:', email);
 
   const profile = await ProfileService.ensureProfileExists(
@@ -117,7 +119,7 @@ async function resolvePlanFromSession(
       ? (localStorage.getItem(`bizscope_user_plan_${email}`) ?? localStorage.getItem('bizscope_user_plan') ?? getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null, betaFullAccess))
       : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null, betaFullAccess);
     console.warn('[Auth] Profile unavailable — using cached role:', cachedRole, '| plan:', fallbackPlan);
-    return { plan: fallbackPlan, role: cachedRole, subscription_tier: cachedTier };
+    return { plan: fallbackPlan, role: cachedRole, subscription_tier: cachedTier, tos_accepted_at: localStorage.getItem(`bizscope_user_tos_at_${email}`) || null };
   }
 
   // In Demo Mode respect any plan override the switcher wrote to localStorage,
@@ -147,9 +149,14 @@ async function resolvePlanFromSession(
     localStorage.setItem(`bizscope_user_role_${email}`, profile.role);
     localStorage.setItem(`bizscope_user_tier_${email}`, profile.subscription_tier);
     localStorage.setItem(`bizscope_user_plan_${email}`, plan);
+    if (profile.tos_accepted_at) {
+      localStorage.setItem(`bizscope_user_tos_at_${email}`, profile.tos_accepted_at);
+    } else {
+      localStorage.removeItem(`bizscope_user_tos_at_${email}`);
+    }
   } catch { /* ignore quota errors */ }
 
-  return { plan, role: profile.role, subscription_tier: profile.subscription_tier };
+  return { plan, role: profile.role, subscription_tier: profile.subscription_tier, tos_accepted_at: profile.tos_accepted_at ?? null };
 }
 
 // ─── AuthService ────────────────────────────────────────────────────────────
@@ -221,6 +228,7 @@ export class AuthService {
           );
           const cachedRole = localStorage.getItem(`bizscope_user_role_${email}`) ?? 'Explorer';
           const cachedTier = localStorage.getItem(`bizscope_user_tier_${email}`) ?? 'Explorer';
+          const cachedTosAt = localStorage.getItem(`bizscope_user_tos_at_${email}`) || null;
 
           localStorage.setItem('bizscope_user_email', email);
 
@@ -242,6 +250,7 @@ export class AuthService {
               // The INITIAL_SESSION handler will overwrite these once the lock releases.
               role: cachedRole,
               subscription_tier: cachedTier,
+              tos_accepted_at: cachedTosAt,
             },
             isMock: false,
           };
@@ -266,7 +275,7 @@ export class AuthService {
         if (parsed?.email) {
           localStorage.setItem('bizscope_user_email', parsed.email);
           return {
-            user: { role: 'Explorer', subscription_tier: 'Explorer', ...parsed },
+            user: { role: 'Explorer', subscription_tier: 'Explorer', tos_accepted_at: null, ...parsed },
             isMock: true,
           };
         }
@@ -304,6 +313,7 @@ export class AuthService {
       plan,
       role: 'Explorer',
       subscription_tier: 'Explorer',
+      tos_accepted_at: null,
     };
 
     sessionStorage.setItem(MOCK_USER_KEY, JSON.stringify(demoUser));
@@ -404,6 +414,7 @@ export class AuthService {
         plan: defaultPlan,
         role: 'Explorer',
         subscription_tier: 'Explorer',
+        tos_accepted_at: tosAcceptedAt ?? null,
       };
     }
 
@@ -418,6 +429,7 @@ export class AuthService {
       plan: defaultPlan,
       role: 'Explorer',
       subscription_tier: 'Explorer',
+      tos_accepted_at: null,
     };
     sessionStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
     localStorage.setItem(`bizscope_user_plan_${emailLower}`, defaultPlan);
@@ -445,7 +457,7 @@ export class AuthService {
 
       const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
       const emailAddr = user.email ?? email;
-      const { plan, role, subscription_tier } = await resolvePlanFromSession(user.id, emailAddr, meta);
+      const { plan, role, subscription_tier, tos_accepted_at } = await resolvePlanFromSession(user.id, emailAddr, meta);
 
       localStorage.setItem('bizscope_user_email', emailAddr);
       if (isDemoMode) localStorage.setItem('bizscope_user_plan', plan);
@@ -460,6 +472,7 @@ export class AuthService {
         plan,
         role,
         subscription_tier,
+        tos_accepted_at,
       };
     }
 
@@ -476,6 +489,7 @@ export class AuthService {
       plan: savedPlan,
       role: 'Explorer',
       subscription_tier: 'Explorer',
+      tos_accepted_at: null,
     };
     sessionStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
     localStorage.setItem(`bizscope_user_plan_${emailLower}`, savedPlan);
@@ -596,6 +610,7 @@ export class AuthService {
         plan,
         role,
         subscription_tier,
+        tos_accepted_at: profile?.tos_accepted_at ?? null,
       };
     }
 
@@ -658,7 +673,7 @@ export class AuthService {
           localStorage.setItem('bizscope_user_email', email);
 
           try {
-            const { plan, role, subscription_tier } = await resolvePlanFromSession(
+            const { plan, role, subscription_tier, tos_accepted_at } = await resolvePlanFromSession(
               authUser.id,
               email,
               meta,
@@ -674,6 +689,7 @@ export class AuthService {
               plan,
               role,
               subscription_tier,
+              tos_accepted_at,
             });
             if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
 
@@ -705,6 +721,7 @@ export class AuthService {
                     onUserChange({
                       id: authUser.id,
                       email,
+                      tos_accepted_at: retry.tos_accepted_at,
                       fullName: (meta.full_name ?? meta.fullName ?? meta.name ?? email.split('@')[0]) as string,
                       avatarUrl:
                         (meta.avatar_url ?? meta.picture ?? '') as string ||
@@ -737,6 +754,7 @@ export class AuthService {
                 : getEffectivePlan({ role: cachedRole, subscription_tier: cachedTier }, null, betaFullAccess),
               role: cachedRole,
               subscription_tier: cachedTier,
+              tos_accepted_at: localStorage.getItem(`bizscope_user_tos_at_${email}`) || null,
             });
             if (event === 'PASSWORD_RECOVERY') onPasswordRecovery?.();
           }
