@@ -19,9 +19,9 @@ export interface Assessment {
 export function viabilityScoreToAssessment(score: number): Assessment {
   if (score >= 80) return { label: 'Strong Opportunity',          emoji: '🟢', colorClass: 'text-emerald-700', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-300' };
   if (score >= 70) return { label: 'Attractive Market',           emoji: '🟢', colorClass: 'text-emerald-600', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-200' };
-  if (score >= 60) return { label: 'Worth Further Investigation', emoji: '🟡', colorClass: 'text-amber-700',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-300'   };
-  if (score >= 50) return { label: 'Proceed Carefully',           emoji: '🟡', colorClass: 'text-amber-600',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-200'   };
-  if (score >= 35) return { label: 'Significant Concerns',        emoji: '🔴', colorClass: 'text-rose-700',    bgClass: 'bg-rose-50',     borderClass: 'border-rose-300'    };
+  if (score >= 60) return { label: 'Worth Further Investigation', emoji: '🟢', colorClass: 'text-green-700',   bgClass: 'bg-green-50',    borderClass: 'border-green-300'   };
+  if (score >= 50) return { label: 'Proceed Carefully',           emoji: '🟡', colorClass: 'text-amber-700',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-300'   };
+  if (score >= 35) return { label: 'Significant Concerns',        emoji: '🟠', colorClass: 'text-orange-700',  bgClass: 'bg-orange-50',   borderClass: 'border-orange-300'  };
   return             { label: 'Not Recommended',                 emoji: '🔴', colorClass: 'text-rose-700',    bgClass: 'bg-rose-50',     borderClass: 'border-rose-200'    };
 }
 
