@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
         // non-Admin user receives effective Pro+ entitlement client-side.
         // Defaults to 'false' so omitting the var is always the safe production state.
         'process.env.VITE_BETA_FULL_ACCESS': JSON.stringify(env.VITE_BETA_FULL_ACCESS ?? 'false'),
+        'process.env.VITE_BETA_CLOSED': JSON.stringify(env.VITE_BETA_CLOSED ?? 'false'),
       },
       resolve: {
         alias: {
