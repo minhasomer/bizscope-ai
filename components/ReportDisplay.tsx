@@ -951,14 +951,18 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   : report._refreshedFromStale
                   ? '✅ Fresh analysis generated today — previous data was outdated.'
                   : report._cached
-                  ? `✅ Generated on ${genDate.toLocaleDateString()}. Using a recently generated analysis to keep results consistent across users.`
+                  ? `✓ Loaded from cache — no report credits were used.`
                   : `✅ Fresh analysis generated on ${genDate.toLocaleDateString()}.`
                 }
               </span>
-              {isOld && onRegenerate && (
+              {(isOld || report._cached) && onRegenerate && (
                 <button
                   onClick={handleRegenerateClick}
-                  className="shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                  className={`shrink-0 px-3 py-1.5 text-[10px] font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                    isOld
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-sky-600 hover:bg-sky-700 text-white'
+                  }`}
                 >
                   Refresh with new market research
                 </button>
