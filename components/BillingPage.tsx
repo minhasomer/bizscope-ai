@@ -309,7 +309,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
             <p className="text-xs text-gray-500 mt-0.5">Custom SLAs, integrations, and dedicated support.</p>
           </div>
           <button
-            onClick={() => onNavigate('pricing')}
+            onClick={() => onNavigate('contact')}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-sm whitespace-nowrap"
           >
             Contact Sales <ArrowRight className="w-3.5 h-3.5" />
