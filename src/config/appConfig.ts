@@ -64,6 +64,14 @@ const _betaFullAccess: boolean =
   process.env.VITE_BETA_FULL_ACCESS === 'true' ||
   (process.env.VITE_BETA_FULL_ACCESS as unknown) === true;
 
+// Closed-beta signup gate — must be declared before appConfig uses it.
+// VITE_BETA_CLOSED is statically replaced by the vite.config.ts define block.
+// When true, public account creation is hidden; Sign In remains available.
+// Defaults to 'false' when the env var is absent so omitting it is always safe.
+const _betaClosed: boolean =
+  process.env.VITE_BETA_CLOSED === 'true' ||
+  (process.env.VITE_BETA_CLOSED as unknown) === true;
+
 // ─── App Config (frozen object — never mutate at runtime) ────────────────────
 
 export const appConfig = {
@@ -169,6 +177,19 @@ export const appConfig = {
    * This is a BUILD-TIME flag. Changing it requires a new Vercel deployment.
    */
   betaFullAccess: _betaFullAccess,
+  /**
+   * Closed-beta signup gate (VITE_BETA_CLOSED=true).
+   *
+   * When true, public account creation is hidden from the auth screen.
+   * Sign In and password reset remain fully available for invited/existing users.
+   * A "Request Early Access" link to the Contact page is shown in place of signup.
+   *
+   * Toggle:    VITE_BETA_CLOSED=true  in Vercel env vars → redeploy
+   * Kill switch: set to false (or remove) → redeploy; signup reappears automatically.
+   *
+   * This is a BUILD-TIME flag. Changing it requires a new Vercel deployment.
+   */
+  betaClosed: _betaClosed,
 } as const;
 
 // ─── Convenience named exports ───────────────────────────────────────────────
@@ -190,6 +211,16 @@ export const useRealAuth: boolean = appConfig.useRealAuth;
  * @see appConfig.betaFullAccess
  */
 export const betaFullAccess: boolean = appConfig.betaFullAccess;
+
+/**
+ * True when VITE_BETA_CLOSED=true.
+ *
+ * Hides public account creation; Sign In remains available.
+ * Set to false (or omit) at launch to open signup to the public.
+ *
+ * @see appConfig.betaClosed
+ */
+export const betaClosed: boolean = appConfig.betaClosed;
 
 // ─── Beta real-reports gate ──────────────────────────────────────────────────
 

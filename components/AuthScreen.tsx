@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AuthService, UserProfile, EmailConfirmationRequiredError, AmbiguousSignupStateError } from '../services/authService';
-import { isDemoMode } from '../src/config/appConfig';
+import { isDemoMode, betaClosed } from '../src/config/appConfig';
 import {
   Lock,
   Mail,
@@ -22,7 +22,9 @@ interface AuthScreenProps {
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, initialMode = 'login', onNavigate }) => {
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(
+    betaClosed ? 'login' : initialMode,
+  );
 
   // Input fields
   const [email, setEmail] = useState('');
@@ -49,6 +51,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
   };
 
   const handleModeChange = (newMode: 'login' | 'signup' | 'forgot') => {
+    if (betaClosed && newMode === 'signup') return;
     setMode(newMode);
     cleanStates();
     setPassword('');
@@ -298,17 +301,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
           >
             Sign In
           </button>
-          <button
-            type="button"
-            onClick={() => handleModeChange('signup')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
-              mode === 'signup'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-450 hover:text-gray-900'
-            }`}
-          >
-            Create Account
-          </button>
+          {betaClosed ? (
+            <div className="flex-1 py-2.5 text-xs font-bold rounded-xl text-center text-gray-350 select-none">
+              Private Beta
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleModeChange('signup')}
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                mode === 'signup'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-450 hover:text-gray-900'
+              }`}
+            >
+              Create Account
+            </button>
+          )}
         </div>
       )}
 
@@ -515,6 +524,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
             </svg>
             <span>Google Account</span>
           </button>
+        </div>
+      )}
+
+      {/* Closed-beta early-access callout — only shown when VITE_BETA_CLOSED=true */}
+      {betaClosed && mode !== 'forgot' && (
+        <div className="mt-5 pt-5 border-t border-gray-100 text-center space-y-2">
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            BizScope is currently in <strong className="text-gray-700">private beta</strong>.<br />
+            New account creation is by invitation only.
+          </p>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('contact')}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer transition-colors"
+            >
+              Request early access →
+            </button>
+          )}
         </div>
       )}
 
