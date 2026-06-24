@@ -32,5 +32,13 @@ export function normalizeRangeSeparator(s: string | undefined | null): string {
     .replace(
       /(\b[\d,]+[kKmM]?)\s+(\b[\d,]+[kKmM]?\b)(?=\s+sq\b)/g,
       '$1–$2'
-    );
+    )
+    // 5. X–Y% where only the trailing value carries the % sign ("8-15%", "40–55%")
+    .replace(/(\b[\d,.]+)\s*[-–—]\s*([\d,.]+\s?%)/g, '$1–$2')
+    // 5b. same, space-separated ("8 15%", "40 55%")
+    .replace(/(\b[\d,.]+)\s+([\d,.]+\s?%)/g, '$1–$2')
+    // 6. plain-number ranges before a time unit ("12-24 months", "3–5 years")
+    .replace(/(\b[\d,.]+)\s*[-–—]\s*(\b[\d,.]+)(?=\s+(?:months?|years?|weeks?|days?))/g, '$1–$2')
+    // 6b. same, space-separated ("12 24 months", "3 5 years")
+    .replace(/(\b[\d,.]+)\s+(\b[\d,.]+)(?=\s+(?:months?|years?|weeks?|days?))/g, '$1–$2');
 }
