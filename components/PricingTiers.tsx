@@ -108,7 +108,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
           <div>
             <p className="font-black uppercase tracking-wide text-[10px] text-purple-700 mb-0.5">Private Beta — Full Access Active</p>
             <p className="leading-relaxed text-purple-700">
-              All Pro+ features are temporarily unlocked for beta participants. Pricing reflects standard tiers that will apply when beta access ends.
+              Join our private beta today. Every new account receives temporary Pro+ access while beta is active. Pricing reflects standard tiers that will apply when beta ends.
             </p>
           </div>
         </div>

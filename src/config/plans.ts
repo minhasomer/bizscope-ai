@@ -367,7 +367,7 @@ export const PRICING_CARDS: PricingCardConfig[] = [
       { name: 'Nearby ZIP comparisons',               included: false },
       { name: 'Local expansion strategic plans',      included: false },
     ],
-    cta:     'Upgrade to Pro',
+    cta:     'Get Pro',
     ctaClass: 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200',
   },
   {
@@ -390,7 +390,7 @@ export const PRICING_CARDS: PricingCardConfig[] = [
       { name: 'Demographic & regional intelligence',  included: true  },
       { name: 'Dedicated specialist consulting',      included: false },
     ],
-    cta:     'Upgrade to Pro+',
+    cta:     'Get Pro+',
     ctaClass: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-purple-200/60',
   },
   {

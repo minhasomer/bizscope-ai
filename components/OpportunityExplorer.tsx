@@ -385,7 +385,19 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
 
         {/* Plan access indicator */}
         <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-full text-xs font-medium text-slate-600">
-          {currentPlan === 'Explorer' ? (
+          {!isAuthenticated ? (
+            <>
+              <Lock className="w-3 h-3 text-amber-500" />
+              <span>Preview mode</span>
+              <span className="text-slate-300">·</span>
+              <button
+                onClick={() => onNavigate('settings')}
+                className="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+              >
+                Sign in for full beta access →
+              </button>
+            </>
+          ) : currentPlan === 'Explorer' ? (
             <>
               <Lock className="w-3 h-3 text-amber-500" />
               <span>Explorer plan — top 2 visible</span>
@@ -689,7 +701,9 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                       : idx >= visibleLimit
                   }
                   currentPlan={currentPlan}
+                  isAuthenticated={isAuthenticated}
                   onUpgrade={() => onNavigate('pricing')}
+                  onSignIn={() => onNavigate('settings')}
                   location={report.location}
                   onOpenDossier={(opp) => handleOpenDossier(opp, idx + 1)}
                   isDossierLoading={dossierLoading === opportunity.businessType}
@@ -697,8 +711,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
               ))}
             </div>
 
-            {/* Explorer upgrade nudge */}
-            {currentPlan === 'Explorer' && lockedCount > 0 && (
+            {/* Upgrade / sign-in nudge when results are locked */}
+            {lockedCount > 0 && (!isAuthenticated || currentPlan === 'Explorer') && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -708,15 +722,31 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                 <h4 className="text-lg font-black text-gray-900 mb-2">
                   {lockedCount} More {lockedCount === 1 ? 'Opportunity' : 'Opportunities'} Available
                 </h4>
-                <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">
-                  Upgrade to <strong>Pro</strong> to unlock all 5 opportunities including full risk analysis, customer segments, and best launch areas.
-                </p>
-                <button
-                  onClick={() => onNavigate('pricing')}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all cursor-pointer shadow-md"
-                >
-                  Upgrade to Pro →
-                </button>
+                {!isAuthenticated ? (
+                  <>
+                    <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">
+                      Create a free account to unlock full beta access — every new account receives temporary Pro+ access while beta is active.
+                    </p>
+                    <button
+                      onClick={() => onNavigate('settings')}
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all cursor-pointer shadow-md"
+                    >
+                      Create Free Account →
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">
+                      Upgrade to <strong>Pro</strong> to unlock all 5 opportunities including full risk analysis, customer segments, and best launch areas.
+                    </p>
+                    <button
+                      onClick={() => onNavigate('pricing')}
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all cursor-pointer shadow-md"
+                    >
+                      Get Pro →
+                    </button>
+                  </>
+                )}
               </motion.div>
             )}
 
@@ -834,11 +864,13 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             opportunity={selectedDossier}
             location={report?.location ?? ''}
             currentPlan={currentPlan}
+            isAuthenticated={isAuthenticated}
             rank={selectedDossierRank}
             isGrounded={(report?.groundingSources.length ?? 0) > 0}
             generationError={dossierError}
             onClose={() => { setSelectedDossier(null); setError(null); }}
             onUpgrade={() => { setSelectedDossier(null); setError(null); onNavigate('pricing'); }}
+            onSignIn={() => { setSelectedDossier(null); setError(null); onNavigate('settings'); }}
           />
         )}
       </AnimatePresence>
@@ -904,11 +936,13 @@ const OpportunityCard: React.FC<{
   rank: number;
   isLocked: boolean;
   currentPlan: SubscriptionPlan;
+  isAuthenticated: boolean;
   onUpgrade: () => void;
+  onSignIn: () => void;
   location: string;
   onOpenDossier: (opp: BusinessOpportunity) => void;
   isDossierLoading?: boolean;
-}> = ({ opportunity, rank, isLocked, currentPlan, onUpgrade, onOpenDossier, isDossierLoading = false }) => {
+}> = ({ opportunity, rank, isLocked, currentPlan, isAuthenticated, onUpgrade, onSignIn, onOpenDossier, isDossierLoading = false }) => {
   const rankConfig = RANK_CONFIGS[rank - 1];
   const tier = getOpportunityTier(resolveViabilityScore(opportunity.scores));
 
@@ -1172,12 +1206,14 @@ const OpportunityDossierModal: React.FC<{
   opportunity: BusinessOpportunity;
   location: string;
   currentPlan: SubscriptionPlan;
+  isAuthenticated: boolean;
   rank: number;
   isGrounded: boolean;
   generationError?: string | null;
   onClose: () => void;
   onUpgrade: () => void;
-}> = ({ opportunity, location, currentPlan, rank, isGrounded, generationError, onClose, onUpgrade }) => {
+  onSignIn: () => void;
+}> = ({ opportunity, location, currentPlan, isAuthenticated, rank, isGrounded, generationError, onClose, onUpgrade, onSignIn }) => {
   React.useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleKey);
@@ -1199,7 +1235,7 @@ const OpportunityDossierModal: React.FC<{
     opportunity.marketDemand ||
     opportunity.opportunityScorecard
   );
-  const canViewDossier = currentPlan !== 'Explorer';
+  const canViewDossier = isAuthenticated && currentPlan !== 'Explorer';
 
   const decisionKey = opportunity.strategicRecommendation?.decision ?? '';
   const decisionStyle = DECISION_STYLES[decisionKey] ?? DECISION_STYLES['Proceed with Caution'];
@@ -1333,20 +1369,36 @@ const OpportunityDossierModal: React.FC<{
             </div>
           </div>
 
-          {/* Plan gate for Explorer */}
+          {/* Gate for anonymous visitors or Explorer plan */}
           {!canViewDossier ? (
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-8 text-center">
               <Lock className="w-10 h-10 text-indigo-300 mx-auto mb-3" />
-              <h4 className="text-base font-black text-slate-800 mb-2">Full Analysis — Pro Required</h4>
-              <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-                Upgrade to <strong>Pro</strong> to unlock the complete business analysis — market breakdown, competitive landscape, financial projections, risk assessment, and scorecard.
-              </p>
-              <button
-                onClick={onUpgrade}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl cursor-pointer transition-all shadow-md"
-              >
-                Upgrade to Pro →
-              </button>
+              <h4 className="text-base font-black text-slate-800 mb-2">Full Analysis Available</h4>
+              {!isAuthenticated ? (
+                <>
+                  <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
+                    Create a free account to unlock the complete business analysis. Every new account receives temporary Pro+ access during our private beta.
+                  </p>
+                  <button
+                    onClick={onSignIn}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl cursor-pointer transition-all shadow-md"
+                  >
+                    Create Free Account →
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
+                    Get Pro to unlock the complete business analysis — market breakdown, competitive landscape, financial projections, risk assessment, and scorecard.
+                  </p>
+                  <button
+                    onClick={onUpgrade}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl cursor-pointer transition-all shadow-md"
+                  >
+                    Get Pro →
+                  </button>
+                </>
+              )}
             </div>
           ) : !hasDossier ? (
             <div className="bg-slate-100 border border-slate-200 rounded-2xl p-8 text-center">
