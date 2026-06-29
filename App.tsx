@@ -895,6 +895,7 @@ const App: React.FC = () => {
               onSelectPlan={handleSelectPlan}
               onCheckout={handleCheckout}
               isBetaActive={betaFullAccess}
+              isAuthenticated={!!currentUser}
             />
           </div>
         );

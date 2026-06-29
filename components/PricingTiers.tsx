@@ -14,6 +14,8 @@ interface PricingTiersProps {
   onCheckout?: (plan: 'Pro' | 'Pro+') => void;
   /** True when the private-beta full-access override is active for this user. */
   isBetaActive?: boolean;
+  /** True when a user is signed in. Hides account-specific UI (billing banner, Active badge) for anonymous visitors. */
+  isAuthenticated?: boolean;
 }
 
 const PLAN_ORDER: Record<string, number> = { Explorer: 0, Pro: 1, 'Pro+': 2, Enterprise: 3 };
@@ -35,7 +37,7 @@ const PLAN_ICONS: Record<PlanIconKey, React.ReactNode> = {
   building: <Building className="w-5 h-5 text-indigo-700" />,
 };
 
-export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelectPlan, onCheckout, isBetaActive = false }) => {
+export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelectPlan, onCheckout, isBetaActive = false, isAuthenticated = true }) => {
   const isDemo = isDemoMode;
 
   const handlePlanAction = (tierId: SubscriptionPlan) => {
@@ -63,39 +65,41 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
 
   return (
     <div className="space-y-10">
-      {/* Mode banner */}
-      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm ${
-        isDemo
-          ? 'bg-blue-50 border-blue-100'
-          : 'bg-gray-50 border-gray-200'
-      }`}>
-        <div className="flex items-center gap-3">
-          {isDemo ? (
-            <div className="p-2 bg-blue-100 text-blue-700 rounded-xl shrink-0">
-              <Sparkles className="w-4 h-4 animate-pulse" />
-            </div>
-          ) : (
-            <div className="p-2 bg-gray-200 text-gray-700 rounded-xl shrink-0">
-              <Zap className="w-4 h-4" />
-            </div>
-          )}
-          <div>
-            <p className="text-xs font-black text-gray-900 uppercase tracking-wide">
-              {isDemo ? 'Demo Mode' : 'Billing Active'}
-            </p>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              {isDemo
-                ? 'Click any plan to hot-swap instantly — no payment required.'
-                : 'Upgrade instantly via Stripe. Cancel anytime. No hidden fees.'}
-            </p>
-          </div>
-        </div>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border shrink-0 ${
-          isDemo ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-white text-gray-700 border-gray-200'
+      {/* Mode / account banner — only shown to authenticated users or in demo mode */}
+      {(isAuthenticated || isDemo) && (
+        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm ${
+          isDemo
+            ? 'bg-blue-50 border-blue-100'
+            : 'bg-gray-50 border-gray-200'
         }`}>
-          Current: {currentPlan}
-        </span>
-      </div>
+          <div className="flex items-center gap-3">
+            {isDemo ? (
+              <div className="p-2 bg-blue-100 text-blue-700 rounded-xl shrink-0">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+              </div>
+            ) : (
+              <div className="p-2 bg-gray-200 text-gray-700 rounded-xl shrink-0">
+                <Zap className="w-4 h-4" />
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-black text-gray-900 uppercase tracking-wide">
+                {isDemo ? 'Demo Mode' : 'Billing Active'}
+              </p>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                {isDemo
+                  ? 'Click any plan to hot-swap instantly — no payment required.'
+                  : 'Upgrade instantly via Stripe. Cancel anytime. No hidden fees.'}
+              </p>
+            </div>
+          </div>
+          <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border shrink-0 ${
+            isDemo ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-white text-gray-700 border-gray-200'
+          }`}>
+            Current: {currentPlan}
+          </span>
+        </div>
+      )}
 
       {/* Private-beta banner — shown only when beta full-access is active */}
       {isBetaActive && (
@@ -113,7 +117,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
       {/* Tier cards — driven by PRICING_CARDS from src/config/plans.ts */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-4 items-start">
         {PRICING_CARDS.map((card) => {
-          const isActive = currentPlan === card.id;
+          const isActive = isAuthenticated && currentPlan === card.id;
           const icon = PLAN_ICONS[card.iconKey];
 
           return (
@@ -192,22 +196,28 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
               {/* CTA */}
               <div className="px-6 pb-6 pt-4 border-t border-gray-50">
                 {(() => {
-                  const relation = getPlanRelation(currentPlan, card.id);
                   let label: string;
                   let btnClass: string;
-                  if (relation === 'active') {
-                    label = 'Currently Active';
-                    btnClass = 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100';
-                  } else if (relation === 'enterprise') {
+                  if (!isAuthenticated) {
+                    // Anonymous visitor: no current plan to compare against — always show the card's own CTA.
                     label = card.cta;
                     btnClass = `${card.ctaClass} border border-transparent`;
-                  } else if (relation === 'upgrade') {
-                    label = !isDemo ? `${card.cta} →` : card.cta;
-                    btnClass = `${card.ctaClass} border border-transparent`;
                   } else {
-                    // downgrade
-                    label = card.id === 'Explorer' ? 'Downgrade to Free' : `Switch to ${card.name}`;
-                    btnClass = 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100';
+                    const relation = getPlanRelation(currentPlan, card.id);
+                    if (relation === 'active') {
+                      label = 'Currently Active';
+                      btnClass = 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100';
+                    } else if (relation === 'enterprise') {
+                      label = card.cta;
+                      btnClass = `${card.ctaClass} border border-transparent`;
+                    } else if (relation === 'upgrade') {
+                      label = !isDemo ? `${card.cta} →` : card.cta;
+                      btnClass = `${card.ctaClass} border border-transparent`;
+                    } else {
+                      // downgrade
+                      label = card.id === 'Explorer' ? 'Downgrade to Free' : `Switch to ${card.name}`;
+                      btnClass = 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100';
+                    }
                   }
                   return (
                     <button
