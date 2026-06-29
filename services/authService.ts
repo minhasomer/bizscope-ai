@@ -555,7 +555,7 @@ export class AuthService {
   public static async signOut(): Promise<void> {
     if (this.isSupabaseActive()) {
       try {
-        await supabase!.auth.signOut();
+        await supabase!.auth.signOut({ scope: 'global' });
       } catch (err) {
         console.error('[AuthService] Supabase signOut error:', err);
       }

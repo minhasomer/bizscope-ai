@@ -894,7 +894,7 @@ const App: React.FC = () => {
               currentPlan={userPlan}
               onSelectPlan={handleSelectPlan}
               onCheckout={handleCheckout}
-              isBetaActive={betaFullAccess && currentUser !== null}
+              isBetaActive={betaFullAccess}
             />
           </div>
         );

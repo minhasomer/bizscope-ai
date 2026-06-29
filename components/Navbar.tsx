@@ -122,14 +122,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
               </div>
             ) : (
               <>
-                <button
-                  onClick={() => onNavigate('pricing')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-black uppercase tracking-wide transition-all cursor-pointer ${planBadgeClass()}`}
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  {currentPlan}
-                  <ChevronDown className="w-3 h-3 opacity-50" />
-                </button>
+                {user && (
+                  <button
+                    onClick={() => onNavigate('pricing')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-black uppercase tracking-wide transition-all cursor-pointer ${planBadgeClass()}`}
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    {currentPlan}
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                  </button>
+                )}
 
                 {user ? (
                   <div className="flex items-center gap-1.5">
@@ -204,13 +206,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
             </div>
           ) : (
             <>
-              <button
-                onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold uppercase tracking-wide transition-all cursor-pointer ${planBadgeClass()}`}
-              >
-                <CreditCard className="w-4 h-4" />
-                {demoActive ? 'Sandbox Plan' : 'Plan'}: {currentPlan}
-              </button>
+              {user && (
+                <button
+                  onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold uppercase tracking-wide transition-all cursor-pointer ${planBadgeClass()}`}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  {demoActive ? 'Sandbox Plan' : 'Plan'}: {currentPlan}
+                </button>
+              )}
 
               {user ? (
                 <div className="space-y-2">

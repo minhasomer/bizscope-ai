@@ -74,7 +74,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
       case 'Pro':        return '20 reports/month';
       case 'Pro+':       return '50 standard + 10 regional/month';
       case 'Enterprise': return 'Custom access';
-      default:           return '3 reports/month'; // Explorer
+      default:           return 'Free account · Pro plan required for reports'; // Explorer
     }
   };
 
