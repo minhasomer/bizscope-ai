@@ -387,8 +387,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
         <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-full text-xs font-medium text-slate-600">
           {!isAuthenticated ? (
             <>
-              <Lock className="w-3 h-3 text-amber-500" />
-              <span>Preview mode</span>
+              <Sparkles className="w-3 h-3 text-indigo-400" />
+              <span>Preview Mode</span>
               <span className="text-slate-300">·</span>
               <button
                 onClick={() => onNavigate('settings')}

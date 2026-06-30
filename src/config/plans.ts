@@ -324,7 +324,7 @@ export const PRICING_CARDS: PricingCardConfig[] = [
     price:            '$0',
     period:           'forever',
     badge:            'Free',
-    description:      'Sign up free. Get 3 reports/month to validate your idea.',
+    description:      'Get started with BizScope at no cost.',
     shortDescription: 'Free · 3 reports/month',
     accent:           null,
     iconKey:          'shield',
