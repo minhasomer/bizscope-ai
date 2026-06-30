@@ -108,7 +108,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
           <div>
             <p className="font-black uppercase tracking-wide text-[10px] text-purple-700 mb-0.5">Private Beta — Complimentary Pro+ Access</p>
             <p className="leading-relaxed text-purple-700">
-              Every new account gets complimentary access to all Pro+ features during beta, at no cost. The pricing below is shown for reference and will apply after beta — you will not be charged for participating.
+              Every new account receives complimentary access to all Pro+ features throughout the beta at no cost. The pricing below is provided for reference and will apply after beta. You will not be charged for participating.
             </p>
           </div>
         </div>
