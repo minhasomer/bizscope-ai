@@ -106,9 +106,9 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
         <div className="flex items-start gap-3 px-4 py-3 bg-purple-50 border border-purple-200 rounded-2xl text-xs text-purple-800">
           <Sparkles className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
           <div>
-            <p className="font-black uppercase tracking-wide text-[10px] text-purple-700 mb-0.5">Private Beta — Full Access Active</p>
+            <p className="font-black uppercase tracking-wide text-[10px] text-purple-700 mb-0.5">Private Beta — Complimentary Pro+ Access</p>
             <p className="leading-relaxed text-purple-700">
-              Join our private beta today. Every new account receives temporary Pro+ access while beta is active. Pricing reflects the plans that will be available after beta.
+              Every new account gets complimentary access to all Pro+ features during beta, at no cost. The pricing below is shown for reference and will apply after beta — you will not be charged for participating.
             </p>
           </div>
         </div>
