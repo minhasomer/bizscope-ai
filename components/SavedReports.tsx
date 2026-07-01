@@ -3,7 +3,7 @@ import { SavedReport, SavedMarketGapReport, OpportunityReport } from '../types';
 import { SavedReportsService } from '../services/savedReportsService';
 import { isDemoMode } from '../src/config/appConfig';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
-import { viabilityScoreToAssessment, scoreToRiskRating, scoreToCompetitionRating, stripScoreReferences } from '../src/utils/assessmentUtils';
+import { viabilityScoreToAssessment, scoreToRiskRating, scoreToCompetitionRating, stripScoreReferences, getRecommendationDisplayLabel } from '../src/utils/assessmentUtils';
 import { AssessmentDot } from './AssessmentDot';
 import { 
   Briefcase, 
@@ -996,22 +996,16 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
                     <div className="p-4 space-y-2">
-                      <span className={`inline-flex text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md border ${
-                        reportA.recommendation?.decision === 'Recommended' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' :
-                        reportA.recommendation?.decision === 'Caution Advised' ? 'bg-amber-50 text-amber-800 border-amber-100' : 'bg-rose-50 text-rose-800 border-rose-100'
-                      }`}>
-                        {reportA.recommendation?.decision || 'No Decision'}
+                      <span className="inline-flex text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md border bg-slate-50 text-slate-700 border-slate-200">
+                        {getRecommendationDisplayLabel(reportA.recommendation?.decision)}
                       </span>
                       <p className="text-xs text-gray-500 leading-relaxed italic">
                         "{reportA.recommendation?.reasoning ? stripScoreReferences(reportA.recommendation.reasoning) : 'Reasoning text omitted'}"
                       </p>
                     </div>
                     <div className="p-4 space-y-2">
-                      <span className={`inline-flex text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md border ${
-                        reportB.recommendation?.decision === 'Recommended' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' :
-                        reportB.recommendation?.decision === 'Caution Advised' ? 'bg-amber-50 text-amber-800 border-amber-100' : 'bg-rose-50 text-rose-800 border-rose-100'
-                      }`}>
-                        {reportB.recommendation?.decision || 'No Decision'}
+                      <span className="inline-flex text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md border bg-slate-50 text-slate-700 border-slate-200">
+                        {getRecommendationDisplayLabel(reportB.recommendation?.decision)}
                       </span>
                       <p className="text-xs text-gray-500 leading-relaxed italic">
                         "{reportB.recommendation?.reasoning ? stripScoreReferences(reportB.recommendation.reasoning) : 'Reasoning text omitted'}"

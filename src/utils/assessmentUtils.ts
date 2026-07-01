@@ -105,11 +105,27 @@ export function viabilityScoreToFrameworkIndex(score: number): number {
  */
 export function getRecommendedPosture(decision: string): string {
   switch (decision) {
-    case 'Recommended':           return 'Good candidate for deeper validation';
-    case 'Caution Advised':       return 'Review key risks before proceeding';
-    case 'Not Recommended':       return 'Avoid or reassess before investing';
+    case 'Recommended':           return 'Proceed with validation';
+    case 'Caution Advised':       return 'Continue due diligence';
+    case 'Not Recommended':       return 'Do not proceed';
     case 'Verification Required': return 'Verify assumptions before proceeding';
     default:                      return 'Review details before proceeding';
+  }
+}
+
+/**
+ * User-facing display label for a recommendation.decision value.
+ * Returns action-oriented text — never exposes internal codes like
+ * "Caution Advised" or "Not Recommended" as UI labels.
+ * Use everywhere a decision value would otherwise be rendered directly.
+ */
+export function getRecommendationDisplayLabel(decision: string | undefined | null): string {
+  switch (decision) {
+    case 'Recommended':           return 'Proceed with validation';
+    case 'Caution Advised':       return 'Continue due diligence';
+    case 'Not Recommended':       return 'Do not proceed';
+    case 'Verification Required': return 'Verify assumptions';
+    default:                      return 'Review details';
   }
 }
 

@@ -22,6 +22,7 @@ import {
   getNextStep,
   getConfidenceLevel,
   stripScoreReferences,
+  getRecommendationDisplayLabel,
 } from '../src/utils/assessmentUtils';
 import { LiveModeConfirmModal } from './LiveModeConfirmModal';
 import { UsageTrackerService } from '../services/usageTrackerService';
@@ -866,23 +867,11 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
   // Action-guidance posture derived from recommendation.decision. Framed as a
   // recommended NEXT MOVE, not a second verdict — the Overall Assessment badge
-  // is the only headline verdict, so this never repeats/contradicts it (e.g. a
-  // "Worth Further Investigation" assessment can pair with "Review key risks
-  // before proceeding" without looking like two competing conclusions).
+  // is the only headline verdict. Neutral slate styling is used for all cases
+  // so the posture pill never emits a competing color signal against the badge.
   const getRecommendationStyle = (decision: string) => {
     const action = getRecommendedPosture(decision);  // shared with PDF export — single source of truth
-    switch(decision) {
-      case 'Recommended':
-        return { bg: 'bg-green-50 text-green-800 border-green-200', action };
-      case 'Caution Advised':
-        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', action };
-      case 'Not Recommended':
-        return { bg: 'bg-rose-50 text-rose-800 border-rose-200', action };
-      case 'Verification Required':
-        return { bg: 'bg-orange-50 text-orange-800 border-orange-200', action };
-      default:
-        return { bg: 'bg-gray-50 text-gray-800 border-gray-200', action };
-    }
+    return { bg: 'bg-slate-50 text-slate-700 border-slate-200', action };
   };
 
   const getSeverityColor = (severity: string) => {
@@ -1827,13 +1816,8 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             </h4>
                             <p className="text-sm text-gray-700 leading-relaxed">{report.recommendation?.reasoning ? stripScoreReferences(report.recommendation.reasoning) : 'Recommendation reasoning was unavailable for this report.'}</p>
                             <div className="mt-3 flex items-center gap-3 flex-wrap">
-                                <span className={`text-xs font-black px-3 py-1 rounded-full ${
-                                    report.recommendation?.decision === 'Recommended' ? 'bg-emerald-100 text-emerald-800' :
-                                    report.recommendation?.decision === 'Caution Advised' ? 'bg-amber-100 text-amber-800' :
-                                    report.recommendation?.decision === 'Verification Required' ? 'bg-orange-100 text-orange-800' :
-                                    'bg-red-100 text-red-800'
-                                }`}>
-                                    {report.recommendation?.decision ?? 'Verification Required'}
+                                <span className="text-xs font-black px-3 py-1 rounded-full bg-slate-100 text-slate-700">
+                                    {getRecommendationDisplayLabel(report.recommendation?.decision)}
                                 </span>
                                 <span className="text-xs text-gray-500">Assessment: <strong className="text-gray-800">{viabilityScoreToAssessment(report.viabilityScore).label}</strong></span>
                             </div>

@@ -2,7 +2,7 @@
 import React from 'react';
 import type { ViabilityReport } from '../types';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
-import { viabilityScoreToAssessment, stripScoreReferences } from '../src/utils/assessmentUtils';
+import { viabilityScoreToAssessment, stripScoreReferences, getRecommendationDisplayLabel } from '../src/utils/assessmentUtils';
 import { AssessmentDot } from './AssessmentDot';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 
@@ -12,12 +12,6 @@ interface ReportSummaryCardProps {
   onRegenerate: () => void;
 }
 
-const decisionStyle = (d: string) => {
-  if (d === 'Recommended')          return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (d === 'Caution Advised')      return 'bg-amber-50  text-amber-700  border-amber-200';
-  if (d === 'Verification Required') return 'bg-orange-50 text-orange-700 border-orange-200';
-  return                                    'bg-red-50    text-red-700    border-red-200';
-};
 
 export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, onViewFull, onRegenerate }) => {
   const {
@@ -62,9 +56,9 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
               <AssessmentDot color={assessment.dotColor} variant={assessment.indicatorVariant} size={20} />
               <span className={`text-[8px] font-black uppercase tracking-wide ${assessment.colorClass} text-center leading-tight mt-0.5`}>{assessment.label}</span>
             </div>
-            {/* Decision badge */}
-            <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border ${decisionStyle(recommendation?.decision ?? 'Verification Required')}`}>
-              {recommendation?.decision ?? 'Verification Required'}
+            {/* Posture badge — action-oriented label, never raw internal decision code */}
+            <span className="text-[11px] font-bold px-3 py-1.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+              {getRecommendationDisplayLabel(recommendation?.decision)}
             </span>
           </div>
         </div>
