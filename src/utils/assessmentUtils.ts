@@ -115,18 +115,15 @@ export function getRecommendedPosture(decision: string): string {
 
 /**
  * User-facing display label for a recommendation.decision value.
- * Returns action-oriented text — never exposes internal codes like
- * "Caution Advised" or "Not Recommended" as UI labels.
- * Use everywhere a decision value would otherwise be rendered directly.
+ * Delegates to getRecommendedPosture() for the three primary decision values
+ * (single source of truth for that wording). Handles nullable input and
+ * returns shorter badge-friendly text for Verification Required / default,
+ * which differ intentionally from the PDF-style prose in getRecommendedPosture.
  */
 export function getRecommendationDisplayLabel(decision: string | undefined | null): string {
-  switch (decision) {
-    case 'Recommended':           return 'Proceed with validation';
-    case 'Caution Advised':       return 'Continue due diligence';
-    case 'Not Recommended':       return 'Do not proceed';
-    case 'Verification Required': return 'Verify assumptions';
-    default:                      return 'Review details';
-  }
+  if (decision === 'Verification Required') return 'Verify assumptions';
+  if (!decision)                            return 'Review details';
+  return getRecommendedPosture(decision);
 }
 
 // ─── Category Ratings ─────────────────────────────────────────────────────────
