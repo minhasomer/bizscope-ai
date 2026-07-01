@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+import { viabilityScoreToAssessment, getRecommendationDisplayLabel } from '../src/utils/assessmentUtils';
 import { AssessmentDot } from './AssessmentDot';
 
 interface SampleReportsProps {
@@ -13,8 +13,6 @@ interface SampleCard {
   location: string;
   category: string;
   viabilityScore: number;
-  decision: string;
-  decisionColor: string;
   startupCost: string;
   year1Revenue: string;
   breakEven: string;
@@ -27,8 +25,6 @@ const SAMPLES: SampleCard[] = [
     location: 'Gurnee, IL',
     category: 'Medical / Healthcare',
     viabilityScore: 78,
-    decision: 'Recommended',
-    decisionColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     startupCost: '$380k – $520k',
     year1Revenue: '$1.1M',
     breakEven: '18 months',
@@ -39,8 +35,6 @@ const SAMPLES: SampleCard[] = [
     location: 'Austin, TX',
     category: 'Food & Beverage',
     viabilityScore: 74,
-    decision: 'Recommended',
-    decisionColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     startupCost: '$130k – $195k',
     year1Revenue: '$360k',
     breakEven: '16 months',
@@ -51,8 +45,6 @@ const SAMPLES: SampleCard[] = [
     location: 'Lake County, IL',
     category: 'Local Services',
     viabilityScore: 68,
-    decision: 'Conditionally Recommended',
-    decisionColor: 'bg-amber-100 text-amber-700 border-amber-200',
     startupCost: '$35k – $65k',
     year1Revenue: '$185k',
     breakEven: '9 months',
@@ -129,7 +121,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                   </span>
                 </div>
 
-                {/* Assessment badge + decision badge */}
+                {/* Assessment badge + posture badge */}
                 <div className="px-5 py-4 flex items-center gap-4 border-b border-gray-100">
                   <div className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl border ${assessment.bgClass} ${assessment.borderClass} shrink-0`}>
                     <AssessmentDot color={assessment.dotColor} variant={assessment.indicatorVariant} size={20} />
@@ -137,10 +129,14 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1.5">
-                      Overall Assessment
+                      Recommended Posture
                     </p>
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${s.decisionColor}`}>
-                      {s.decision}
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+                      {getRecommendationDisplayLabel(
+                        s.viabilityScore >= 76 ? 'Recommended' :
+                        s.viabilityScore >= 51 ? 'Caution Advised' :
+                        'Not Recommended'
+                      )}
                     </span>
                   </div>
                 </div>

@@ -207,11 +207,11 @@ export function getNextStep(decision: string, score?: number): string {
   switch (decision) {
     case 'Recommended':           return 'Proceed to Due Diligence';
     case 'Caution Advised':       return 'Further Validation Recommended';
-    case 'Not Recommended':       return 'Not Recommended Without Additional Research';
+    case 'Not Recommended':       return 'Do not proceed without major reassessment';
     case 'Verification Required': return 'Proceed Carefully';
     default: return score != null && score >= 60
       ? 'Further Validation Recommended'
-      : 'Not Recommended Without Additional Research';
+      : 'Do not proceed without major reassessment';
   }
 }
 
