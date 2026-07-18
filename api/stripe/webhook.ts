@@ -282,7 +282,8 @@ async function handleInvoicePaymentSucceeded(inv: Stripe.Invoice): Promise<void>
 
   // Retrieve the current subscription to restore authoritative state.
   // This is the canonical recovery path from past_due after a successful retry.
-  const subscriptionId = inv.subscription as string | null ?? row.stripe_subscription_id;
+  // inv.subscription was removed from Invoice types in Stripe API 2026+; access via any.
+  const subscriptionId = (inv as any).subscription as string | null ?? row.stripe_subscription_id;
   if (!subscriptionId) {
     console.warn(`[Stripe] invoice.payment_succeeded — no subscriptionId to reconcile for userId=${row.user_id}`);
     return;
