@@ -198,7 +198,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
             </button>
           ) : (
             <>
-              {subStatus?.customerId ? (
+              {subStatus && ['active', 'trialing', 'past_due'].includes(subStatus.status) ? (
                 <button
                   onClick={handleManageBilling}
                   disabled={portalLoading}
@@ -209,7 +209,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
                   ) : (
                     <ExternalLink className="w-3.5 h-3.5" />
                   )}
-                  {portalLoading ? 'Opening Portal...' : 'Manage Billing & Invoices'}
+                  {portalLoading ? 'Opening Portal...' : 'Manage Subscription'}
                 </button>
               ) : (
                 <button
