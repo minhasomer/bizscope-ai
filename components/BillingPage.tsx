@@ -74,7 +74,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
     const load = async () => {
       setStatusLoading(true);
       try {
-        const status = await StripeService.getSubscriptionStatus(user.email);
+        const status = await StripeService.getSubscriptionStatus();
         setSubStatus(status);
       } catch {
         setSubStatus({ plan: currentPlan, status: 'not_configured', customerId: null });
@@ -83,13 +83,13 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
       }
     };
     load();
-  }, [user.email, currentPlan]);
+  }, [currentPlan]);
 
   const handleManageBilling = async () => {
     setPortalError(null);
     setPortalLoading(true);
     try {
-      await StripeService.openPortal(user.email);
+      await StripeService.openPortal();
     } catch (err: any) {
       setPortalError(err.message || 'Could not open billing portal. Please try again.');
     } finally {

@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { json, verifyAuth, getStripe, getSupabaseAdmin, PRICE_TO_PLAN } from './_shared.js';
+import { json, verifyAuth, getStripe, getSupabaseAdmin } from './_shared.js';
 
 async function readBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -29,10 +29,16 @@ export default async function handler(
   }
 
   const body = (await readBody(req)) as Record<string, unknown>;
-  const priceId = typeof body?.priceId === 'string' ? body.priceId : null;
+  const plan = typeof body?.plan === 'string' ? body.plan : null;
 
-  if (!priceId || !PRICE_TO_PLAN[priceId]) {
-    return json(res, 400, { error: 'Invalid or missing priceId.' });
+  const PLAN_TO_PRICE: Record<string, string | undefined> = {
+    'Pro':  process.env.STRIPE_PRICE_ID_PRO,
+    'Pro+': process.env.STRIPE_PRICE_ID_PRO_PLUS,
+  };
+  const priceId = plan ? PLAN_TO_PRICE[plan] : undefined;
+
+  if (!priceId) {
+    return json(res, 400, { error: 'Invalid or missing plan. Must be "Pro" or "Pro+".' });
   }
 
   // Reject if user already has an active or trialing subscription.

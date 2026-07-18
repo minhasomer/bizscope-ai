@@ -1,12 +1,27 @@
 import { isDemoMode } from '../src/config/appConfig';
 import { assertLiveService } from '../src/lib/guardrails';
+import { supabase } from './supabaseClient';
 
 export interface SubscriptionStatus {
   plan: string;
-  status: 'active' | 'past_due' | 'cancelled' | 'no_subscription' | 'no_customer' | 'not_configured' | 'demo';
-  customerId: string | null;
-  currentPeriodEnd?: number;
-  cancelAtPeriodEnd?: boolean;
+  status: 'active' | 'trialing' | 'past_due' | 'cancelled' | 'inactive' | 'no_subscription' | 'no_customer' | 'not_configured' | 'demo';
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+  // Legacy field — kept so BillingPage.tsx betaGranted check (`!subStatus?.customerId`) still works.
+  customerId: null;
+}
+
+async function getAccessToken(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+function authHeaders(token: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
 }
 
 export class StripeService {
@@ -14,45 +29,44 @@ export class StripeService {
     return isDemoMode;
   }
 
-  /**
-   * Redirect to Stripe Checkout for Pro or Pro+ subscription.
-   * No-op in Demo Mode.
-   */
-  static async startCheckout(plan: 'Pro' | 'Pro+', userEmail: string): Promise<void> {
+  static async startCheckout(plan: 'Pro' | 'Pro+'): Promise<void> {
     if (this.isDemo()) {
       console.info('[Stripe] Demo mode active — skipping real checkout.');
       return;
     }
-
-    // Guardrail: real Stripe sessions must never be created in Demo Mode.
     assertLiveService('Stripe /api/stripe/create-checkout-session');
+
+    const token = await getAccessToken();
+    if (!token) throw new Error('Not authenticated.');
+
     const resp = await fetch('/api/stripe/create-checkout-session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, userEmail }),
+      headers: authHeaders(token),
+      body: JSON.stringify({ plan }),
     });
 
     const data = await resp.json();
+    if (resp.status === 409 && data.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
+      // Caller should redirect to portal instead.
+      throw Object.assign(new Error(data.error), { code: 'ACTIVE_SUBSCRIPTION_EXISTS' });
+    }
     if (!resp.ok) throw new Error(data.error || 'Failed to create Stripe checkout session.');
     if (data.url) window.location.href = data.url;
   }
 
-  /**
-   * Redirect to Stripe Billing Portal so the user can manage/cancel their subscription.
-   * No-op in Demo Mode.
-   */
-  static async openPortal(userEmail: string): Promise<void> {
+  static async openPortal(): Promise<void> {
     if (this.isDemo()) {
       console.info('[Stripe] Demo mode active — skipping portal redirect.');
       return;
     }
-
-    // Guardrail: real billing portal redirects must never occur in Demo Mode.
     assertLiveService('Stripe /api/stripe/create-portal-session');
+
+    const token = await getAccessToken();
+    if (!token) throw new Error('Not authenticated.');
+
     const resp = await fetch('/api/stripe/create-portal-session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userEmail }),
+      headers: authHeaders(token),
     });
 
     const data = await resp.json();
@@ -60,18 +74,19 @@ export class StripeService {
     if (data.url) window.location.href = data.url;
   }
 
-  /**
-   * Fetch live subscription status from the server.
-   * Returns a demo status object in Demo Mode.
-   */
-  static async getSubscriptionStatus(userEmail: string): Promise<SubscriptionStatus> {
+  static async getSubscriptionStatus(): Promise<SubscriptionStatus> {
     if (this.isDemo()) {
-      return { plan: 'Explorer', status: 'demo', customerId: null };
+      return { plan: 'Explorer', status: 'demo', cancelAtPeriodEnd: false, currentPeriodEnd: null, customerId: null };
     }
 
-    const resp = await fetch(`/api/stripe/subscription-status?email=${encodeURIComponent(userEmail)}`);
+    const token = await getAccessToken();
+    if (!token) throw new Error('Not authenticated.');
+
+    const resp = await fetch('/api/stripe/subscription-status', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Failed to fetch subscription status.');
-    return data as SubscriptionStatus;
+    return { ...data, customerId: null } as SubscriptionStatus;
   }
 }
