@@ -177,6 +177,11 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription): Promise<void
     localStatus = 'active';
   }
 
+  // Newer Stripe API versions (and the Customer Portal) schedule end-of-period
+  // cancellations by setting cancel_at (absolute timestamp) rather than
+  // cancel_at_period_end=true. Treat either form as "cancellation scheduled."
+  const cancelAtPeriodEnd = sub.cancel_at_period_end || (sub as any).cancel_at != null;
+
   await upsertSubscription({
     userId,
     stripeCustomerId:     sub.customer as string,
@@ -185,7 +190,7 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription): Promise<void
     status:              localStatus,
     periodStart,
     periodEnd,
-    cancelAtPeriodEnd:   sub.cancel_at_period_end,
+    cancelAtPeriodEnd,
   });
 
   // Sync profile tier for active/trialing states, including when cancellation
@@ -202,7 +207,7 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription): Promise<void
 
   console.log(
     `[Stripe] subscription.updated — userId=${userId} plan=${plan} ` +
-    `status=${localStatus} cancelAtPeriodEnd=${sub.cancel_at_period_end}`,
+    `status=${localStatus} cancelAtPeriodEnd=${cancelAtPeriodEnd}`,
   );
 }
 
@@ -305,7 +310,7 @@ async function handleInvoicePaymentSucceeded(inv: Stripe.Invoice): Promise<void>
     status:              'active',
     periodStart,
     periodEnd,
-    cancelAtPeriodEnd:   sub.cancel_at_period_end,
+    cancelAtPeriodEnd:   sub.cancel_at_period_end || (sub as any).cancel_at != null,
   });
   await setProfileTier(row.user_id, plan);
 
