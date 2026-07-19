@@ -75,8 +75,9 @@ export const PRICE_TO_PLAN: Record<string, 'Pro' | 'Pro+'> = (() => {
 // Every write to profiles.subscription_tier must go through this map.
 
 export const PLAN_TO_DB_TIER: Record<string, string> = {
-  'Pro':  'Pro',
-  'Pro+': 'ProPlus',
+  'Explorer': 'Explorer',
+  'Pro':      'Pro',
+  'Pro+':     'ProPlus',
 };
 
 // ─── Subscription row lookup ──────────────────────────────────────────────────
