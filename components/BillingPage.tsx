@@ -35,10 +35,9 @@ const PLAN_COLORS: Record<string, string> = {
   Enterprise: 'bg-indigo-50 border-indigo-200 text-indigo-700',
 };
 
-const formatPeriodEnd = (ts: number): string => {
-  return new Date(ts * 1000).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+const formatPeriodEnd = (ts: number | string): string => {
+  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
 const StatusBadge: React.FC<{ status: SubscriptionStatus['status']; betaAccess?: boolean }> = ({ status, betaAccess }) => {
