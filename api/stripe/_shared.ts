@@ -86,13 +86,16 @@ export interface SubscriptionRow {
   stripe_subscription_id: string | null;
   status: string;
   plan: string;
+  cancel_at_period_end: boolean;
+  cancel_at: string | null;
+  current_period_end: string | null;
 }
 
 export async function getSubscriptionRow(userId: string): Promise<SubscriptionRow | null> {
   try {
     const { data } = await getSupabaseAdmin()
       .from('subscriptions')
-      .select('stripe_customer_id, stripe_subscription_id, status, plan')
+      .select('stripe_customer_id, stripe_subscription_id, status, plan, cancel_at_period_end, cancel_at, current_period_end')
       .eq('user_id', userId)
       .single();
     return data ?? null;

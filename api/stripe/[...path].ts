@@ -52,11 +52,19 @@ async function handleSubscriptionStatus(
     });
   }
 
+  // Derive cancellation-pending from both Stripe mechanisms:
+  // cancel_at_period_end=true (older API) OR cancel_at set to a future timestamp
+  // (Customer Portal / newer API versions). Belt-and-suspenders: either alone is enough.
+  const cancelAt = row.cancel_at ?? null;
+  const cancelAtPeriodEnd =
+    row.cancel_at_period_end ||
+    (cancelAt != null && new Date(cancelAt) > new Date());
+
   return json(res, 200, {
     plan:              row.plan,
     status:            row.status,
-    cancelAtPeriodEnd: (row as any).cancel_at_period_end ?? false,
-    currentPeriodEnd:  (row as any).current_period_end   ?? null,
+    cancelAtPeriodEnd,
+    currentPeriodEnd:  row.current_period_end ?? null,
   });
 }
 
