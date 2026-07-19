@@ -167,7 +167,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
         )}
 
         {/* Billing cycle details from Stripe */}
-        {subStatus?.currentPeriodEnd && (
+        {subStatus && ['active', 'trialing', 'past_due'].includes(subStatus.status) && subStatus.currentPeriodEnd ? (
           <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
             <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
             {subStatus.cancelAtPeriodEnd ? (
@@ -182,7 +182,12 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
               </span>
             )}
           </div>
-        )}
+        ) : subStatus && ['cancelled', 'no_subscription', 'no_customer'].includes(subStatus.status) ? (
+          <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span>No active subscription</span>
+          </div>
+        ) : null}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
