@@ -310,6 +310,17 @@ async function handleInvoicePaymentSucceeded(inv: Stripe.Invoice): Promise<void>
 
   const stripe = getStripe();
   const sub = await stripe.subscriptions.retrieve(subscriptionId);
+
+  // Guard: if this invoice belongs to an already-cancelled subscription, skip.
+  // This prevents a stale invoice for an old sub from overwriting a newer active sub.
+  if (sub.status === 'canceled') {
+    console.warn(
+      `[Stripe] invoice.payment_succeeded — subscriptionId=${subscriptionId} is canceled; ` +
+      `skipping overwrite for userId=${row.user_id}`,
+    );
+    return;
+  }
+
   const priceId = sub.items.data[0]?.price.id;
   const plan = priceId ? PRICE_TO_PLAN[priceId] : undefined;
   if (!plan) throw new Error(`Unknown price ID in invoice.payment_succeeded: ${priceId}`);
