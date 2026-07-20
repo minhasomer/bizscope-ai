@@ -12,7 +12,6 @@ import {
   viabilityScoreToFrameworkContext,
   viabilityScoreToFrameworkIndex,
   ASSESSMENT_FRAMEWORK,
-  getRecommendedPosture,
   scoreToMarketDemandRating,
   scoreToCompetitionRating,
   scoreToCapitalRating,
@@ -865,15 +864,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     setShowExportModal(true);
   };
 
-  // Action-guidance posture derived from recommendation.decision. Framed as a
-  // recommended NEXT MOVE, not a second verdict — the Overall Assessment badge
-  // is the only headline verdict. Neutral slate styling is used for all cases
-  // so the posture pill never emits a competing color signal against the badge.
-  const getRecommendationStyle = (decision: string) => {
-    const action = getRecommendedPosture(decision);  // shared with PDF export — single source of truth
-    return { bg: 'bg-slate-50 text-slate-700 border-slate-200', action };
-  };
-
   const getSeverityColor = (severity: string) => {
     switch(severity) {
         case 'High': return 'bg-rose-50 text-rose-700 border-rose-200 font-extrabold shadow-inner';
@@ -891,8 +881,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
         default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
-
-  const recStyle = getRecommendationStyle(report.recommendation?.decision ?? 'Verification Required');
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth">
@@ -1012,20 +1000,15 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                           <span>Location: <strong className="text-blue-600">{formatLocationDisplay(report.location)}</strong></span>
                         </p>
                         
-                        <div className="flex flex-wrap items-center gap-2 mb-4">
-                          <div className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border font-black text-xs uppercase tracking-wider ${recStyle.bg}`}>
-                              <Compass className="w-3 h-3 shrink-0 opacity-70" />
-                              <span className="opacity-60">Recommended Posture:</span>
-                              <span>{recStyle.action}</span>
-                          </div>
-                          {report.franchiseTerritoryCheck && (
+                        {report.franchiseTerritoryCheck && (
+                          <div className="flex flex-wrap items-center gap-2 mb-4">
                             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 font-black text-xs uppercase tracking-wider">
                               <AlertTriangle className="w-3 h-3 shrink-0" />
                               Territory Availability Unknown
                             </div>
-                          )}
-                        </div>
-                        <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl">{report.recommendation?.reasoning ? stripScoreReferences(report.recommendation.reasoning) : 'Recommendation reasoning was unavailable for this report.'}</p>
+                          </div>
+                        )}
+                        <p className="text-gray-600 text-xs md:text-sm leading-relaxed max-w-2xl mb-4">{report.recommendation?.reasoning ? stripScoreReferences(report.recommendation.reasoning) : 'Recommendation reasoning was unavailable for this report.'}</p>
                         {report.franchiseTerritoryCheck && (
                           <p className="mt-2 text-xs text-amber-700 font-semibold leading-relaxed max-w-2xl">
                             ⚠️ This assessment reflects market conditions only — territory availability is not confirmed. Verify directly with the franchisor before investing.

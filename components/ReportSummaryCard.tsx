@@ -2,7 +2,7 @@
 import React from 'react';
 import type { ViabilityReport } from '../types';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
-import { viabilityScoreToAssessment, stripScoreReferences, getRecommendationDisplayLabel } from '../src/utils/assessmentUtils';
+import { viabilityScoreToAssessment, stripScoreReferences } from '../src/utils/assessmentUtils';
 import { AssessmentDot } from './AssessmentDot';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
 
@@ -50,16 +50,12 @@ export const ReportSummaryCard: React.FC<ReportSummaryCardProps> = ({ report, on
             <p className="text-xs text-slate-400 mt-0.5">{formatLocationDisplay(location)}</p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="shrink-0">
             {/* Assessment tier badge */}
             <div className={`flex flex-col items-center justify-center w-20 h-14 rounded-xl border ${assessment.bgClass} ${assessment.borderClass} px-2`}>
               <AssessmentDot color={assessment.dotColor} variant={assessment.indicatorVariant} size={20} />
               <span className={`text-[8px] font-black uppercase tracking-wide ${assessment.colorClass} text-center leading-tight mt-0.5`}>{assessment.label}</span>
             </div>
-            {/* Posture badge — action-oriented label, never raw internal decision code */}
-            <span className="text-[11px] font-bold px-3 py-1.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
-              {getRecommendationDisplayLabel(recommendation?.decision)}
-            </span>
           </div>
         </div>
 
