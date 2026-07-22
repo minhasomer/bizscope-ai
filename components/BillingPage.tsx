@@ -35,10 +35,9 @@ const PLAN_COLORS: Record<string, string> = {
   Enterprise: 'bg-indigo-50 border-indigo-200 text-indigo-700',
 };
 
-const formatPeriodEnd = (ts: number): string => {
-  return new Date(ts * 1000).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+const formatPeriodEnd = (ts: number | string): string => {
+  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
 const StatusBadge: React.FC<{ status: SubscriptionStatus['status']; betaAccess?: boolean }> = ({ status, betaAccess }) => {
@@ -74,7 +73,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
     const load = async () => {
       setStatusLoading(true);
       try {
-        const status = await StripeService.getSubscriptionStatus(user.email);
+        const status = await StripeService.getSubscriptionStatus();
         setSubStatus(status);
       } catch {
         setSubStatus({ plan: currentPlan, status: 'not_configured', customerId: null });
@@ -83,13 +82,13 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
       }
     };
     load();
-  }, [user.email, currentPlan]);
+  }, [currentPlan]);
 
   const handleManageBilling = async () => {
     setPortalError(null);
     setPortalLoading(true);
     try {
-      await StripeService.openPortal(user.email);
+      await StripeService.openPortal();
     } catch (err: any) {
       setPortalError(err.message || 'Could not open billing portal. Please try again.');
     } finally {
@@ -168,7 +167,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
         )}
 
         {/* Billing cycle details from Stripe */}
-        {subStatus?.currentPeriodEnd && (
+        {subStatus && ['active', 'trialing', 'past_due'].includes(subStatus.status) && subStatus.currentPeriodEnd ? (
           <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
             <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
             {subStatus.cancelAtPeriodEnd ? (
@@ -183,7 +182,12 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
               </span>
             )}
           </div>
-        )}
+        ) : subStatus && ['cancelled', 'no_subscription', 'no_customer'].includes(subStatus.status) ? (
+          <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span>No active subscription</span>
+          </div>
+        ) : null}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
@@ -198,7 +202,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
             </button>
           ) : (
             <>
-              {subStatus?.customerId ? (
+              {subStatus && ['active', 'trialing', 'past_due'].includes(subStatus.status) ? (
                 <button
                   onClick={handleManageBilling}
                   disabled={portalLoading}
@@ -209,7 +213,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
                   ) : (
                     <ExternalLink className="w-3.5 h-3.5" />
                   )}
-                  {portalLoading ? 'Opening Portal...' : 'Manage Billing & Invoices'}
+                  {portalLoading ? 'Opening Portal...' : 'Manage Subscription'}
                 </button>
               ) : (
                 <button

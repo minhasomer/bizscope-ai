@@ -797,12 +797,19 @@ const App: React.FC = () => {
 
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
-      navigate('settings'); // redirect to auth if not signed in
+      navigate('settings');
       return;
     }
     try {
-      await StripeService.startCheckout(plan, currentUser.email);
-    } catch (err) {
+      await StripeService.startCheckout(plan);
+    } catch (err: any) {
+      if (err?.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
+        // User already has an active subscription — send them to the portal to switch plans.
+        try { await StripeService.openPortal(); } catch (portalErr) {
+          console.error('Stripe portal redirect failed:', portalErr);
+        }
+        return;
+      }
       console.error('Stripe checkout failed:', err);
     }
   };
