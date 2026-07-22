@@ -7,8 +7,10 @@ export interface SubscriptionStatus {
   status: 'active' | 'trialing' | 'past_due' | 'cancelled' | 'inactive' | 'no_subscription' | 'no_customer' | 'not_configured' | 'demo';
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: string | null;
-  // Legacy field — kept so BillingPage.tsx betaGranted check (`!subStatus?.customerId`) still works.
-  customerId: null;
+  /** Stripe customer ID. Null when the user has never started a paid subscription. */
+  customerId: string | null;
+  /** Stripe subscription ID. Null when no active subscription exists. */
+  subscriptionId: string | null;
 }
 
 async function getAccessToken(): Promise<string | null> {
@@ -76,7 +78,7 @@ export class StripeService {
 
   static async getSubscriptionStatus(): Promise<SubscriptionStatus> {
     if (this.isDemo()) {
-      return { plan: 'Explorer', status: 'demo', cancelAtPeriodEnd: false, currentPeriodEnd: null, customerId: null };
+      return { plan: 'Explorer', status: 'demo', cancelAtPeriodEnd: false, currentPeriodEnd: null, customerId: null, subscriptionId: null };
     }
 
     const token = await getAccessToken();
@@ -87,6 +89,6 @@ export class StripeService {
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Failed to fetch subscription status.');
-    return { ...data, customerId: null } as SubscriptionStatus;
+    return data as SubscriptionStatus;
   }
 }

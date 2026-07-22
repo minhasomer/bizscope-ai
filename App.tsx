@@ -105,6 +105,8 @@ const App: React.FC = () => {
 
   const navigate = useCallback((view: string, authMode: 'login' | 'signup' = 'login') => {
     setPendingAuthMode(authMode);
+    // Clear any stale pricing-action error when leaving the pricing page.
+    setPricingActionError(null);
     const currentParam = new URLSearchParams(window.location.search).get('view') ?? 'home';
     if (view !== currentParam) {
       history.pushState({ view }, '', `?view=${view}`);
@@ -795,23 +797,62 @@ const App: React.FC = () => {
     setPendingLiveRequest(null);
   }, []);
 
+  // ── Pricing-page action state ─────────────────────────────────────────────
+  // Shared loading/error for checkout and portal actions on the pricing page.
+  // BillingPage has its own parallel portalLoading/portalError state.
+  const [pricingActionLoading, setPricingActionLoading] = useState(false);
+  const [pricingActionError, setPricingActionError] = useState<string | null>(null);
+
+  /**
+   * True when the signed-in user has an actual active Stripe subscription,
+   * derived from the raw subscription_tier stored by the webhook.
+   * Intentionally not elevated by betaFullAccess — beta access must not be
+   * confused with a real paid subscription when routing billing actions.
+   */
+  const hasPaidSubscription =
+    !!currentUser &&
+    (currentUser.subscription_tier === 'Pro' || currentUser.subscription_tier === 'ProPlus');
+
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
       navigate('settings');
       return;
     }
+    setPricingActionError(null);
+    setPricingActionLoading(true);
     try {
       await StripeService.startCheckout(plan);
     } catch (err: any) {
       if (err?.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
-        // User already has an active subscription — send them to the portal to switch plans.
-        try { await StripeService.openPortal(); } catch (portalErr) {
-          console.error('Stripe portal redirect failed:', portalErr);
+        // Already subscribed — portal is the right path; routing logic should
+        // have sent them there, but handle this edge case gracefully.
+        try {
+          await StripeService.openPortal();
+        } catch (portalErr: any) {
+          setPricingActionError(portalErr?.message || 'Could not open billing portal. Please try again.');
         }
         return;
       }
-      console.error('Stripe checkout failed:', err);
+      setPricingActionError(err?.message || 'Could not start checkout. Please try again.');
+    } finally {
+      setPricingActionLoading(false);
     }
+  };
+
+  const handleManageSubscription = async () => {
+    setPricingActionError(null);
+    setPricingActionLoading(true);
+    try {
+      await StripeService.openPortal();
+    } catch (err: any) {
+      setPricingActionError(err?.message || 'Could not open billing portal. Please try again.');
+    } finally {
+      setPricingActionLoading(false);
+    }
+  };
+
+  const handleContactSales = () => {
+    navigate('contact');
   };
 
   const renderSEOTemplate = () => {
@@ -901,8 +942,13 @@ const App: React.FC = () => {
               currentPlan={userPlan}
               onSelectPlan={handleSelectPlan}
               onCheckout={handleCheckout}
+              onManageSubscription={handleManageSubscription}
+              onContactSales={handleContactSales}
               isBetaActive={betaFullAccess}
               isAuthenticated={!!currentUser}
+              hasPaidSubscription={hasPaidSubscription}
+              pricingActionLoading={pricingActionLoading}
+              pricingActionError={pricingActionError}
             />
           </div>
         );
