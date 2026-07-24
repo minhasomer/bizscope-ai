@@ -24,7 +24,7 @@ import { TosGate } from './components/TosGate';
 import { AccountSettings } from './components/AccountSettings';
 import { BillingPage } from './components/BillingPage';
 import { AuthService, UserProfile } from './services/authService';
-import { StripeService } from './services/stripeService';
+import { StripeService, SubscriptionStatus } from './services/stripeService';
 import { ProfileService } from './services/profileService';
 import { getEffectivePlan } from './src/utils/planUtils';
 import { parseSEORoute, SEORouteMatch } from './src/utils/seoUtils';
@@ -147,6 +147,7 @@ const App: React.FC = () => {
   // User Authentication States
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
 
   // Desktop-site-mode detection banner.
   // Fires when Chrome's "Request Desktop Site" is active for this domain:
@@ -358,6 +359,19 @@ const App: React.FC = () => {
 
     return unsubscribe;
   }, []);
+
+  // Fetch live subscription status whenever the signed-in user changes.
+  // Keyed on user ID so sign-out clears it and sign-in re-fetches from the
+  // subscriptions table rather than relying solely on the profile tier field.
+  useEffect(() => {
+    if (!currentUser) {
+      setSubscriptionStatus(null);
+      return;
+    }
+    StripeService.getSubscriptionStatus()
+      .then(setSubscriptionStatus)
+      .catch(() => setSubscriptionStatus(null));
+  }, [currentUser?.id]);
 
   // Keep track of reports run count for the daily limits rule
   const [reportsRunCount, setReportsRunCount] = useState<number>(() => {
@@ -803,15 +817,23 @@ const App: React.FC = () => {
   const [pricingActionLoading, setPricingActionLoading] = useState(false);
   const [pricingActionError, setPricingActionError] = useState<string | null>(null);
 
+  // Statuses that indicate an active, manageable subscription — route to Portal.
+  // Everything else (inactive, cancelled, no row) routes to Checkout.
+  const MANAGEABLE_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus['status']>([
+    'active',
+    'trialing',
+    'past_due',
+  ]);
+
   /**
-   * True when the signed-in user has an actual active Stripe subscription,
-   * derived from the raw subscription_tier stored by the webhook.
-   * Intentionally not elevated by betaFullAccess — beta access must not be
-   * confused with a real paid subscription when routing billing actions.
+   * True when the signed-in user has a currently manageable Stripe subscription.
+   * Derived from the live subscription-status API response, not the profile
+   * subscription_tier, so it stays correct even if a webhook delivery fails.
+   * Intentionally not elevated by betaFullAccess.
    */
   const hasPaidSubscription =
-    !!currentUser &&
-    (currentUser.subscription_tier === 'Pro' || currentUser.subscription_tier === 'ProPlus');
+    !!subscriptionStatus &&
+    MANAGEABLE_SUBSCRIPTION_STATUSES.has(subscriptionStatus.status);
 
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
