@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { ClipboardList, MapPin, Scale, Layers, Zap } from 'lucide-react';
 import { searchBusinessTypes, DEFAULT_SUGGESTIONS, BusinessSuggestion } from '../src/data/businessSuggestionsData';
 import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSuggestions, fetchLocationAutocomplete } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
@@ -514,6 +515,34 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                         </span>
                     ))}
                 </div>
+
+                {!hasResults && (
+                    <div className="mt-5 mb-4 max-w-2xl mx-auto px-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 text-center mb-2">
+                            Built for business decisions
+                        </p>
+                        <p className="text-sm font-semibold text-slate-200 text-center mb-3">
+                            More than a general AI conversation
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {([
+                                { Icon: ClipboardList, label: 'Structured viability analysis', desc: 'Market demand, competition, startup considerations, demographics, and risks organized in one report.' },
+                                { Icon: MapPin,        label: 'Local market context',          desc: 'Research tailored to the city or region you are evaluating, not a generic national overview.' },
+                                { Icon: Scale,         label: 'Consistent evaluation',         desc: 'Assess different businesses and locations using the same decision framework every time.' },
+                                { Icon: Layers,        label: 'Save and compare opportunities', desc: 'Keep reports together and review multiple ideas without managing separate chat threads.' },
+                                { Icon: Zap,           label: 'No prompt engineering required', desc: 'BizScope guides the research process so you do not need to know every question to ask.' },
+                            ] as const).map(({ Icon, label, desc }) => (
+                                <div key={label} className={`flex items-start gap-2.5 px-3.5 py-3 bg-white/[0.05] border border-white/[0.08] rounded-xl${label === 'No prompt engineering required' ? ' sm:col-span-2' : ''}`}>
+                                    <Icon className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-200 leading-tight">{label}</p>
+                                        <p className="text-[11px] text-slate-400 leading-relaxed mt-0.5">{desc}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {onNavigate && (
                     <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
