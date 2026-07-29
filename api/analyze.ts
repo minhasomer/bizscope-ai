@@ -785,6 +785,18 @@ export default async function handler(
       } catch (logErr: any) {
         console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
       }
+      // Enforce quota on cache hits — a served report consumes a slot regardless of AI cost
+      const cacheQuota = await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+      if (!cacheQuota.allowed) {
+        console.warn(`[Analyze] Quota exceeded (cache hit) — userId=${verifiedUserId} plan=${verifiedPlan} used=${cacheQuota.used} limit=${cacheQuota.limit}`);
+        return json(res, 429, {
+          error: 'Monthly report limit reached for your plan.',
+          code: 'QUOTA_EXCEEDED',
+          used: cacheQuota.used,
+          limit: cacheQuota.limit,
+        });
+      }
+      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
       return json(res, 200, {
         ...normalizeViabilityReport(cacheHit.report),
         _cached:        true,
