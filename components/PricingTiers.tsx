@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, X, Shield, Sparkles, Zap, Building } from 'lucide-react';
+import { Check, X, Shield, Sparkles, Zap, Building, RefreshCw, AlertCircle } from 'lucide-react';
 import { SubscriptionPlan } from '../src/utils/planUtils';
 import { isDemoMode } from '../src/config/appConfig';
 import {
@@ -12,10 +12,24 @@ interface PricingTiersProps {
   currentPlan: SubscriptionPlan;
   onSelectPlan: (plan: SubscriptionPlan) => void;
   onCheckout?: (plan: 'Pro' | 'Pro+') => void;
+  /** Opens the Stripe Customer Portal for plan changes and cancellation. */
+  onManageSubscription?: () => void;
+  /** Navigates to the Contact page — never mutates plan state. */
+  onContactSales?: () => void;
   /** True when the private-beta full-access override is active for this user. */
   isBetaActive?: boolean;
-  /** True when a user is signed in. Hides account-specific UI (billing banner, Active badge) for anonymous visitors. */
+  /** True when a user is signed in. Hides account-specific UI for anonymous visitors. */
   isAuthenticated?: boolean;
+  /**
+   * True when the user has an actual active/trialing/past-due Stripe subscription.
+   * Drives routing: paid users go to Customer Portal; unpaid users go to Checkout.
+   * Must NOT be inferred from the beta-elevated effective plan.
+   */
+  hasPaidSubscription?: boolean;
+  /** True while a checkout or portal request is in flight. Disables all action buttons. */
+  pricingActionLoading?: boolean;
+  /** Error message to display below the pricing cards when a checkout/portal request fails. */
+  pricingActionError?: string | null;
 }
 
 const PLAN_ORDER: Record<string, number> = { Explorer: 0, Pro: 1, 'Pro+': 2, Enterprise: 3 };
@@ -28,8 +42,6 @@ function getPlanRelation(currentPlan: string, cardId: string): 'active' | 'upgra
   return card > current ? 'upgrade' : 'downgrade';
 }
 
-// Map icon keys from plans.ts to actual React icon components.
-// Icon styling matches the original per-plan colour conventions.
 const PLAN_ICONS: Record<PlanIconKey, React.ReactNode> = {
   shield:   <Shield   className="w-5 h-5 text-gray-500"   />,
   zap:      <Zap      className="w-5 h-5 text-blue-600"   />,
@@ -37,17 +49,51 @@ const PLAN_ICONS: Record<PlanIconKey, React.ReactNode> = {
   building: <Building className="w-5 h-5 text-indigo-700" />,
 };
 
-export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelectPlan, onCheckout, isBetaActive = false, isAuthenticated = true }) => {
+export const PricingTiers: React.FC<PricingTiersProps> = ({
+  currentPlan,
+  onSelectPlan,
+  onCheckout,
+  onManageSubscription,
+  onContactSales,
+  isBetaActive = false,
+  isAuthenticated = true,
+  hasPaidSubscription = false,
+  pricingActionLoading = false,
+  pricingActionError = null,
+}) => {
   const isDemo = isDemoMode;
 
   const handlePlanAction = (tierId: SubscriptionPlan) => {
-    if (tierId === 'Explorer' || tierId === 'Enterprise') {
+    if (pricingActionLoading) return;
+
+    // Enterprise: always navigate to Contact — never activates as a plan.
+    if (tierId === 'Enterprise') {
+      onContactSales?.();
+      return;
+    }
+
+    // Demo mode: local plan switching only (no real Stripe calls).
+    if (isDemo) {
       onSelectPlan(tierId);
       return;
     }
-    if (isDemo) {
-      onSelectPlan(tierId);
+
+    // Explorer card in live mode.
+    if (tierId === 'Explorer') {
+      if (hasPaidSubscription) {
+        // Paid subscriber: open portal to cancel at period end.
+        onManageSubscription?.();
+      }
+      // No paid subscription (free or beta): nothing to cancel.
+      return;
+    }
+
+    // Pro / Pro+ in live mode.
+    if (hasPaidSubscription) {
+      // Existing subscriber: change plan or cancel via portal.
+      onManageSubscription?.();
     } else {
+      // No subscription: start a new one via Checkout.
       onCheckout?.(tierId as 'Pro' | 'Pro+');
     }
   };
@@ -101,7 +147,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
         </div>
       )}
 
-      {/* Private-beta banner — shown only when beta full-access is active */}
+      {/* Private-beta banner */}
       {isBetaActive && (
         <div className="flex items-start gap-3 px-4 py-3 bg-purple-50 border border-purple-200 rounded-2xl text-xs text-purple-800">
           <Sparkles className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
@@ -114,7 +160,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
         </div>
       )}
 
-      {/* Tier cards — driven by PRICING_CARDS from src/config/plans.ts */}
+      {/* Tier cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-4 items-start">
         {PRICING_CARDS.map((card) => {
           const isActive = isAuthenticated && currentPlan === card.id;
@@ -122,7 +168,6 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
 
           return (
             <div key={card.id} className={getCardClasses(card.accent, isActive)}>
-              {/* Colored top accent bar */}
               {card.accent === 'blue' && (
                 <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-t-3xl" />
               )}
@@ -130,17 +175,16 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
                 <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-t-3xl" />
               )}
 
-              {/* Active badge */}
+              {/* Active / Beta badge */}
               {isActive && (
                 <div className="absolute top-5 right-4">
                   <span className="bg-blue-600 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
-                    Active
+                    {isBetaActive && !hasPaidSubscription ? 'Beta' : 'Active'}
                   </span>
                 </div>
               )}
 
               <div className={`p-6 flex-1 flex flex-col ${!card.accent ? 'pt-6' : 'pt-5'}`}>
-                {/* Icon + badge row — pr-16 when Active badge is present to prevent overlap */}
                 <div className={`flex items-start justify-between gap-2 mb-4${isActive ? ' pr-16' : ''}`}>
                   <div className={`p-2.5 rounded-xl border ${
                     card.accent === 'blue'
@@ -162,11 +206,9 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
                   </span>
                 </div>
 
-                {/* Name + description */}
                 <h3 className="text-xl font-black text-gray-900 tracking-tight">{card.name}</h3>
                 <p className="text-xs text-gray-500 mt-1 mb-4 leading-relaxed min-h-[36px]">{card.description}</p>
 
-                {/* Price */}
                 <div className="flex items-baseline gap-1 mb-6">
                   <span className="text-4xl font-black text-gray-900 tracking-tight">{card.price}</span>
                   {card.period && (
@@ -174,7 +216,6 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
                   )}
                 </div>
 
-                {/* Features — sourced from PRICING_CARDS[n].features */}
                 <ul className="space-y-2.5 border-t border-gray-100 pt-5 flex-1">
                   {card.features.map((feature, idx) => (
                     <li key={idx} className={`flex items-start gap-2.5 text-xs ${
@@ -198,32 +239,69 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
                 {(() => {
                   let label: string;
                   let btnClass: string;
+                  let disabled = false;
+
                   if (!isAuthenticated) {
-                    // Anonymous visitor: no current plan to compare against — always show the card's own CTA.
+                    // Anonymous visitor: show the card's default CTA.
                     label = card.cta;
+                    btnClass = `${card.ctaClass} border border-transparent`;
+                  } else if (card.id === 'Enterprise') {
+                    // Enterprise never self-activates — always Contact Sales.
+                    label = 'Contact Sales';
                     btnClass = `${card.ctaClass} border border-transparent`;
                   } else {
                     const relation = getPlanRelation(currentPlan, card.id);
+
                     if (relation === 'active') {
-                      label = 'Currently Active';
-                      btnClass = 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100';
-                    } else if (relation === 'enterprise') {
-                      label = card.cta;
-                      btnClass = `${card.ctaClass} border border-transparent`;
-                    } else if (relation === 'upgrade') {
-                      label = !isDemo ? `${card.cta} →` : card.cta;
-                      btnClass = `${card.ctaClass} border border-transparent`;
+                      // Beta-elevated plan vs. real paid subscription.
+                      label = (isBetaActive && !hasPaidSubscription)
+                        ? 'Beta Access Active'
+                        : 'Currently Active';
+                      btnClass = 'bg-blue-50 text-blue-700 border border-blue-100';
+                      disabled = true;
+                    } else if (isDemo) {
+                      // Demo mode: local switching labels.
+                      label = relation === 'upgrade' ? card.cta :
+                              card.id === 'Explorer' ? 'Downgrade to Free' : `Switch to ${card.name}`;
+                      btnClass = relation === 'upgrade'
+                        ? `${card.ctaClass} border border-transparent`
+                        : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100';
+                    } else if (hasPaidSubscription) {
+                      // Real subscriber: all changes go through Stripe Customer Portal.
+                      if (card.id === 'Explorer') {
+                        label = 'Cancel to Free';
+                      } else if (relation === 'upgrade') {
+                        label = pricingActionLoading ? 'Opening Portal…' : 'Upgrade in Billing Portal →';
+                      } else {
+                        label = pricingActionLoading ? 'Opening Portal…' : 'Downgrade in Billing Portal';
+                      }
+                      btnClass = 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 disabled:opacity-50';
+                      disabled = pricingActionLoading;
                     } else {
-                      // downgrade
-                      label = card.id === 'Explorer' ? 'Downgrade to Free' : `Switch to ${card.name}`;
-                      btnClass = 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100';
+                      // No paid subscription.
+                      if (card.id === 'Explorer') {
+                        // No subscription to cancel: disable this button.
+                        label = 'No Subscription to Cancel';
+                        btnClass = 'bg-gray-50 text-gray-300 border border-gray-200 cursor-not-allowed';
+                        disabled = true;
+                      } else {
+                        // Pro / Pro+: start a new subscription via Checkout.
+                        label = pricingActionLoading ? 'Loading…' : `${card.cta} →`;
+                        btnClass = `${card.ctaClass} border border-transparent disabled:opacity-60`;
+                        disabled = pricingActionLoading;
+                      }
                     }
                   }
+
                   return (
                     <button
                       onClick={() => handlePlanAction(card.id)}
-                      className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-150 cursor-pointer text-center ${btnClass}`}
+                      disabled={disabled}
+                      className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-150 text-center ${btnClass} ${disabled ? '' : 'cursor-pointer'}`}
                     >
+                      {pricingActionLoading && !disabled && (
+                        <RefreshCw className="inline w-3 h-3 mr-1.5 animate-spin" />
+                      )}
                       {label}
                     </button>
                   );
@@ -234,7 +312,15 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({ currentPlan, onSelec
         })}
       </div>
 
-      {/* Feature comparison table — driven by COMPARISON_TABLE_ROWS from src/config/plans.ts */}
+      {/* Checkout / portal error — shown below the grid */}
+      {pricingActionError && (
+        <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-xs text-red-700">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+          <span>{pricingActionError}</span>
+        </div>
+      )}
+
+      {/* Feature comparison table */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hidden md:block">
         <div className="px-6 pt-6 pb-4 border-b border-gray-100">
           <h4 className="text-sm font-black text-gray-900 uppercase tracking-wide">Full Capability Comparison</h4>

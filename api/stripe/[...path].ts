@@ -45,10 +45,12 @@ async function handleSubscriptionStatus(
   const row = await getSubscriptionRow(user.userId);
   if (!row) {
     return json(res, 200, {
-      plan: 'Explorer',
-      status: 'inactive',
+      plan:             'Explorer',
+      status:           'inactive',
       cancelAtPeriodEnd: false,
       currentPeriodEnd: null,
+      customerId:       null,
+      subscriptionId:   null,
     });
   }
 
@@ -61,10 +63,12 @@ async function handleSubscriptionStatus(
     (cancelAt != null && new Date(cancelAt) > new Date());
 
   return json(res, 200, {
-    plan:              row.plan,
-    status:            row.status,
+    plan:             row.plan,
+    status:           row.status,
     cancelAtPeriodEnd,
-    currentPeriodEnd:  row.current_period_end ?? null,
+    currentPeriodEnd: row.current_period_end ?? null,
+    customerId:       row.stripe_customer_id ?? null,
+    subscriptionId:   row.stripe_subscription_id ?? null,
   });
 }
 

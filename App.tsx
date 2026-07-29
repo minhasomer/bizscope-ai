@@ -24,7 +24,7 @@ import { TosGate } from './components/TosGate';
 import { AccountSettings } from './components/AccountSettings';
 import { BillingPage } from './components/BillingPage';
 import { AuthService, UserProfile } from './services/authService';
-import { StripeService } from './services/stripeService';
+import { StripeService, SubscriptionStatus } from './services/stripeService';
 import { ProfileService } from './services/profileService';
 import { getEffectivePlan } from './src/utils/planUtils';
 import { parseSEORoute, SEORouteMatch } from './src/utils/seoUtils';
@@ -105,6 +105,8 @@ const App: React.FC = () => {
 
   const navigate = useCallback((view: string, authMode: 'login' | 'signup' = 'login') => {
     setPendingAuthMode(authMode);
+    // Clear any stale pricing-action error when leaving the pricing page.
+    setPricingActionError(null);
     const currentParam = new URLSearchParams(window.location.search).get('view') ?? 'home';
     if (view !== currentParam) {
       history.pushState({ view }, '', `?view=${view}`);
@@ -145,6 +147,7 @@ const App: React.FC = () => {
   // User Authentication States
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
 
   // Desktop-site-mode detection banner.
   // Fires when Chrome's "Request Desktop Site" is active for this domain:
@@ -356,6 +359,19 @@ const App: React.FC = () => {
 
     return unsubscribe;
   }, []);
+
+  // Fetch live subscription status whenever the signed-in user changes.
+  // Keyed on user ID so sign-out clears it and sign-in re-fetches from the
+  // subscriptions table rather than relying solely on the profile tier field.
+  useEffect(() => {
+    if (!currentUser) {
+      setSubscriptionStatus(null);
+      return;
+    }
+    StripeService.getSubscriptionStatus()
+      .then(setSubscriptionStatus)
+      .catch(() => setSubscriptionStatus(null));
+  }, [currentUser?.id]);
 
   // Keep track of reports run count for the daily limits rule
   const [reportsRunCount, setReportsRunCount] = useState<number>(() => {
@@ -795,23 +811,70 @@ const App: React.FC = () => {
     setPendingLiveRequest(null);
   }, []);
 
+  // ── Pricing-page action state ─────────────────────────────────────────────
+  // Shared loading/error for checkout and portal actions on the pricing page.
+  // BillingPage has its own parallel portalLoading/portalError state.
+  const [pricingActionLoading, setPricingActionLoading] = useState(false);
+  const [pricingActionError, setPricingActionError] = useState<string | null>(null);
+
+  // Statuses that indicate an active, manageable subscription — route to Portal.
+  // Everything else (inactive, cancelled, no row) routes to Checkout.
+  const MANAGEABLE_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus['status']>([
+    'active',
+    'trialing',
+    'past_due',
+  ]);
+
+  /**
+   * True when the signed-in user has a currently manageable Stripe subscription.
+   * Derived from the live subscription-status API response, not the profile
+   * subscription_tier, so it stays correct even if a webhook delivery fails.
+   * Intentionally not elevated by betaFullAccess.
+   */
+  const hasPaidSubscription =
+    !!subscriptionStatus &&
+    MANAGEABLE_SUBSCRIPTION_STATUSES.has(subscriptionStatus.status);
+
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
       navigate('settings');
       return;
     }
+    setPricingActionError(null);
+    setPricingActionLoading(true);
     try {
       await StripeService.startCheckout(plan);
     } catch (err: any) {
       if (err?.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
-        // User already has an active subscription — send them to the portal to switch plans.
-        try { await StripeService.openPortal(); } catch (portalErr) {
-          console.error('Stripe portal redirect failed:', portalErr);
+        // Already subscribed — portal is the right path; routing logic should
+        // have sent them there, but handle this edge case gracefully.
+        try {
+          await StripeService.openPortal();
+        } catch (portalErr: any) {
+          setPricingActionError(portalErr?.message || 'Could not open billing portal. Please try again.');
         }
         return;
       }
-      console.error('Stripe checkout failed:', err);
+      setPricingActionError(err?.message || 'Could not start checkout. Please try again.');
+    } finally {
+      setPricingActionLoading(false);
     }
+  };
+
+  const handleManageSubscription = async () => {
+    setPricingActionError(null);
+    setPricingActionLoading(true);
+    try {
+      await StripeService.openPortal();
+    } catch (err: any) {
+      setPricingActionError(err?.message || 'Could not open billing portal. Please try again.');
+    } finally {
+      setPricingActionLoading(false);
+    }
+  };
+
+  const handleContactSales = () => {
+    navigate('contact');
   };
 
   const renderSEOTemplate = () => {
@@ -901,8 +964,13 @@ const App: React.FC = () => {
               currentPlan={userPlan}
               onSelectPlan={handleSelectPlan}
               onCheckout={handleCheckout}
+              onManageSubscription={handleManageSubscription}
+              onContactSales={handleContactSales}
               isBetaActive={betaFullAccess}
               isAuthenticated={!!currentUser}
+              hasPaidSubscription={hasPaidSubscription}
+              pricingActionLoading={pricingActionLoading}
+              pricingActionError={pricingActionError}
             />
           </div>
         );
