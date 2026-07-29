@@ -722,16 +722,8 @@ export default async function handler(
       code: 'UNAUTHENTICATED',
     });
   }
-  // Block Explorer-plan users. When BETA_FULL_ACCESS=true, getServerSidePlan()
-  // already resolved the plan to Pro+, so Explorer only appears for users whose
-  // stored tier is genuinely Explorer (no active subscription).
-  if (verifiedPlan === 'Explorer') {
-    console.warn(`[Analyze] Rejected — plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
-    return json(res, 403, {
-      error: 'Real reports require a Pro or higher plan.',
-      code: 'INSUFFICIENT_PLAN',
-    });
-  }
+  // Explorer is a paid-free tier: 3 standard reports/month enforced by
+  // checkStandardQuota below. No plan-level gate here — quota handles it.
   console.log(`[Analyze] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} betaFullAccess=${_serverBetaFullAccess}`);
 
   const requestStartMs = Date.now();
