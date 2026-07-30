@@ -550,19 +550,24 @@ check('T-7: App.tsx gates trialEligible on proTrialEnabled AND subscriptionStatu
 });
 
 // T-8: The client and server flags are sourced independently.
-//      VITE_PRO_TRIAL_ENABLED is read from process.env in appConfig.ts (client build).
+//      VITE_PRO_TRIAL_ENABLED is baked into the client bundle via vite.config.ts define.
 //      PRO_TRIAL_ENABLED is read from process.env in the API route (server).
 //      They must never share the same runtime read.
 check('T-8: client and server trial flags are independent reads (structural)', () => {
   const clientSrc = fs.readFileSync(path.join(repoRoot, 'src', 'config', 'appConfig.ts'), 'utf8');
   const serverSrc = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
+  const viteSrc   = fs.readFileSync(path.join(repoRoot, 'vite.config.ts'), 'utf8');
   assert.ok(
     clientSrc.includes('VITE_PRO_TRIAL_ENABLED'),
     'appConfig.ts must read VITE_PRO_TRIAL_ENABLED',
   );
   assert.ok(
-    serverSrc.includes("process.env.PRO_TRIAL_ENABLED === 'true'"),
-    'checkout handler must read PRO_TRIAL_ENABLED from process.env',
+    viteSrc.includes("'process.env.VITE_PRO_TRIAL_ENABLED'"),
+    'vite.config.ts must bake VITE_PRO_TRIAL_ENABLED into the client bundle via define block',
+  );
+  assert.ok(
+    serverSrc.includes("PRO_TRIAL_ENABLED?.trim() === 'true'"),
+    'checkout handler must read PRO_TRIAL_ENABLED from process.env (with .trim())',
   );
   // Server must NOT read VITE_ prefixed flag — that would couple to client build.
   assert.ok(
