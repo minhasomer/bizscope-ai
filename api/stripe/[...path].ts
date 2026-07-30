@@ -43,7 +43,7 @@ async function handleSubscriptionStatus(
   if (!user) return json(res, 401, { error: 'Unauthorized.' });
 
   // Server-authoritative trial feature flag.
-  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED === 'true';
+  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED?.trim() === 'true';
 
   // Fetch has_used_trial from profiles — never trust a client-supplied value.
   const { data: profileData } = await getSupabaseAdmin()
@@ -156,7 +156,7 @@ async function handleCreateCheckout(
   // Server-side trial eligibility — authoritative, never trusts client input.
   // Requires all of: PRO_TRIAL_ENABLED=true, plan=Pro (not Pro+),
   // no prior trial (has_used_trial=false), no active/trialing/past_due subscription.
-  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED === 'true';
+  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED?.trim() === 'true';
   let isTrialEligible = false;
   if (proTrialEnabled && plan === 'Pro') {
     const { data: profileData } = await getSupabaseAdmin()
