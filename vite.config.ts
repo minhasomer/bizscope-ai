@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
         // Falls back to process.env directly so Vercel's injected build-time
         // env vars are picked up even when loadEnv reads from .env files only.
         'process.env.VITE_PRO_TRIAL_ENABLED': JSON.stringify(
-          env.VITE_PRO_TRIAL_ENABLED ?? process.env.VITE_PRO_TRIAL_ENABLED ?? 'false',
+          (env.VITE_PRO_TRIAL_ENABLED ?? process.env.VITE_PRO_TRIAL_ENABLED ?? 'false').trim(),
         ),
       },
       resolve: {
