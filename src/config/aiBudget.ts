@@ -24,14 +24,16 @@
 //
 // Verified against @google/genai v1.52.0 / Gemini API v1beta.
 // Migration history:
-//   gemini-1.5-flash → removed from v1beta (NOT_FOUND)
-//   gemini-2.0-flash → removed ("no longer available", NOT_FOUND)
-//   gemini-2.5-flash → current stable Flash model; the @google/genai v1.52.0
-//                      SDK README quickstart uses this exact ID.
-//   gemini-2.5-pro   → current stable Pro model; unchanged.
+//   gemini-1.5-flash          → removed from v1beta (NOT_FOUND)
+//   gemini-2.0-flash          → removed ("no longer available", NOT_FOUND)
+//   gemini-2.5-flash          → current stable Flash model; the @google/genai v1.52.0
+//                               SDK README quickstart uses this exact ID.
+//   gemini-2.5-pro            → 404 NOT_FOUND for new API key holders as of 2026-07;
+//                               Google message: "no longer available to new users."
+//   gemini-2.5-pro-preview-06-05 → NOT_FOUND in v1beta (wrong version path).
+//   gemini-3.1-pro-preview    → confirmed in ai.models.list() 2026-07; active replacement.
 //
 // NOTE: "gemini-3.5-flash" does not exist in Google's model catalogue.
-// Google's Flash naming follows 1.5 → 2.0 → 2.5 — there is no 3.x series.
 //
 // To list all available models for your API key:
 //   GET https://generativelanguage.googleapis.com/v1beta/models?key=GEMINI_API_KEY
@@ -44,8 +46,8 @@ export const GEMINI_MODELS = {
    *  Confirmed in @google/genai v1.52.0 SDK README quickstart. */
   standard: 'gemini-2.5-flash',
   /** Pro-tier model — Regional Intelligence reports (higher reasoning).
-   *  Current stable Pro model; not deprecated as of v1.52.0. */
-  regional: 'gemini-2.5-pro',
+   *  Confirmed available via models.list() on staging key 2026-07. */
+  regional: 'gemini-3.1-pro-preview',
 } as const;
 
 // ─── Model pricing constants ──────────────────────────────────────────────────
@@ -59,11 +61,14 @@ export const MODEL_PRICING: Record<string, { inputPer1kTokens: number; outputPer
     inputPer1kTokens:  0.00030,  // $0.30 / 1M input tokens (text/image/video)
     outputPer1kTokens: 0.00250,  // $2.50 / 1M output tokens — thinking tokens are billed at this same output rate
   },
-  // gemini-2.5-pro (regional reports) — ≤200k-token-context tier; verified
-  // against https://ai.google.dev/gemini-api/docs/pricing (paid tier, 2026-06).
+  // gemini-3.1-pro-preview (regional reports) — replaces deprecated gemini-2.5-pro.
+  // Pricing verified: $2.00/1M input, $12.00/1M output for prompts ≤200k input tokens.
+  // Regional prompts are bounded by maxInputTokens (Pro+: 24k, Enterprise: 32k) —
+  // both are far below the 200k threshold, so the flat ≤200k-tier rate always applies.
+  // Source: https://ai.google.dev/gemini-api/docs/pricing (2026-07)
   [GEMINI_MODELS.regional]: {
-    inputPer1kTokens:  0.00125,  // $1.25 / 1M input tokens
-    outputPer1kTokens: 0.01000,  // $10.00 / 1M output tokens — thinking tokens are billed at this same output rate
+    inputPer1kTokens:  0.00200,  // $2.00 / 1M input tokens (≤200k-context tier)
+    outputPer1kTokens: 0.01200,  // $12.00 / 1M output tokens (≤200k-context tier)
   },
 };
 

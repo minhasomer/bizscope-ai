@@ -722,16 +722,8 @@ export default async function handler(
       code: 'UNAUTHENTICATED',
     });
   }
-  // Block Explorer-plan users. When BETA_FULL_ACCESS=true, getServerSidePlan()
-  // already resolved the plan to Pro+, so Explorer only appears for users whose
-  // stored tier is genuinely Explorer (no active subscription).
-  if (verifiedPlan === 'Explorer') {
-    console.warn(`[Analyze] Rejected — plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
-    return json(res, 403, {
-      error: 'Real reports require a Pro or higher plan.',
-      code: 'INSUFFICIENT_PLAN',
-    });
-  }
+  // Explorer is a paid-free tier: 3 standard reports/month enforced by
+  // checkStandardQuota below. No plan-level gate here — quota handles it.
   console.log(`[Analyze] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} betaFullAccess=${_serverBetaFullAccess}`);
 
   const requestStartMs = Date.now();
@@ -793,6 +785,18 @@ export default async function handler(
       } catch (logErr: any) {
         console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
       }
+      // Enforce quota on cache hits — a served report consumes a slot regardless of AI cost
+      const cacheQuota = await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+      if (!cacheQuota.allowed) {
+        console.warn(`[Analyze] Quota exceeded (cache hit) — userId=${verifiedUserId} plan=${verifiedPlan} used=${cacheQuota.used} limit=${cacheQuota.limit}`);
+        return json(res, 429, {
+          error: 'Monthly report limit reached for your plan.',
+          code: 'QUOTA_EXCEEDED',
+          used: cacheQuota.used,
+          limit: cacheQuota.limit,
+        });
+      }
+      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
       return json(res, 200, {
         ...normalizeViabilityReport(cacheHit.report),
         _cached:        true,

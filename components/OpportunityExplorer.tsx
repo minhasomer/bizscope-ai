@@ -394,7 +394,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                 onClick={() => onNavigate('settings')}
                 className="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
               >
-                Sign in for full beta access →
+                Sign in for full access →
               </button>
             </>
           ) : currentPlan === 'Explorer' ? (
@@ -725,7 +725,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
                 {!isAuthenticated ? (
                   <>
                     <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">
-                      Create a free account to unlock full beta access — every new account receives temporary Pro+ access while beta is active.
+                      Create a free account to get started — sign up to explore market opportunities and access business analysis.
                     </p>
                     <button
                       onClick={() => onNavigate('settings')}
@@ -1377,7 +1377,7 @@ const OpportunityDossierModal: React.FC<{
               {!isAuthenticated ? (
                 <>
                   <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-                    Create a free account to unlock the complete business analysis. Every new account receives temporary Pro+ access during our private beta.
+                    Create a free account to unlock the complete business analysis — market breakdown, competitive landscape, financial projections, and risk assessment.
                   </p>
                   <button
                     onClick={onSignIn}

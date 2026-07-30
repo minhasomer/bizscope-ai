@@ -26,6 +26,8 @@ import {
   MODEL_PRICING,
   GROUNDING_CALL_COST_USD,
 } from '../src/config/aiBudget';
+import { checkStandardQuota, checkRegionalQuota } from '../src/config/usageTracking';
+import { getPlanLimits } from '../src/config/plans';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -38,6 +40,18 @@ function check(name: string, fn: () => void) {
   fn();
   passed++;
   console.log(`ok   ${name}`);
+}
+
+// Fluent Supabase mock: .from().select().eq().eq().eq().maybeSingle()
+function mockDb(count: number | null, error: unknown = null) {
+  const leaf = { maybeSingle: async () => ({ data: count !== null ? { count } : null, error }) };
+  const eqable: any = { eq: () => eqable, maybeSingle: leaf.maybeSingle };
+  return { from: () => ({ select: () => eqable }) };
+}
+
+const asyncTests: Array<{ name: string; fn: () => Promise<void> }> = [];
+function checkAsync(name: string, fn: () => Promise<void>) {
+  asyncTests.push({ name, fn });
 }
 
 // ── 1. Blocked-category word-boundary matching ────────────────────────────────
@@ -244,5 +258,207 @@ check('all known AI-prose render sites are wrapped in stripScoreReferences', () 
     }
   }
 });
+
+// ── 5. Plan limits (static values) ───────────────────────────────────────────
+
+check('plan limits: Explorer=3/mo, Pro=20/mo, Pro+=50/mo, Enterprise=unlimited', () => {
+  assert.equal(getPlanLimits('Explorer').standardReportsPerCycle, 3);
+  assert.equal(getPlanLimits('Pro').standardReportsPerCycle, 20);
+  assert.equal(getPlanLimits('Pro+').standardReportsPerCycle, 50);
+  assert.equal(getPlanLimits('Enterprise').standardReportsPerCycle, null);
+  assert.equal(getPlanLimits('Explorer').regionalReportsPerCycle, 0);
+  assert.equal(getPlanLimits('Pro').regionalReportsPerCycle, 0);
+  assert.equal(getPlanLimits('Pro+').regionalReportsPerCycle, 10);
+});
+
+// ── 6. Quota enforcement (async, mocked Supabase) ─────────────────────────────
+
+checkAsync('Explorer: requests 1–3 allowed (used=0,1,2 each < limit=3)', async () => {
+  for (const used of [0, 1, 2]) {
+    const r = await checkStandardQuota(mockDb(used), 'uid', 'Explorer', false);
+    assert.equal(r.allowed, true,  `used=${used} should be allowed`);
+    assert.equal(r.limit,   3,     `limit should be 3`);
+    assert.equal(r.used,    used,  `used should be ${used}`);
+  }
+});
+
+checkAsync('Explorer: request 4 blocked (used=3 not < limit=3)', async () => {
+  const r = await checkStandardQuota(mockDb(3), 'uid', 'Explorer', false);
+  assert.equal(r.allowed, false);
+  assert.equal(r.used,    3);
+  assert.equal(r.limit,   3);
+});
+
+checkAsync('Explorer: betaFullAccess=true bypasses quota even at used=3', async () => {
+  const r = await checkStandardQuota(mockDb(3), 'uid', 'Explorer', true);
+  assert.equal(r.allowed, true);
+  assert.equal(r.used,    3);
+});
+
+checkAsync('Pro: allowed at used=19, blocked at used=20', async () => {
+  const ok  = await checkStandardQuota(mockDb(19), 'uid', 'Pro', false);
+  const nok = await checkStandardQuota(mockDb(20), 'uid', 'Pro', false);
+  assert.equal(ok.allowed,  true);
+  assert.equal(ok.limit,    20);
+  assert.equal(nok.allowed, false);
+});
+
+checkAsync('Pro+: allowed at used=49, blocked at used=50', async () => {
+  const ok  = await checkStandardQuota(mockDb(49), 'uid', 'Pro+', false);
+  const nok = await checkStandardQuota(mockDb(50), 'uid', 'Pro+', false);
+  assert.equal(ok.allowed,  true);
+  assert.equal(ok.limit,    50);
+  assert.equal(nok.allowed, false);
+});
+
+checkAsync('Enterprise: always allowed (limit=null)', async () => {
+  const r = await checkStandardQuota(mockDb(9999), 'uid', 'Enterprise', false);
+  assert.equal(r.allowed, true);
+  assert.equal(r.limit,   null);
+});
+
+checkAsync('quota fails open when supabaseAdmin is null', async () => {
+  const r = await checkStandardQuota(null, 'uid', 'Explorer', false);
+  assert.equal(r.allowed, true);
+});
+
+checkAsync('quota fails open on Supabase error', async () => {
+  const r = await checkStandardQuota(mockDb(null, new Error('timeout')), 'uid', 'Explorer', false);
+  assert.equal(r.allowed, true);
+});
+
+checkAsync('Explorer regional quota: always blocked (limit=0)', async () => {
+  const r = await checkRegionalQuota(mockDb(0), 'uid', 'Explorer', false);
+  assert.equal(r.allowed, false);
+  assert.equal(r.limit,   0);
+});
+
+// ── 7. Structural source guards ───────────────────────────────────────────────
+
+check('analyze.ts: Explorer gate (INSUFFICIENT_PLAN) removed before quota check', () => {
+  const src      = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
+  const quotaIdx = src.indexOf('checkStandardQuota(');
+  const insuffIdx = src.indexOf("code: 'INSUFFICIENT_PLAN'");
+  assert.ok(quotaIdx !== -1, 'checkStandardQuota call not found in analyze.ts');
+  // INSUFFICIENT_PLAN must not appear before the quota check — either absent or after.
+  assert.ok(
+    insuffIdx === -1 || insuffIdx > quotaIdx,
+    `INSUFFICIENT_PLAN gate (char ${insuffIdx}) precedes quota check (char ${quotaIdx}) — Explorer blocked before quota`,
+  );
+});
+
+check('analyze.ts: quota check precedes Gemini AI initialisation', () => {
+  const src       = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
+  const quotaIdx  = src.indexOf('checkStandardQuota(');
+  const geminiIdx = src.indexOf('new GoogleGenAI(');
+  assert.ok(quotaIdx  !== -1, 'checkStandardQuota not found');
+  assert.ok(geminiIdx !== -1, 'GoogleGenAI instantiation not found');
+  assert.ok(quotaIdx < geminiIdx, 'quota check must precede Gemini initialisation');
+});
+
+check('analyze.ts: incrementUsageTracking is after QUOTA_EXCEEDED early-return', () => {
+  const src          = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
+  const incrementIdx = src.indexOf('incrementUsageTracking(');
+  const quotaGateIdx = src.indexOf("code: 'QUOTA_EXCEEDED'");
+  assert.ok(incrementIdx !== -1, 'incrementUsageTracking call not found');
+  assert.ok(quotaGateIdx !== -1, 'QUOTA_EXCEEDED gate not found');
+  assert.ok(incrementIdx > quotaGateIdx, 'incrementUsageTracking must come after the QUOTA_EXCEEDED return');
+});
+
+check('analyze.ts: quota check precedes cache-hit return (cache hits consume a quota credit)', () => {
+  const src          = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
+  const cacheIdx     = src.indexOf('_cached:');
+  const quotaIdx     = src.indexOf('checkStandardQuota(');
+  assert.ok(cacheIdx !== -1, 'cache-hit return (_cached:) not found');
+  assert.ok(quotaIdx !== -1, 'quota check not found');
+  assert.ok(quotaIdx < cacheIdx, 'quota check must precede cache-hit return (fix/quota: enforce quota on server cache hits)');
+});
+
+check('opportunities.ts: Explorer still rejected (Market Gap remains locked)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'opportunities.ts'), 'utf8');
+  assert.ok(src.includes("code: 'INSUFFICIENT_PLAN'"), 'opportunities.ts must still gate Explorer');
+});
+
+check('opportunity-dossier.ts: Explorer still rejected (dossier remains locked)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'opportunity-dossier.ts'), 'utf8');
+  assert.ok(src.includes("code: 'INSUFFICIENT_PLAN'"), 'opportunity-dossier.ts must still gate Explorer');
+});
+
+// ── 8. Regional analysis — plan limits and structural guards ──────────────────
+
+check('plan limits: Pro regional=0 (same as Explorer — blocked)', () => {
+  assert.equal(getPlanLimits('Pro').regionalReportsPerCycle, 0);
+  assert.equal(getPlanLimits('Pro+').regionalReportsPerCycle, 10);
+  assert.equal(getPlanLimits('Enterprise').regionalReportsPerCycle, null);
+});
+
+checkAsync('Pro regional quota: always blocked (limit=0)', async () => {
+  const r = await checkRegionalQuota(mockDb(0), 'uid', 'Pro', false);
+  assert.equal(r.allowed, false);
+  assert.equal(r.limit,   0);
+});
+
+checkAsync('Pro+ regional quota: allowed at used=9, blocked at used=10', async () => {
+  const ok  = await checkRegionalQuota(mockDb(9),  'uid', 'Pro+', false);
+  const nok = await checkRegionalQuota(mockDb(10), 'uid', 'Pro+', false);
+  assert.equal(ok.allowed,  true);
+  assert.equal(ok.limit,    10);
+  assert.equal(nok.allowed, false);
+  assert.equal(nok.used,    10);
+});
+
+checkAsync('Enterprise regional quota: always allowed (limit=null)', async () => {
+  const r = await checkRegionalQuota(mockDb(9999), 'uid', 'Enterprise', false);
+  assert.equal(r.allowed, true);
+  assert.equal(r.limit,   null);
+});
+
+check('regional-analysis.ts: unauthenticated → 401 gate present', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'regional-analysis.ts'), 'utf8');
+  assert.ok(src.includes("code: 'UNAUTHENTICATED'"), 'regional-analysis.ts must gate unauthenticated requests with 401');
+});
+
+check('regional-analysis.ts: Explorer and Pro explicitly rejected with INSUFFICIENT_PLAN', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'regional-analysis.ts'), 'utf8');
+  assert.ok(src.includes("code: 'INSUFFICIENT_PLAN'"), 'regional-analysis.ts must have INSUFFICIENT_PLAN gate');
+  // Gate must require both Pro+ and Enterprise — i.e. neither Explorer nor Pro passes
+  assert.ok(src.includes("verifiedPlan !== 'Pro+' && verifiedPlan !== 'Enterprise'"), 'gate must block both Explorer and Pro');
+});
+
+check('regional-analysis.ts: quota check precedes Gemini call', () => {
+  const src      = fs.readFileSync(path.join(repoRoot, 'api', 'regional-analysis.ts'), 'utf8');
+  const quotaIdx = src.indexOf('checkRegionalQuota(');
+  const genIdx   = src.indexOf('ai.models.generateContent(');
+  assert.ok(quotaIdx !== -1, 'checkRegionalQuota call not found');
+  assert.ok(genIdx   !== -1, 'generateContent call not found');
+  assert.ok(quotaIdx < genIdx, 'quota check must precede generateContent call');
+});
+
+check('regional-analysis.ts: incrementUsageTracking only in success path (after generation)', () => {
+  const src          = fs.readFileSync(path.join(repoRoot, 'api', 'regional-analysis.ts'), 'utf8');
+  const incrementIdx = src.indexOf('incrementUsageTracking(');
+  const quotaGateIdx = src.indexOf("code: 'QUOTA_EXCEEDED'");
+  const genIdx       = src.indexOf('ai.models.generateContent(');
+  assert.ok(incrementIdx !== -1, 'incrementUsageTracking not found');
+  assert.ok(quotaGateIdx !== -1, 'QUOTA_EXCEEDED gate not found');
+  assert.ok(genIdx       !== -1, 'generateContent not found');
+  // increment must come AFTER quota gate and AFTER Gemini call
+  assert.ok(incrementIdx > quotaGateIdx, 'increment must be after QUOTA_EXCEEDED gate');
+  assert.ok(incrementIdx > genIdx, 'increment must be after Gemini generateContent call');
+});
+
+// ── Run async tests, then report ──────────────────────────────────────────────
+
+for (const { name, fn } of asyncTests) {
+  try {
+    await fn();
+    passed++;
+    console.log(`ok   ${name}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`FAIL ${name}: ${msg}`);
+    process.exit(1);
+  }
+}
 
 console.log(`\n${passed} test group(s) passed.`);

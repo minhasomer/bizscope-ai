@@ -1387,7 +1387,7 @@ const App: React.FC = () => {
             <div className="mb-8">
               <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Legal</span>
               <h1 className="text-3xl font-black tracking-tight text-gray-900 mt-1">Terms of Service</h1>
-              <p className="text-gray-400 text-sm mt-1">Last updated: May 2026</p>
+              <p className="text-gray-400 text-sm mt-1">Last updated: July 2026</p>
             </div>
             <div className="prose prose-sm max-w-none space-y-6 text-gray-600 leading-relaxed">
               <section>
@@ -1413,8 +1413,8 @@ const App: React.FC = () => {
                 </ul>
               </section>
               <section>
-                <h2 className="text-base font-black text-gray-900 mb-2">4a. Restricted Business Categories (Beta)</h2>
-                <p className="text-sm">During the beta period, BizScope does not support analysis for the following business categories:</p>
+                <h2 className="text-base font-black text-gray-900 mb-2">4a. Restricted Business Categories</h2>
+                <p className="text-sm">BizScope does not currently support analysis for the following business categories:</p>
                 <ul className="list-disc list-inside space-y-1 text-sm mt-2">
                   <li>Firearms, weapons, and ammunition retail</li>
                   <li>Tobacco products and smoke shops</li>
