@@ -24,11 +24,14 @@
 //
 // Verified against @google/genai v1.52.0 / Gemini API v1beta.
 // Migration history:
-//   gemini-1.5-flash → removed from v1beta (NOT_FOUND)
-//   gemini-2.0-flash → removed ("no longer available", NOT_FOUND)
-//   gemini-2.5-flash → current stable Flash model; the @google/genai v1.52.0
-//                      SDK README quickstart uses this exact ID.
-//   gemini-2.5-pro   → current stable Pro model; unchanged.
+//   gemini-1.5-flash          → removed from v1beta (NOT_FOUND)
+//   gemini-2.0-flash          → removed ("no longer available", NOT_FOUND)
+//   gemini-2.5-flash          → current stable Flash model; the @google/genai v1.52.0
+//                               SDK README quickstart uses this exact ID.
+//   gemini-2.5-pro            → 404 NOT_FOUND for new API key holders as of 2026-07;
+//                               Google message: "no longer available to new users."
+//   gemini-2.5-pro-preview-06-05 → versioned June-2026 preview; replacement for the
+//                               generic alias. Use this ID until a new stable alias ships.
 //
 // NOTE: "gemini-3.5-flash" does not exist in Google's model catalogue.
 // Google's Flash naming follows 1.5 → 2.0 → 2.5 — there is no 3.x series.
@@ -44,8 +47,8 @@ export const GEMINI_MODELS = {
    *  Confirmed in @google/genai v1.52.0 SDK README quickstart. */
   standard: 'gemini-2.5-flash',
   /** Pro-tier model — Regional Intelligence reports (higher reasoning).
-   *  Current stable Pro model; not deprecated as of v1.52.0. */
-  regional: 'gemini-2.5-pro',
+   *  Versioned June-2026 preview; replaces deprecated 'gemini-2.5-pro' generic alias. */
+  regional: 'gemini-2.5-pro-preview-06-05',
 } as const;
 
 // ─── Model pricing constants ──────────────────────────────────────────────────
