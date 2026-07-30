@@ -30,11 +30,10 @@
 //                               SDK README quickstart uses this exact ID.
 //   gemini-2.5-pro            → 404 NOT_FOUND for new API key holders as of 2026-07;
 //                               Google message: "no longer available to new users."
-//   gemini-2.5-pro-preview-06-05 → versioned June-2026 preview; replacement for the
-//                               generic alias. Use this ID until a new stable alias ships.
+//   gemini-2.5-pro-preview-06-05 → NOT_FOUND in v1beta (wrong version path).
+//   gemini-3.1-pro-preview    → confirmed in ai.models.list() 2026-07; active replacement.
 //
 // NOTE: "gemini-3.5-flash" does not exist in Google's model catalogue.
-// Google's Flash naming follows 1.5 → 2.0 → 2.5 — there is no 3.x series.
 //
 // To list all available models for your API key:
 //   GET https://generativelanguage.googleapis.com/v1beta/models?key=GEMINI_API_KEY
@@ -47,8 +46,8 @@ export const GEMINI_MODELS = {
    *  Confirmed in @google/genai v1.52.0 SDK README quickstart. */
   standard: 'gemini-2.5-flash',
   /** Pro-tier model — Regional Intelligence reports (higher reasoning).
-   *  Versioned June-2026 preview; replaces deprecated 'gemini-2.5-pro' generic alias. */
-  regional: 'gemini-2.5-pro-preview-06-05',
+   *  Confirmed available via models.list() on staging key 2026-07. */
+  regional: 'gemini-3.1-pro-preview',
 } as const;
 
 // ─── Model pricing constants ──────────────────────────────────────────────────
@@ -62,11 +61,12 @@ export const MODEL_PRICING: Record<string, { inputPer1kTokens: number; outputPer
     inputPer1kTokens:  0.00030,  // $0.30 / 1M input tokens (text/image/video)
     outputPer1kTokens: 0.00250,  // $2.50 / 1M output tokens — thinking tokens are billed at this same output rate
   },
-  // gemini-2.5-pro (regional reports) — ≤200k-token-context tier; verified
-  // against https://ai.google.dev/gemini-api/docs/pricing (paid tier, 2026-06).
+  // gemini-3.1-pro-preview (regional reports) — replaces deprecated gemini-2.5-pro.
+  // Pricing is provisional; verify at https://ai.google.dev/gemini-api/docs/pricing
+  // before production. Using 2.5-pro rates as a conservative placeholder.
   [GEMINI_MODELS.regional]: {
-    inputPer1kTokens:  0.00125,  // $1.25 / 1M input tokens
-    outputPer1kTokens: 0.01000,  // $10.00 / 1M output tokens — thinking tokens are billed at this same output rate
+    inputPer1kTokens:  0.00125,  // placeholder — re-verify for gemini-3.1-pro-preview
+    outputPer1kTokens: 0.01000,  // placeholder — re-verify for gemini-3.1-pro-preview
   },
 };
 
