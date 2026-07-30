@@ -72,6 +72,15 @@ const _betaClosed: boolean =
   process.env.VITE_BETA_CLOSED === 'true' ||
   (process.env.VITE_BETA_CLOSED as unknown) === true;
 
+// Pro 7-day trial promotional toggle (client side — display only).
+// Controls the "Start Free 7-Day Trial" CTA on the pricing page.
+// VITE_PRO_TRIAL_ENABLED is statically replaced by the vite.config.ts define block.
+// The server flag PRO_TRIAL_ENABLED is authoritative for checkout eligibility.
+// Defaults to 'false' when absent — safe to omit in production.
+const _proTrialEnabled: boolean =
+  process.env.VITE_PRO_TRIAL_ENABLED === 'true' ||
+  (process.env.VITE_PRO_TRIAL_ENABLED as unknown) === true;
+
 // ─── App Config (frozen object — never mutate at runtime) ────────────────────
 
 export const appConfig = {
@@ -190,6 +199,25 @@ export const appConfig = {
    * This is a BUILD-TIME flag. Changing it requires a new Vercel deployment.
    */
   betaClosed: _betaClosed,
+  /**
+   * Pro 7-day free trial promotional display toggle (VITE_PRO_TRIAL_ENABLED=true).
+   *
+   * Controls only the PRESENTATION of the trial offer in PricingTiers.
+   * When true, eligible Explorer users see "Start Free 7-Day Trial" on the Pro card.
+   * When false, the Pro card shows the normal "Get Pro" CTA.
+   *
+   * This is a CLIENT-SIDE display flag only. Checkout eligibility is always
+   * controlled server-side by PRO_TRIAL_ENABLED. Setting this true while the
+   * server flag is false merely shows the trial CTA — checkout still creates a
+   * normal paid subscription, never a trial.
+   *
+   * Toggle:    VITE_PRO_TRIAL_ENABLED=true  in Vercel env vars → redeploy
+   * Kill switch: set to false (or remove) → normal "Get Pro" CTA reappears.
+   *
+   * Existing trialing users always see their correct trial status regardless of
+   * this flag (their subscription is already in state 'trialing' in the DB).
+   */
+  proTrialEnabled: _proTrialEnabled,
 } as const;
 
 // ─── Convenience named exports ───────────────────────────────────────────────
@@ -221,6 +249,16 @@ export const betaFullAccess: boolean = appConfig.betaFullAccess;
  * @see appConfig.betaClosed
  */
 export const betaClosed: boolean = appConfig.betaClosed;
+
+/**
+ * True when VITE_PRO_TRIAL_ENABLED=true.
+ *
+ * CLIENT-SIDE DISPLAY ONLY. Controls the trial CTA on the pricing page.
+ * Server-side checkout eligibility is controlled by PRO_TRIAL_ENABLED.
+ *
+ * @see appConfig.proTrialEnabled
+ */
+export const proTrialEnabled: boolean = appConfig.proTrialEnabled;
 
 // ─── Beta real-reports gate ──────────────────────────────────────────────────
 

@@ -13,6 +13,19 @@ export interface SubscriptionStatus {
   subscriptionId: string | null;
   /** True when this user has previously used their one free trial. */
   hasUsedTrial?: boolean;
+  /**
+   * Server-computed trial eligibility: PRO_TRIAL_ENABLED=true, no prior trial,
+   * no active subscription. Use this field instead of re-deriving client-side.
+   */
+  trialEligible?: boolean;
+  /** True when PRO_TRIAL_ENABLED=true on the server (mirrors the server flag). */
+  proTrialEnabled?: boolean;
+  /** True when status === 'trialing'. Shorthand for status check. */
+  trialing?: boolean;
+  /** ISO timestamp when this trial started. Only present when trialing. */
+  trialStartedAt?: string | null;
+  /** ISO timestamp when this trial ends. Only present when trialing. */
+  trialEndsAt?: string | null;
   /** Number of trial reports used (only present when status === 'trialing'). */
   trialReportCount?: number;
 }

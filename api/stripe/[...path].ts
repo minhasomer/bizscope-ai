@@ -42,8 +42,10 @@ async function handleSubscriptionStatus(
   const user = await verifyAuth(req.headers['authorization'] as string | undefined);
   if (!user) return json(res, 401, { error: 'Unauthorized.' });
 
-  // Fetch has_used_trial from profiles (needed for trial eligibility on the
-  // pricing page — must be server-authoritative, never client-supplied).
+  // Server-authoritative trial feature flag.
+  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED === 'true';
+
+  // Fetch has_used_trial from profiles — never trust a client-supplied value.
   const { data: profileData } = await getSupabaseAdmin()
     .from('profiles')
     .select('has_used_trial')
@@ -52,6 +54,15 @@ async function handleSubscriptionStatus(
   const hasUsedTrial: boolean = profileData?.has_used_trial ?? false;
 
   const row = await getSubscriptionRow(user.userId);
+
+  // trialEligible: server-computed and returned so the client can rely on
+  // this field rather than independently re-deriving eligibility.
+  // Requires: trial feature enabled, no prior trial, no active subscription.
+  const activeStatuses = ['active', 'trialing', 'past_due'];
+  const trialEligible = proTrialEnabled &&
+    !hasUsedTrial &&
+    !activeStatuses.includes(row?.status ?? '');
+
   if (!row) {
     return json(res, 200, {
       plan:             'Explorer',
@@ -61,6 +72,8 @@ async function handleSubscriptionStatus(
       customerId:       null,
       subscriptionId:   null,
       hasUsedTrial,
+      trialEligible,
+      proTrialEnabled,
     });
   }
 
@@ -72,10 +85,12 @@ async function handleSubscriptionStatus(
     row.cancel_at_period_end ||
     (cancelAt != null && new Date(cancelAt) > new Date());
 
+  const trialing = row.status === 'trialing';
+
   // Include trial report usage for trialing subscribers so the billing page
   // can show the 5-report cap progress without a separate API call.
   let trialReportCount: number | undefined;
-  if (row.status === 'trialing') {
+  if (trialing) {
     const { data: usageData } = await getSupabaseAdmin()
       .from('usage_tracking')
       .select('count')
@@ -94,6 +109,11 @@ async function handleSubscriptionStatus(
     customerId:       row.stripe_customer_id ?? null,
     subscriptionId:   row.stripe_subscription_id ?? null,
     hasUsedTrial,
+    trialEligible,
+    proTrialEnabled,
+    trialing,
+    trialStartedAt:   row.trial_started_at ?? null,
+    trialEndsAt:      row.trial_ends_at    ?? null,
     ...(trialReportCount !== undefined && { trialReportCount }),
   });
 }
@@ -133,15 +153,19 @@ async function handleCreateCheckout(
     });
   }
 
-  // Server-side trial eligibility check. Only Pro (not Pro+) gets a trial.
-  // Never trust a client-supplied flag — eligibility is always derived server-side.
+  // Server-side trial eligibility — authoritative, never trusts client input.
+  // Requires all of: PRO_TRIAL_ENABLED=true, plan=Pro (not Pro+),
+  // no prior trial (has_used_trial=false), no active/trialing/past_due subscription.
+  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED === 'true';
   let isTrialEligible = false;
-  if (plan === 'Pro') {
+  if (proTrialEnabled && plan === 'Pro') {
     const { data: profileData } = await getSupabaseAdmin()
       .from('profiles')
       .select('has_used_trial')
       .eq('id', user.userId)
       .single();
+    // has_used_trial defaults to true on error so that a DB failure never
+    // accidentally grants a second trial.
     isTrialEligible = !(profileData?.has_used_trial ?? true);
   }
 

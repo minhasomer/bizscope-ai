@@ -10,7 +10,7 @@ import { OpportunityExplorer } from './components/OpportunityExplorer';
 import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
 import { generateViabilityReport, generateAnonymousPreviewReport, ApiError } from './services/geminiService';
-import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess } from './src/config/appConfig';
+import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess, proTrialEnabled } from './src/config/appConfig';
 import type { ViabilityReport, OpportunityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { mockSavedReports } from './src/data/mockSavedReports.js';
@@ -836,16 +836,13 @@ const App: React.FC = () => {
     MANAGEABLE_SUBSCRIPTION_STATUSES.has(subscriptionStatus.status);
 
   /**
-   * True when the signed-in user qualifies for the 7-day free Pro trial.
-   * Server-authoritative: has_used_trial is returned from the subscription-status
-   * endpoint (never supplied by the client). Only drives CTA copy — eligibility
-   * is re-verified server-side on checkout creation.
+   * VITE_PRO_TRIAL_ENABLED gates the promotional CTA presentation only.
+   * Actual eligibility is server-computed (subscriptionStatus.trialEligible) from
+   * PRO_TRIAL_ENABLED, has_used_trial, and subscription state — never re-derived
+   * here. Client flag false → always shows "Get Pro". Client flag true + server
+   * flag false → CTA copy shows, but checkout creates a normal paid session.
    */
-  const trialEligible =
-    !!currentUser &&
-    !!subscriptionStatus &&
-    !hasPaidSubscription &&
-    !(subscriptionStatus.hasUsedTrial ?? false);
+  const trialEligible = proTrialEnabled && !!(subscriptionStatus?.trialEligible);
 
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
