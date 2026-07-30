@@ -372,6 +372,21 @@ ${isZip
 
     console.error('[RegionalAnalysis] generation failed:', { msg, isTimeout, incrementOk });
 
+    // TEMP DIAG: on model 404, log available pro-tier models so we can pick the right ID.
+    if (msg.includes('NOT_FOUND') || msg.includes('not found') || msg.includes('404')) {
+      try {
+        const diagAi = new GoogleGenAI({ apiKey: apiKey! });
+        const pager = await diagAi.models.list();
+        const proNames: string[] = [];
+        for await (const m of pager) {
+          if ((m.name ?? '').toLowerCase().includes('pro')) proNames.push(m.name ?? '');
+        }
+        console.log('[RegionalAnalysis][ModelDiag] pro models available:', JSON.stringify(proNames));
+      } catch (diagErr: any) {
+        console.log('[RegionalAnalysis][ModelDiag] list failed:', (diagErr.message ?? String(diagErr)).slice(0, 200));
+      }
+    }
+
     if (isTimeout) {
       return json(res, 504, {
         error: 'Regional analysis timed out. Please try again — no report credit was used.',
