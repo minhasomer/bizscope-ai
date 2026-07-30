@@ -365,13 +365,13 @@ check('analyze.ts: incrementUsageTracking is after QUOTA_EXCEEDED early-return',
   assert.ok(incrementIdx > quotaGateIdx, 'incrementUsageTracking must come after the QUOTA_EXCEEDED return');
 });
 
-check('analyze.ts: cache-hit return is before quota check (cache hits skip quota)', () => {
+check('analyze.ts: quota check precedes cache-hit return (cache hits consume a quota credit)', () => {
   const src          = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
   const cacheIdx     = src.indexOf('_cached:');
   const quotaIdx     = src.indexOf('checkStandardQuota(');
   assert.ok(cacheIdx !== -1, 'cache-hit return (_cached:) not found');
   assert.ok(quotaIdx !== -1, 'quota check not found');
-  assert.ok(cacheIdx < quotaIdx, 'cache hit must precede quota check');
+  assert.ok(quotaIdx < cacheIdx, 'quota check must precede cache-hit return (fix/quota: enforce quota on server cache hits)');
 });
 
 check('opportunities.ts: Explorer still rejected (Market Gap remains locked)', () => {

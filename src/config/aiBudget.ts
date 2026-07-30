@@ -62,11 +62,13 @@ export const MODEL_PRICING: Record<string, { inputPer1kTokens: number; outputPer
     outputPer1kTokens: 0.00250,  // $2.50 / 1M output tokens — thinking tokens are billed at this same output rate
   },
   // gemini-3.1-pro-preview (regional reports) — replaces deprecated gemini-2.5-pro.
-  // Pricing is provisional; verify at https://ai.google.dev/gemini-api/docs/pricing
-  // before production. Using 2.5-pro rates as a conservative placeholder.
+  // Pricing verified: $2.00/1M input, $12.00/1M output for prompts ≤200k input tokens.
+  // Regional prompts are bounded by maxInputTokens (Pro+: 24k, Enterprise: 32k) —
+  // both are far below the 200k threshold, so the flat ≤200k-tier rate always applies.
+  // Source: https://ai.google.dev/gemini-api/docs/pricing (2026-07)
   [GEMINI_MODELS.regional]: {
-    inputPer1kTokens:  0.00125,  // placeholder — re-verify for gemini-3.1-pro-preview
-    outputPer1kTokens: 0.01000,  // placeholder — re-verify for gemini-3.1-pro-preview
+    inputPer1kTokens:  0.00200,  // $2.00 / 1M input tokens (≤200k-context tier)
+    outputPer1kTokens: 0.01200,  // $12.00 / 1M output tokens (≤200k-context tier)
   },
 };
 
