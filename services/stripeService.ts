@@ -11,6 +11,10 @@ export interface SubscriptionStatus {
   customerId: string | null;
   /** Stripe subscription ID. Null when no active subscription exists. */
   subscriptionId: string | null;
+  /** True when this user has previously used their one free trial. */
+  hasUsedTrial?: boolean;
+  /** Number of trial reports used (only present when status === 'trialing'). */
+  trialReportCount?: number;
 }
 
 async function getAccessToken(): Promise<string | null> {

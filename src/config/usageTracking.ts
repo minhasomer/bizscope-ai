@@ -125,3 +125,56 @@ export async function incrementUsageTracking(
     console.error('[UsageTracking] increment failed:', err.message ?? err);
   }
 }
+
+// ─── Trial quota (5 reports total, never resets) ─────────────────────────────
+// Trial usage is stored in usage_tracking with month_key = 'trial' so it
+// reuses the existing table + RPC without any calendar-month reset logic.
+
+const TRIAL_REPORT_LIMIT = 5;
+
+/**
+ * Checks how many of the 5 trial reports have been used.
+ * Fails open — a transient DB error must not block report generation.
+ */
+export async function checkTrialQuota(
+  supabaseAdmin: any,
+  userId: string,
+): Promise<QuotaCheckResult> {
+  if (!supabaseAdmin) return { allowed: true, used: 0, limit: TRIAL_REPORT_LIMIT };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('usage_tracking')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('report_type', 'standard')
+      .eq('month_key', 'trial')
+      .maybeSingle();
+    if (error) throw error;
+    const used = data?.count ?? 0;
+    return { allowed: used < TRIAL_REPORT_LIMIT, used, limit: TRIAL_REPORT_LIMIT };
+  } catch (err: any) {
+    console.error('[UsageTracking] trial quota check failed, failing open:', err.message ?? err);
+    return { allowed: true, used: 0, limit: TRIAL_REPORT_LIMIT };
+  }
+}
+
+/**
+ * Increments the trial usage counter (month_key='trial'). Never throws.
+ */
+export async function incrementTrialUsage(
+  supabaseAdmin: any,
+  userId: string,
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin.rpc('increment_usage_tracking', {
+      p_user_id:     userId,
+      p_report_type: 'standard',
+      p_month_key:   'trial',
+    });
+    if (error) throw error;
+    console.log(`[UsageTracking] trial incremented user=${userId}`);
+  } catch (err: any) {
+    console.error('[UsageTracking] trial increment failed:', err.message ?? err);
+  }
+}

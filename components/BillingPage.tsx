@@ -42,13 +42,14 @@ const formatPeriodEnd = (ts: number | string): string => {
 
 const StatusBadge: React.FC<{ status: SubscriptionStatus['status']; betaAccess?: boolean }> = ({ status, betaAccess }) => {
   const map: Record<string, { label: string; cls: string }> = {
-    active: { label: 'Active', cls: 'bg-green-100 text-green-800 border-green-200' },
-    past_due: { label: 'Past Due', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
-    cancelled: { label: 'Cancelled', cls: 'bg-red-100 text-red-800 border-red-200' },
+    active:          { label: 'Active',    cls: 'bg-green-100 text-green-800 border-green-200' },
+    trialing:        { label: 'Trial',     cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+    past_due:        { label: 'Past Due',  cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    cancelled:       { label: 'Cancelled', cls: 'bg-red-100 text-red-800 border-red-200' },
     no_subscription: { label: 'Free Tier', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
-    no_customer: { label: 'Free Tier', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
-    not_configured: { label: 'Unverified', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
-    demo: { label: 'Sandbox', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    no_customer:     { label: 'Free Tier', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+    not_configured:  { label: 'Unverified', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+    demo:            { label: 'Sandbox',   cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   };
   // During the private beta, paid-tier access is granted without a Stripe
   // subscription, so the raw "Unverified" status is misleading and alarming.
@@ -168,18 +169,35 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
 
         {/* Billing cycle details from Stripe */}
         {subStatus && ['active', 'trialing', 'past_due'].includes(subStatus.status) && subStatus.currentPeriodEnd ? (
-          <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
-            <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            {subStatus.cancelAtPeriodEnd ? (
-              <span>
-                Subscription ends on{' '}
-                <strong>{formatPeriodEnd(subStatus.currentPeriodEnd)}</strong>. Access continues until then.
-              </span>
-            ) : (
-              <span>
-                Next billing date:{' '}
-                <strong>{formatPeriodEnd(subStatus.currentPeriodEnd)}</strong>
-              </span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
+              <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              {subStatus.status === 'trialing' ? (
+                <span>
+                  Free trial ends on{' '}
+                  <strong>{formatPeriodEnd(subStatus.currentPeriodEnd)}</strong> — then $29/month.
+                </span>
+              ) : subStatus.cancelAtPeriodEnd ? (
+                <span>
+                  Subscription ends on{' '}
+                  <strong>{formatPeriodEnd(subStatus.currentPeriodEnd)}</strong>. Access continues until then.
+                </span>
+              ) : (
+                <span>
+                  Next billing date:{' '}
+                  <strong>{formatPeriodEnd(subStatus.currentPeriodEnd)}</strong>
+                </span>
+              )}
+            </div>
+            {subStatus.status === 'trialing' && (
+              <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-xl p-3 border border-blue-100">
+                <Receipt className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>
+                  Trial reports:{' '}
+                  <strong>{subStatus.trialReportCount ?? 0} of 5</strong> used.
+                  {(subStatus.trialReportCount ?? 0) >= 5 && ' Limit reached — upgrade or wait for trial to convert.'}
+                </span>
+              </div>
             )}
           </div>
         ) : subStatus && ['cancelled', 'no_subscription', 'no_customer'].includes(subStatus.status) ? (

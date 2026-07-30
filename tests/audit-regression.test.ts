@@ -356,13 +356,19 @@ check('analyze.ts: quota check precedes Gemini AI initialisation', () => {
   assert.ok(quotaIdx < geminiIdx, 'quota check must precede Gemini initialisation');
 });
 
-check('analyze.ts: incrementUsageTracking is after QUOTA_EXCEEDED early-return', () => {
+check('analyze.ts: quota rejection gate exists and precedes usage increment', () => {
   const src          = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
   const incrementIdx = src.indexOf('incrementUsageTracking(');
-  const quotaGateIdx = src.indexOf("code: 'QUOTA_EXCEEDED'");
+  // Trial and standard paths each emit their own rejection code.
+  const quotaGateIdx = Math.min(
+    ...[
+      "QUOTA_EXCEEDED",
+      "TRIAL_REPORT_LIMIT_REACHED",
+    ].map(code => src.indexOf(code)).filter(i => i !== -1),
+  );
   assert.ok(incrementIdx !== -1, 'incrementUsageTracking call not found');
-  assert.ok(quotaGateIdx !== -1, 'QUOTA_EXCEEDED gate not found');
-  assert.ok(incrementIdx > quotaGateIdx, 'incrementUsageTracking must come after the QUOTA_EXCEEDED return');
+  assert.ok(quotaGateIdx !== Infinity, 'no quota rejection code (QUOTA_EXCEEDED or TRIAL_REPORT_LIMIT_REACHED) found');
+  assert.ok(incrementIdx > quotaGateIdx, 'incrementUsageTracking must come after the quota rejection gate');
 });
 
 check('analyze.ts: quota check precedes cache-hit return (cache hits consume a quota credit)', () => {

@@ -30,6 +30,11 @@ interface PricingTiersProps {
   pricingActionLoading?: boolean;
   /** Error message to display below the pricing cards when a checkout/portal request fails. */
   pricingActionError?: string | null;
+  /**
+   * True when this user qualifies for the 7-day free Pro trial.
+   * Drives trial-specific CTA copy on the Pro card.
+   */
+  trialEligible?: boolean;
 }
 
 const PLAN_ORDER: Record<string, number> = { Explorer: 0, Pro: 1, 'Pro+': 2, Enterprise: 3 };
@@ -60,6 +65,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
   hasPaidSubscription = false,
   pricingActionLoading = false,
   pricingActionError = null,
+  trialEligible = false,
 }) => {
   const isDemo = isDemoMode;
 
@@ -286,24 +292,37 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
                         disabled = true;
                       } else {
                         // Pro / Pro+: start a new subscription via Checkout.
-                        label = pricingActionLoading ? 'Loading…' : `${card.cta} →`;
+                        // Show trial-specific copy for eligible users on the Pro card.
+                        const isProTrial = card.id === 'Pro' && trialEligible;
+                        label = pricingActionLoading ? 'Loading…'
+                          : isProTrial ? 'Start Free 7-Day Trial →'
+                          : `${card.cta} →`;
                         btnClass = `${card.ctaClass} border border-transparent disabled:opacity-60`;
                         disabled = pricingActionLoading;
                       }
                     }
                   }
 
+                  const isProTrialNote = card.id === 'Pro' && trialEligible && !hasPaidSubscription && !isDemo && isAuthenticated;
+
                   return (
-                    <button
-                      onClick={() => handlePlanAction(card.id)}
-                      disabled={disabled}
-                      className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-150 text-center ${btnClass} ${disabled ? '' : 'cursor-pointer'}`}
-                    >
-                      {pricingActionLoading && !disabled && (
-                        <RefreshCw className="inline w-3 h-3 mr-1.5 animate-spin" />
+                    <div>
+                      <button
+                        onClick={() => handlePlanAction(card.id)}
+                        disabled={disabled}
+                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-150 text-center ${btnClass} ${disabled ? '' : 'cursor-pointer'}`}
+                      >
+                        {pricingActionLoading && !disabled && (
+                          <RefreshCw className="inline w-3 h-3 mr-1.5 animate-spin" />
+                        )}
+                        {label}
+                      </button>
+                      {isProTrialNote && (
+                        <p className="text-center text-[10px] text-gray-400 mt-2">
+                          No charge today. Then $29/month — cancel anytime.
+                        </p>
                       )}
-                      {label}
-                    </button>
+                    </div>
                   );
                 })()}
               </div>

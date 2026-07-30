@@ -42,6 +42,15 @@ async function handleSubscriptionStatus(
   const user = await verifyAuth(req.headers['authorization'] as string | undefined);
   if (!user) return json(res, 401, { error: 'Unauthorized.' });
 
+  // Fetch has_used_trial from profiles (needed for trial eligibility on the
+  // pricing page — must be server-authoritative, never client-supplied).
+  const { data: profileData } = await getSupabaseAdmin()
+    .from('profiles')
+    .select('has_used_trial')
+    .eq('id', user.userId)
+    .single();
+  const hasUsedTrial: boolean = profileData?.has_used_trial ?? false;
+
   const row = await getSubscriptionRow(user.userId);
   if (!row) {
     return json(res, 200, {
@@ -51,6 +60,7 @@ async function handleSubscriptionStatus(
       currentPeriodEnd: null,
       customerId:       null,
       subscriptionId:   null,
+      hasUsedTrial,
     });
   }
 
@@ -62,6 +72,20 @@ async function handleSubscriptionStatus(
     row.cancel_at_period_end ||
     (cancelAt != null && new Date(cancelAt) > new Date());
 
+  // Include trial report usage for trialing subscribers so the billing page
+  // can show the 5-report cap progress without a separate API call.
+  let trialReportCount: number | undefined;
+  if (row.status === 'trialing') {
+    const { data: usageData } = await getSupabaseAdmin()
+      .from('usage_tracking')
+      .select('count')
+      .eq('user_id', user.userId)
+      .eq('report_type', 'standard')
+      .eq('month_key', 'trial')
+      .maybeSingle();
+    trialReportCount = usageData?.count ?? 0;
+  }
+
   return json(res, 200, {
     plan:             row.plan,
     status:           row.status,
@@ -69,6 +93,8 @@ async function handleSubscriptionStatus(
     currentPeriodEnd: row.current_period_end ?? null,
     customerId:       row.stripe_customer_id ?? null,
     subscriptionId:   row.stripe_subscription_id ?? null,
+    hasUsedTrial,
+    ...(trialReportCount !== undefined && { trialReportCount }),
   });
 }
 
@@ -100,11 +126,23 @@ async function handleCreateCheckout(
     .eq('user_id', user.userId)
     .single();
 
-  if (existing && (existing.status === 'active' || existing.status === 'trialing')) {
+  if (existing && (existing.status === 'active' || existing.status === 'trialing' || existing.status === 'past_due')) {
     return json(res, 409, {
       code:  'ACTIVE_SUBSCRIPTION_EXISTS',
       error: 'An active subscription already exists. Use the Billing Portal to change plans.',
     });
+  }
+
+  // Server-side trial eligibility check. Only Pro (not Pro+) gets a trial.
+  // Never trust a client-supplied flag — eligibility is always derived server-side.
+  let isTrialEligible = false;
+  if (plan === 'Pro') {
+    const { data: profileData } = await getSupabaseAdmin()
+      .from('profiles')
+      .select('has_used_trial')
+      .eq('id', user.userId)
+      .single();
+    isTrialEligible = !(profileData?.has_used_trial ?? true);
   }
 
   const appUrl = process.env.APP_URL ?? process.env.VITE_APP_URL ?? '';
@@ -114,8 +152,10 @@ async function handleCreateCheckout(
     mode:                'subscription',
     line_items:          [{ price: priceId, quantity: 1 }],
     client_reference_id: user.userId,
+    payment_method_collection: 'always',
     subscription_data: {
       metadata: { userId: user.userId },
+      ...(isTrialEligible && { trial_period_days: 7 }),
     },
     success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${appUrl}/billing`,
@@ -128,7 +168,7 @@ async function handleCreateCheckout(
   }
 
   const session = await stripe.checkout.sessions.create(sessionParams);
-  return json(res, 200, { url: session.url });
+  return json(res, 200, { url: session.url, trialEligible: isTrialEligible });
 }
 
 // ─── Route: POST create-portal-session ──────────────────────────────────────

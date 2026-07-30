@@ -835,6 +835,18 @@ const App: React.FC = () => {
     !!subscriptionStatus &&
     MANAGEABLE_SUBSCRIPTION_STATUSES.has(subscriptionStatus.status);
 
+  /**
+   * True when the signed-in user qualifies for the 7-day free Pro trial.
+   * Server-authoritative: has_used_trial is returned from the subscription-status
+   * endpoint (never supplied by the client). Only drives CTA copy — eligibility
+   * is re-verified server-side on checkout creation.
+   */
+  const trialEligible =
+    !!currentUser &&
+    !!subscriptionStatus &&
+    !hasPaidSubscription &&
+    !(subscriptionStatus.hasUsedTrial ?? false);
+
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
       navigate('settings');
@@ -971,6 +983,7 @@ const App: React.FC = () => {
               hasPaidSubscription={hasPaidSubscription}
               pricingActionLoading={pricingActionLoading}
               pricingActionError={pricingActionError}
+              trialEligible={trialEligible}
             />
           </div>
         );

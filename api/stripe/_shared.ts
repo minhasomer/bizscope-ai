@@ -90,13 +90,15 @@ export interface SubscriptionRow {
   cancel_at_period_end: boolean;
   cancel_at: string | null;
   current_period_end: string | null;
+  trial_started_at: string | null;
+  trial_ends_at: string | null;
 }
 
 export async function getSubscriptionRow(userId: string): Promise<SubscriptionRow | null> {
   try {
     const { data } = await getSupabaseAdmin()
       .from('subscriptions')
-      .select('stripe_customer_id, stripe_subscription_id, status, plan, cancel_at_period_end, cancel_at, current_period_end')
+      .select('stripe_customer_id, stripe_subscription_id, status, plan, cancel_at_period_end, cancel_at, current_period_end, trial_started_at, trial_ends_at')
       .eq('user_id', userId)
       .single();
     return data ?? null;

@@ -7,7 +7,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
-import { checkStandardQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
+import { checkStandardQuota, checkTrialQuota, incrementUsageTracking, incrementTrialUsage } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection.js';
 import {
@@ -726,6 +726,23 @@ export default async function handler(
   // checkStandardQuota below. No plan-level gate here — quota handles it.
   console.log(`[Analyze] Auth — email=${verifiedEmail} role="${verifiedRole}" plan=${verifiedPlan} betaFullAccess=${_serverBetaFullAccess}`);
 
+  // Detect whether this Pro user is still in their free trial. Trial users get
+  // 5 reports total (not monthly), enforced via checkTrialQuota. The subscription
+  // status is authoritative — never trust a client-supplied flag.
+  let _isTrialing = false;
+  if (verifiedPlan === 'Pro' && supabaseAdmin) {
+    try {
+      const { data: _subRow } = await supabaseAdmin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', verifiedUserId)
+        .maybeSingle();
+      _isTrialing = _subRow?.status === 'trialing';
+    } catch (err: any) {
+      console.error('[Analyze] trial status lookup failed, defaulting to non-trial:', err.message);
+    }
+  }
+
   const requestStartMs = Date.now();
   const body = req.body ?? {};
   const { businessType, location, userLocation, forceRegenerate } = body;
@@ -786,17 +803,23 @@ export default async function handler(
         console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
       }
       // Enforce quota on cache hits — a served report consumes a slot regardless of AI cost
-      const cacheQuota = await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+      const cacheQuota = _isTrialing
+        ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
+        : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
       if (!cacheQuota.allowed) {
-        console.warn(`[Analyze] Quota exceeded (cache hit) — userId=${verifiedUserId} plan=${verifiedPlan} used=${cacheQuota.used} limit=${cacheQuota.limit}`);
+        console.warn(`[Analyze] Quota exceeded (cache hit) — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${cacheQuota.used} limit=${cacheQuota.limit}`);
         return json(res, 429, {
-          error: 'Monthly report limit reached for your plan.',
-          code: 'QUOTA_EXCEEDED',
-          used: cacheQuota.used,
+          error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
+          code:  _isTrialing ? 'TRIAL_REPORT_LIMIT_REACHED' : 'QUOTA_EXCEEDED',
+          used:  cacheQuota.used,
           limit: cacheQuota.limit,
         });
       }
-      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+      if (_isTrialing) {
+        await incrementTrialUsage(supabaseAdmin, verifiedUserId);
+      } else {
+        await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+      }
       return json(res, 200, {
         ...normalizeViabilityReport(cacheHit.report),
         _cached:        true,
@@ -817,13 +840,15 @@ export default async function handler(
   }
 
   // ── Server-side quota check — standard reports (after cache, before Gemini) ─
-  const quota = await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  const quota = _isTrialing
+    ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
+    : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
   if (!quota.allowed) {
-    console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
+    console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${quota.used} limit=${quota.limit}`);
     return json(res, 429, {
-      error: 'Monthly report limit reached for your plan.',
-      code: 'QUOTA_EXCEEDED',
-      used: quota.used,
+      error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
+      code:  _isTrialing ? 'TRIAL_REPORT_LIMIT_REACHED' : 'QUOTA_EXCEEDED',
+      used:  quota.used,
       limit: quota.limit,
     });
   }
@@ -1372,7 +1397,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     }
 
     // Quota counter — only fresh, successful, non-cached generations count.
-    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+    if (_isTrialing) {
+      await incrementTrialUsage(supabaseAdmin, verifiedUserId);
+    } else {
+      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+    }
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;
