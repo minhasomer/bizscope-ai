@@ -240,54 +240,6 @@ async function handleCreatePortal(
   return json(res, 200, { url: portalSession.url });
 }
 
-// ─── Route: GET staging-setup (STAGING / PREVIEW ONLY) ──────────────────────
-// Creates (or resets) a fresh Explorer test user and returns a magic sign-in
-// link. Hard-blocked in production. Protected by X-Setup-Token header.
-// REMOVE THIS HANDLER before any production consideration.
-
-async function handleStagingSetup(
-  req: IncomingMessage,
-  res: ServerResponse,
-): Promise<void> {
-  if (process.env.VERCEL_ENV === 'production') return json(res, 404, { error: 'Not found.' });
-
-  const secret = process.env.TRIAL_SETUP_SECRET ?? '';
-  const token  = (req.headers['x-setup-token'] as string | undefined) ?? '';
-  if (!secret || token !== secret) return json(res, 401, { error: 'Unauthorized.' });
-
-  const TEST_EMAIL = 'biztrial-test@bizscope-staging-test.invalid';
-  const admin = getSupabaseAdmin();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: listData } = await (admin.auth.admin as any).listUsers();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prev = (listData?.users as any[])?.find((u: any) => u.email === TEST_EMAIL);
-  if (prev) await admin.auth.admin.deleteUser(prev.id);
-
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email: TEST_EMAIL, email_confirm: true,
-    user_metadata: { display_name: 'Trial Test User' },
-  });
-  if (createErr || !created?.user) {
-    return json(res, 500, { error: createErr?.message ?? 'User creation failed.' });
-  }
-
-  const appUrl = process.env.APP_URL ?? process.env.VITE_APP_URL ?? '';
-  const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
-    type: 'magiclink', email: TEST_EMAIL,
-    options: { redirectTo: `${appUrl}/pricing` },
-  });
-  if (linkErr || !(link as any)?.properties?.action_link) {
-    return json(res, 500, { error: linkErr?.message ?? 'Magic link generation failed.' });
-  }
-
-  return json(res, 200, {
-    userId:    created.user.id,
-    email:     TEST_EMAIL,
-    magicLink: (link as any).properties.action_link,
-  });
-}
-
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -305,9 +257,6 @@ export default async function handler(
   }
   if (url.includes('create-portal-session') && method === 'POST') {
     return handleCreatePortal(req, res);
-  }
-  if (url.includes('staging-setup') && method === 'GET') {
-    return handleStagingSetup(req, res);
   }
 
   return json(res, 404, { error: 'Not found.' });
