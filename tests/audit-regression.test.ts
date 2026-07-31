@@ -483,7 +483,7 @@ check('T-2: isTrialEligible defaults false; only set to true inside proTrialEnab
     'isTrialEligible must default to false',
   );
   // The only truthy assignment must be inside the proTrialEnabled guard.
-  const trueIdx = src.indexOf('isTrialEligible = !(');
+  const trueIdx = src.indexOf('isTrialEligible = noPriorTrial');
   const gateIdx = src.indexOf('if (proTrialEnabled && plan === \'Pro\')');
   assert.ok(trueIdx > gateIdx && gateIdx !== -1, 'isTrialEligible can only become true inside proTrialEnabled block');
 });
@@ -514,8 +514,8 @@ check('T-4: Pro+ plan cannot receive trial (plan guard is exact string "Pro") (s
 check('T-5: has_used_trial read from DB; defaults true on error (fail-safe for second trial) (structural)', () => {
   const src = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
   assert.ok(
-    src.includes("select('has_used_trial')"),
-    'checkout must read has_used_trial from profiles',
+    src.includes("select('has_used_trial, subscription_tier, role')"),
+    'checkout must read has_used_trial, subscription_tier, and role from profiles',
   );
   assert.ok(
     src.includes('profileData?.has_used_trial ?? true'),
@@ -617,6 +617,67 @@ checkAsync('T-10: checkTrialQuota allows ≤4 reports and blocks at 5 (async)', 
 
   const nullAdmin = await checkTrialQuota(null, 'uid');
   assert.equal(nullAdmin.allowed, true, 'trial quota must fail open when supabaseAdmin is null');
+});
+
+// ── 10. Trial eligibility — Explorer-only gate (structural) ──────────────────
+//
+// The trial must be restricted to users whose server-resolved effective plan is
+// Explorer.  Former paid subscribers, profile-tier overrides (e.g. DB-level
+// ProPlus), and elevated roles (Admin / BetaTester) must all be rejected
+// server-side, regardless of has_used_trial or current subscription status.
+//
+// E-1 through E-5 are structural: they assert that the source code in
+// api/stripe/[...path].ts contains the required eligibility gates.
+
+const stripeSrc = fs.readFileSync(
+  path.join(repoRoot, 'api', 'stripe', '[...path].ts'),
+  'utf8',
+);
+
+check('E-1: checkout selects plan from subscriptions (historical-paid-plan gate)', () => {
+  assert.ok(
+    stripeSrc.includes("select('status, stripe_customer_id, plan')"),
+    'create-checkout-session must select plan from the subscriptions row ' +
+    'so it can reject users who previously held a Pro/Pro+ subscription',
+  );
+});
+
+check('E-2: checkout blocks former Pro/Pro+ subscribers via plan check', () => {
+  assert.ok(
+    stripeSrc.includes("hasHistoricalPaidPlan") &&
+    stripeSrc.includes("existing?.plan"),
+    'create-checkout-session must check existing?.plan against [Pro, Pro+] ' +
+    'so cancellation of a prior paid plan cannot re-grant a free trial',
+  );
+});
+
+check('E-3: checkout blocks elevated profile tiers (ProPlus DB override)', () => {
+  assert.ok(
+    stripeSrc.includes("profileTierElevated") &&
+    stripeSrc.includes("subscription_tier"),
+    'create-checkout-session must read profiles.subscription_tier and reject ' +
+    'Pro/ProPlus values so a DB-level plan override cannot obtain a trial',
+  );
+});
+
+check('E-4: checkout blocks elevated roles (Admin / BetaTester)', () => {
+  assert.ok(
+    stripeSrc.includes("roleElevated") &&
+    stripeSrc.includes("Admin") &&
+    stripeSrc.includes("BetaTester"),
+    'create-checkout-session must reject Admin and BetaTester roles ' +
+    'because they already carry elevated access',
+  );
+});
+
+check('E-5: subscription-status applies the same three additional gates', () => {
+  // Count how many times each condition appears — must appear in BOTH handlers.
+  const htCount   = (stripeSrc.match(/hasHistoricalPaidPlan/g) ?? []).length;
+  const tierCount = (stripeSrc.match(/profileTierElevated/g)   ?? []).length;
+  const roleCount = (stripeSrc.match(/roleElevated/g)          ?? []).length;
+  assert.ok(htCount   >= 2, `hasHistoricalPaidPlan must appear in both handlers (found ${htCount})`);
+  assert.ok(tierCount >= 2, `profileTierElevated must appear in both handlers (found ${tierCount})`);
+  assert.ok(roleCount >= 2, `roleElevated must appear in both handlers (found ${roleCount})`);
 });
 
 // ── Run async tests, then report ──────────────────────────────────────────────

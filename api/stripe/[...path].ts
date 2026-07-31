@@ -45,10 +45,10 @@ async function handleSubscriptionStatus(
   // Server-authoritative trial feature flag.
   const proTrialEnabled = process.env.PRO_TRIAL_ENABLED?.trim() === 'true';
 
-  // Fetch has_used_trial from profiles — never trust a client-supplied value.
+  // Fetch trial/plan/role from profiles — never trust a client-supplied value.
   const { data: profileData } = await getSupabaseAdmin()
     .from('profiles')
-    .select('has_used_trial')
+    .select('has_used_trial, subscription_tier, role')
     .eq('id', user.userId)
     .single();
   const hasUsedTrial: boolean = profileData?.has_used_trial ?? false;
@@ -57,11 +57,22 @@ async function handleSubscriptionStatus(
 
   // trialEligible: server-computed and returned so the client can rely on
   // this field rather than independently re-deriving eligibility.
-  // Requires: trial feature enabled, no prior trial, no active subscription.
+  // Requires: trial feature enabled AND all of:
+  //   - no prior trial used
+  //   - no active/trialing/past_due subscription
+  //   - no historical Pro/Pro+ subscription row (former paid users are ineligible)
+  //   - profile tier not elevated to Pro/ProPlus without a Stripe sub
+  //   - role is not Admin or BetaTester (already have elevated access)
   const activeStatuses = ['active', 'trialing', 'past_due'];
+  const hasHistoricalPaidPlan = ['Pro', 'Pro+'].includes(row?.plan ?? '');
+  const profileTierElevated   = ['Pro', 'ProPlus'].includes(profileData?.subscription_tier ?? '');
+  const roleElevated          = ['Admin', 'BetaTester'].includes(profileData?.role ?? '');
   const trialEligible = proTrialEnabled &&
     !hasUsedTrial &&
-    !activeStatuses.includes(row?.status ?? '');
+    !activeStatuses.includes(row?.status ?? '') &&
+    !hasHistoricalPaidPlan &&
+    !profileTierElevated &&
+    !roleElevated;
 
   if (!row) {
     return json(res, 200, {
@@ -142,7 +153,7 @@ async function handleCreateCheckout(
   // Reject if the user already has an active or trialing subscription.
   const { data: existing } = await getSupabaseAdmin()
     .from('subscriptions')
-    .select('status, stripe_customer_id')
+    .select('status, stripe_customer_id, plan')
     .eq('user_id', user.userId)
     .single();
 
@@ -154,19 +165,23 @@ async function handleCreateCheckout(
   }
 
   // Server-side trial eligibility — authoritative, never trusts client input.
-  // Requires all of: PRO_TRIAL_ENABLED=true, plan=Pro (not Pro+),
-  // no prior trial (has_used_trial=false), no active/trialing/past_due subscription.
+  // Requires ALL of: PRO_TRIAL_ENABLED=true, plan=Pro (not Pro+),
+  // no prior trial, no active subscription, Explorer-only (no paid history).
   const proTrialEnabled = process.env.PRO_TRIAL_ENABLED?.trim() === 'true';
   let isTrialEligible = false;
   if (proTrialEnabled && plan === 'Pro') {
     const { data: profileData } = await getSupabaseAdmin()
       .from('profiles')
-      .select('has_used_trial')
+      .select('has_used_trial, subscription_tier, role')
       .eq('id', user.userId)
       .single();
     // has_used_trial defaults to true on error so that a DB failure never
     // accidentally grants a second trial.
-    isTrialEligible = !(profileData?.has_used_trial ?? true);
+    const noPriorTrial        = !(profileData?.has_used_trial ?? true);
+    const hasHistoricalPaidPlan = ['Pro', 'Pro+'].includes(existing?.plan ?? '');
+    const profileTierElevated   = ['Pro', 'ProPlus'].includes(profileData?.subscription_tier ?? '');
+    const roleElevated          = ['Admin', 'BetaTester'].includes(profileData?.role ?? '');
+    isTrialEligible = noPriorTrial && !hasHistoricalPaidPlan && !profileTierElevated && !roleElevated;
   }
 
   const appUrl = process.env.APP_URL ?? process.env.VITE_APP_URL ?? '';
