@@ -88,24 +88,27 @@ async function upsertSubscription(params: {
   periodEnd: string;
   cancelAtPeriodEnd: boolean;
   cancelAt: string | null;
+  trialStartedAt?: string | null;
+  trialEndsAt?: string | null;
 }): Promise<void> {
+  const row: Record<string, unknown> = {
+    user_id:                params.userId,
+    stripe_customer_id:     params.stripeCustomerId,
+    stripe_subscription_id: params.stripeSubscriptionId,
+    plan:                   params.plan,
+    status:                 params.status,
+    current_period_start:   params.periodStart,
+    current_period_end:     params.periodEnd,
+    cancel_at_period_end:   params.cancelAtPeriodEnd,
+    cancel_at:              params.cancelAt,
+    updated_at:             new Date().toISOString(),
+  };
+  if (params.trialStartedAt !== undefined) row.trial_started_at = params.trialStartedAt;
+  if (params.trialEndsAt    !== undefined) row.trial_ends_at    = params.trialEndsAt;
+
   const { error } = await getSupabaseAdmin()
     .from('subscriptions')
-    .upsert(
-      {
-        user_id:                params.userId,
-        stripe_customer_id:     params.stripeCustomerId,
-        stripe_subscription_id: params.stripeSubscriptionId,
-        plan:                   params.plan,
-        status:                 params.status,
-        current_period_start:   params.periodStart,
-        current_period_end:     params.periodEnd,
-        cancel_at_period_end:   params.cancelAtPeriodEnd,
-        cancel_at:              params.cancelAt,
-        updated_at:             new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    );
+    .upsert(row, { onConflict: 'user_id' });
   if (error) throw new Error(`subscriptions upsert failed: ${error.message}`);
 }
 
@@ -141,20 +144,50 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
   const { periodStart, periodEnd } = getPeriodTimestamps(sub);
 
+  // Preserve the actual Stripe subscription status. When a trial period is
+  // active, Stripe reports sub.status='trialing'; hardcoding 'active' here
+  // would misrepresent the subscription state and skip trial quota enforcement.
+  const isTrialing = sub.status === 'trialing';
+  const localStatus = isTrialing ? 'trialing' : 'active';
+
+  const trialStartedAt = (sub as any).trial_start
+    ? new Date((sub as any).trial_start * 1000).toISOString()
+    : null;
+  const trialEndsAt = (sub as any).trial_end
+    ? new Date((sub as any).trial_end * 1000).toISOString()
+    : null;
+
   await upsertSubscription({
     userId,
     stripeCustomerId:     session.customer as string,
     stripeSubscriptionId: session.subscription as string,
     plan,
-    status:              'active',
+    status:              localStatus,
     periodStart,
     periodEnd,
     cancelAtPeriodEnd:   false,
     cancelAt:            null,
+    trialStartedAt,
+    trialEndsAt,
   });
   await setProfileTier(userId, plan);
 
-  console.log(`[Stripe] checkout.session.completed — userId=${userId} plan=${plan}`);
+  // Mark the trial as used so the user cannot start a second one.
+  // Set unconditionally when trialing; idempotent on retry.
+  if (isTrialing) {
+    const { error: trialErr } = await getSupabaseAdmin()
+      .from('profiles')
+      .update({ has_used_trial: true, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (trialErr) {
+      console.error(`[Stripe] failed to set has_used_trial for userId=${userId}:`, trialErr.message);
+    }
+  }
+
+  console.log(
+    `[Stripe] checkout.session.completed — userId=${userId} plan=${plan} ` +
+    `status=${localStatus} trialing=${isTrialing}`,
+  );
 }
 
 async function handleSubscriptionUpdated(sub: Stripe.Subscription): Promise<void> {
@@ -328,12 +361,16 @@ async function handleInvoicePaymentSucceeded(inv: Stripe.Invoice): Promise<void>
   const { periodStart, periodEnd } = getPeriodTimestamps(sub);
 
   const cancelAt = getCancelAt(sub);
+  // Preserve 'trialing' — this event also fires for the $0 trial invoice paid
+  // at checkout. Hardcoding 'active' here would overwrite the correct trialing
+  // status and bypass trial quota enforcement for the full trial period.
+  const invoiceStatus = sub.status === 'trialing' ? 'trialing' : 'active';
   await upsertSubscription({
     userId:              row.user_id,
     stripeCustomerId:    customerId,
     stripeSubscriptionId: subscriptionId,
     plan,
-    status:              'active',
+    status:              invoiceStatus,
     periodStart,
     periodEnd,
     cancelAtPeriodEnd:   sub.cancel_at_period_end || cancelAt != null,
@@ -343,7 +380,7 @@ async function handleInvoicePaymentSucceeded(inv: Stripe.Invoice): Promise<void>
 
   console.log(
     `[Stripe] invoice.payment_succeeded — userId=${row.user_id} plan=${plan} ` +
-    `status=active (recovered from past_due)`,
+    `status=${invoiceStatus} (trialing preserved; active=past_due recovery)`,
   );
 }
 

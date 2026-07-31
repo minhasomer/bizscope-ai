@@ -26,7 +26,7 @@ import {
   MODEL_PRICING,
   GROUNDING_CALL_COST_USD,
 } from '../src/config/aiBudget';
-import { checkStandardQuota, checkRegionalQuota } from '../src/config/usageTracking';
+import { checkStandardQuota, checkRegionalQuota, checkTrialQuota } from '../src/config/usageTracking';
 import { getPlanLimits } from '../src/config/plans';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -356,13 +356,19 @@ check('analyze.ts: quota check precedes Gemini AI initialisation', () => {
   assert.ok(quotaIdx < geminiIdx, 'quota check must precede Gemini initialisation');
 });
 
-check('analyze.ts: incrementUsageTracking is after QUOTA_EXCEEDED early-return', () => {
+check('analyze.ts: quota rejection gate exists and precedes usage increment', () => {
   const src          = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
   const incrementIdx = src.indexOf('incrementUsageTracking(');
-  const quotaGateIdx = src.indexOf("code: 'QUOTA_EXCEEDED'");
+  // Trial and standard paths each emit their own rejection code.
+  const quotaGateIdx = Math.min(
+    ...[
+      "QUOTA_EXCEEDED",
+      "TRIAL_REPORT_LIMIT_REACHED",
+    ].map(code => src.indexOf(code)).filter(i => i !== -1),
+  );
   assert.ok(incrementIdx !== -1, 'incrementUsageTracking call not found');
-  assert.ok(quotaGateIdx !== -1, 'QUOTA_EXCEEDED gate not found');
-  assert.ok(incrementIdx > quotaGateIdx, 'incrementUsageTracking must come after the QUOTA_EXCEEDED return');
+  assert.ok(quotaGateIdx !== Infinity, 'no quota rejection code (QUOTA_EXCEEDED or TRIAL_REPORT_LIMIT_REACHED) found');
+  assert.ok(incrementIdx > quotaGateIdx, 'incrementUsageTracking must come after the quota rejection gate');
 });
 
 check('analyze.ts: quota check precedes cache-hit return (cache hits consume a quota credit)', () => {
@@ -445,6 +451,394 @@ check('regional-analysis.ts: incrementUsageTracking only in success path (after 
   // increment must come AFTER quota gate and AFTER Gemini call
   assert.ok(incrementIdx > quotaGateIdx, 'increment must be after QUOTA_EXCEEDED gate');
   assert.ok(incrementIdx > genIdx, 'increment must be after Gemini generateContent call');
+});
+
+// ── 9. Pro 7-day trial feature toggle (structural + async) ───────────────────
+//
+// Safety invariants for the PRO_TRIAL_ENABLED / VITE_PRO_TRIAL_ENABLED toggle.
+// All source-scan tests are structural: they assert that the server code is
+// wired correctly regardless of the env-var value at test-run time, making it
+// impossible for a code change to accidentally break the safety boundary.
+
+// T-1: Checkout trial block is gated by the server flag and plan='Pro'.
+//      If someone removes either condition, the trial becomes unconditional.
+check('T-1: checkout trial eligibility requires proTrialEnabled AND plan===Pro (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
+  assert.ok(
+    src.includes("proTrialEnabled && plan === 'Pro'"),
+    'checkout must gate trial on proTrialEnabled && plan === "Pro"',
+  );
+  assert.ok(
+    src.includes('trial_period_days: 7'),
+    'checkout must pass trial_period_days: 7 to Stripe',
+  );
+});
+
+// T-2: When proTrialEnabled=false the isTrialEligible flag starts false and the
+//      only place it can become true is inside the proTrialEnabled gate.
+check('T-2: isTrialEligible defaults false; only set to true inside proTrialEnabled block (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
+  assert.ok(
+    src.includes('let isTrialEligible = false;'),
+    'isTrialEligible must default to false',
+  );
+  // The only truthy assignment must be inside the proTrialEnabled guard.
+  const trueIdx = src.indexOf('isTrialEligible = noPriorTrial');
+  const gateIdx = src.indexOf('if (proTrialEnabled && plan === \'Pro\')');
+  assert.ok(trueIdx > gateIdx && gateIdx !== -1, 'isTrialEligible can only become true inside proTrialEnabled block');
+});
+
+// T-3: Checkout eligibility must not read any client-supplied trial field.
+//      A client passing {trial: true} or {isTrialEligible: true} must have no effect.
+check('T-3: checkout does not read client-supplied trial fields for eligibility (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
+  // body.trial and body.trialEligible must not appear anywhere that sets isTrialEligible.
+  assert.ok(
+    !src.includes('body.trial') && !src.includes('body.trialEligible') && !src.includes('body?.trial'),
+    'checkout must not read client-supplied trial field',
+  );
+});
+
+// T-4: Pro+ plan must never receive a trial — the plan === 'Pro' condition blocks it.
+check('T-4: Pro+ plan cannot receive trial (plan guard is exact string "Pro") (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
+  // The guard must be exact equality, not a startsWith or includes check.
+  assert.ok(
+    src.includes("plan === 'Pro'") && !src.includes("plan.startsWith('Pro')") && !src.includes("plan.includes('Pro')"),
+    'trial gate must use exact plan === "Pro" (not startsWith/includes which would admit Pro+)',
+  );
+});
+
+// T-5: has_used_trial is read from the DB (not from client body) and fails safe.
+//      If the DB read errors, the code must default to has_used_trial=true (no trial).
+check('T-5: has_used_trial read from DB; defaults true on error (fail-safe for second trial) (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
+  assert.ok(
+    src.includes("select('has_used_trial, subscription_tier, role')"),
+    'checkout must read has_used_trial, subscription_tier, and role from profiles',
+  );
+  assert.ok(
+    src.includes('profileData?.has_used_trial ?? true'),
+    'checkout must default has_used_trial to true on DB error (fails safe — no accidental second trial)',
+  );
+});
+
+// T-6: analyze.ts detects trialing via subscriptions.status in the DB, never via
+//      PRO_TRIAL_ENABLED. This ensures existing trialing users keep trial quota
+//      enforcement even after the feature toggle is disabled.
+check('T-6: analyze.ts detects trialing from DB status, not from PRO_TRIAL_ENABLED (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
+  assert.ok(
+    src.includes("_subRow?.status === 'trialing'"),
+    'analyze.ts must read trialing status from DB, not from env var',
+  );
+  // PRO_TRIAL_ENABLED must NOT appear in analyze.ts — analyze is toggle-agnostic.
+  assert.ok(
+    !src.includes('PRO_TRIAL_ENABLED'),
+    'analyze.ts must not read PRO_TRIAL_ENABLED — existing trialing users must always get trial quota',
+  );
+});
+
+// T-7: App.tsx derives trialEligible from the client VITE_ flag AND the server's
+//      trialEligible field — both must be present in the expression.
+check('T-7: App.tsx gates trialEligible on proTrialEnabled AND subscriptionStatus.trialEligible (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'App.tsx'), 'utf8');
+  assert.ok(
+    src.includes('proTrialEnabled && !!(subscriptionStatus?.trialEligible)'),
+    'App.tsx trialEligible must require both proTrialEnabled and server-returned trialEligible',
+  );
+});
+
+// T-8: The client and server flags are sourced independently.
+//      VITE_PRO_TRIAL_ENABLED is baked into the client bundle via vite.config.ts define.
+//      PRO_TRIAL_ENABLED is read from process.env in the API route (server).
+//      They must never share the same runtime read.
+check('T-8: client and server trial flags are independent reads (structural)', () => {
+  const clientSrc = fs.readFileSync(path.join(repoRoot, 'src', 'config', 'appConfig.ts'), 'utf8');
+  const serverSrc = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', '[...path].ts'), 'utf8');
+  const viteSrc   = fs.readFileSync(path.join(repoRoot, 'vite.config.ts'), 'utf8');
+  assert.ok(
+    clientSrc.includes('VITE_PRO_TRIAL_ENABLED'),
+    'appConfig.ts must read VITE_PRO_TRIAL_ENABLED',
+  );
+  assert.ok(
+    viteSrc.includes("'process.env.VITE_PRO_TRIAL_ENABLED'"),
+    'vite.config.ts must bake VITE_PRO_TRIAL_ENABLED into the client bundle via define block',
+  );
+  assert.ok(
+    serverSrc.includes("PRO_TRIAL_ENABLED?.trim() === 'true'"),
+    'checkout handler must read PRO_TRIAL_ENABLED from process.env (with .trim())',
+  );
+  // Server must NOT read VITE_ prefixed flag — that would couple to client build.
+  assert.ok(
+    !serverSrc.includes('VITE_PRO_TRIAL_ENABLED'),
+    'checkout handler must not read VITE_PRO_TRIAL_ENABLED',
+  );
+  // Client must NOT read unprefixed PRO_TRIAL_ENABLED — that exposes server env.
+  assert.ok(
+    !clientSrc.includes("process.env.PRO_TRIAL_ENABLED'") && !clientSrc.includes('"PRO_TRIAL_ENABLED"'),
+    'appConfig.ts must not reference server-only PRO_TRIAL_ENABLED key',
+  );
+});
+
+// T-9: webhook.ts only sets has_used_trial when the Stripe sub status is 'trialing'.
+//      A paid (non-trial) checkout must not mark has_used_trial.
+check('T-9: webhook only sets has_used_trial inside isTrialing block (structural)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'api', 'stripe', 'webhook.ts'), 'utf8');
+  const trialIdx    = src.indexOf('if (isTrialing)');
+  const hasUsedIdx  = src.indexOf('has_used_trial: true');
+  assert.ok(trialIdx   !== -1, 'webhook must have isTrialing guard');
+  assert.ok(hasUsedIdx !== -1, 'webhook must set has_used_trial: true');
+  assert.ok(hasUsedIdx > trialIdx, 'has_used_trial must only be set inside the isTrialing block');
+  // Confirm isTrialing is derived from Stripe sub.status, not from an env var.
+  assert.ok(
+    src.includes("sub.status === 'trialing'"),
+    "webhook must derive isTrialing from Stripe sub.status === 'trialing'",
+  );
+});
+
+// T-10: checkTrialQuota enforces the 5-report hard cap (async, mocked DB).
+checkAsync('T-10: checkTrialQuota allows ≤4 reports and blocks at 5 (async)', async () => {
+  for (const used of [0, 1, 4]) {
+    const r = await checkTrialQuota(mockDb(used), 'uid');
+    assert.equal(r.allowed, true,  `used=${used} should be allowed (limit=5)`);
+    assert.equal(r.limit,   5,     `trial limit must be 5`);
+    assert.equal(r.used,    used);
+  }
+  // At exactly limit=5, must block.
+  const blocked = await checkTrialQuota(mockDb(5), 'uid');
+  assert.equal(blocked.allowed, false, 'used=5 must be blocked');
+  assert.equal(blocked.used,    5);
+  assert.equal(blocked.limit,   5);
+
+  // Fails open on DB error or null admin.
+  const failOpen = await checkTrialQuota(mockDb(null, new Error('db down')), 'uid');
+  assert.equal(failOpen.allowed, true, 'trial quota must fail open on DB error');
+
+  const nullAdmin = await checkTrialQuota(null, 'uid');
+  assert.equal(nullAdmin.allowed, true, 'trial quota must fail open when supabaseAdmin is null');
+});
+
+// ── 10. Trial eligibility — Explorer-only gate (structural) ──────────────────
+//
+// The trial must be restricted to users whose server-resolved effective plan is
+// Explorer.  Former paid subscribers, profile-tier overrides (e.g. DB-level
+// ProPlus), and elevated roles (Admin / BetaTester) must all be rejected
+// server-side, regardless of has_used_trial or current subscription status.
+//
+// E-1 through E-5 are structural: they assert that the source code in
+// api/stripe/[...path].ts contains the required eligibility gates.
+
+const stripeSrc = fs.readFileSync(
+  path.join(repoRoot, 'api', 'stripe', '[...path].ts'),
+  'utf8',
+);
+
+check('E-1: checkout selects plan from subscriptions (historical-paid-plan gate)', () => {
+  assert.ok(
+    stripeSrc.includes("select('status, stripe_customer_id, plan')"),
+    'create-checkout-session must select plan from the subscriptions row ' +
+    'so it can reject users who previously held a Pro/Pro+ subscription',
+  );
+});
+
+check('E-2: checkout blocks former Pro/Pro+ subscribers via plan check', () => {
+  assert.ok(
+    stripeSrc.includes("hasHistoricalPaidPlan") &&
+    stripeSrc.includes("existing?.plan"),
+    'create-checkout-session must check existing?.plan against [Pro, Pro+] ' +
+    'so cancellation of a prior paid plan cannot re-grant a free trial',
+  );
+});
+
+check('E-3: checkout blocks elevated profile tiers (ProPlus DB override)', () => {
+  assert.ok(
+    stripeSrc.includes("profileTierElevated") &&
+    stripeSrc.includes("subscription_tier"),
+    'create-checkout-session must read profiles.subscription_tier and reject ' +
+    'Pro/ProPlus values so a DB-level plan override cannot obtain a trial',
+  );
+});
+
+check('E-4: checkout blocks elevated roles (Admin / BetaTester)', () => {
+  assert.ok(
+    stripeSrc.includes("roleElevated") &&
+    stripeSrc.includes("Admin") &&
+    stripeSrc.includes("BetaTester"),
+    'create-checkout-session must reject Admin and BetaTester roles ' +
+    'because they already carry elevated access',
+  );
+});
+
+check('E-5: subscription-status applies the same three additional gates', () => {
+  // Count how many times each condition appears — must appear in BOTH handlers.
+  const htCount   = (stripeSrc.match(/hasHistoricalPaidPlan/g) ?? []).length;
+  const tierCount = (stripeSrc.match(/profileTierElevated/g)   ?? []).length;
+  const roleCount = (stripeSrc.match(/roleElevated/g)          ?? []).length;
+  assert.ok(htCount   >= 2, `hasHistoricalPaidPlan must appear in both handlers (found ${htCount})`);
+  assert.ok(tierCount >= 2, `profileTierElevated must appear in both handlers (found ${tierCount})`);
+  assert.ok(roleCount >= 2, `roleElevated must appear in both handlers (found ${roleCount})`);
+});
+
+// ── 11. Homepage trial CTA — structural tests (H-1..H-15) ────────────────────
+//
+// These tests assert that the Hero component wiring and the App.tsx prop
+// connections match the ADD HOMEPAGE PRO TRIAL CTA spec.  All are pure source
+// scans — no runtime required.
+
+const heroSrc = fs.readFileSync(path.join(repoRoot, 'components', 'Hero.tsx'), 'utf8');
+const appSrc  = fs.readFileSync(path.join(repoRoot, 'App.tsx'), 'utf8');
+
+check('H-1: Hero.tsx renders "Start Free 7-Day Trial" CTA text', () => {
+  assert.ok(
+    heroSrc.includes('Start Free 7-Day Trial'),
+    'Hero.tsx must contain the trial CTA label "Start Free 7-Day Trial"',
+  );
+});
+
+check('H-2: Hero.tsx contains trial supporting copy', () => {
+  assert.ok(
+    heroSrc.includes('Includes up to 5 Pro reports'),
+    'Hero.tsx must include the supporting copy "Includes up to 5 Pro reports"',
+  );
+  assert.ok(
+    heroSrc.includes('Payment method required. Then $29/month.'),
+    'Hero.tsx must include the pricing disclosure text',
+  );
+});
+
+check('H-3: Hero.tsx invokes onProCheckout for the trial CTA', () => {
+  assert.ok(
+    heroSrc.includes('onProCheckout'),
+    'Hero.tsx must reference the onProCheckout callback',
+  );
+});
+
+check('H-4: Hero.tsx does not re-derive trial eligibility from raw profile fields', () => {
+  assert.ok(
+    !heroSrc.includes('has_used_trial'),
+    'Hero.tsx must not read has_used_trial — eligibility is server-computed and passed via trialEligible prop',
+  );
+  assert.ok(
+    !heroSrc.includes('subscription_tier'),
+    'Hero.tsx must not read subscription_tier — plan state is passed via currentPlan/hasPaidSubscription props',
+  );
+});
+
+check('H-5: App.tsx passes trialEligible prop to Hero', () => {
+  assert.ok(
+    appSrc.includes('trialEligible={trialEligible}'),
+    'App.tsx must pass trialEligible={trialEligible} to <Hero>',
+  );
+});
+
+check('H-6: Hero.tsx implements trial-signup state with onSignUp for signed-out visitors', () => {
+  assert.ok(
+    heroSrc.includes("'trial-signup'"),
+    'Hero.tsx must have a trial-signup CTA state for signed-out visitors',
+  );
+  assert.ok(
+    heroSrc.includes('onSignUp'),
+    'Hero.tsx must reference the onSignUp callback used by the trial-signup state',
+  );
+});
+
+check('H-7: Hero.tsx implements get-pro state with "Get Pro →" label', () => {
+  assert.ok(
+    heroSrc.includes("'get-pro'"),
+    'Hero.tsx must have a get-pro CTA state for ineligible signed-in users',
+  );
+  assert.ok(
+    heroSrc.includes('Get Pro →'),
+    'Hero.tsx must render "Get Pro →" in the get-pro state',
+  );
+});
+
+check('H-8: Hero.tsx implements dashboard state with "Go to Dashboard →" label', () => {
+  assert.ok(
+    heroSrc.includes("ctaState === 'dashboard'"),
+    'Hero.tsx must have a dashboard CTA state',
+  );
+  assert.ok(
+    heroSrc.includes('Go to Dashboard →'),
+    'Hero.tsx must render "Go to Dashboard →" in the dashboard state',
+  );
+});
+
+check('H-9: Hero.tsx routes non-Explorer plans (Admin/BetaTester) to dashboard, not trial', () => {
+  assert.ok(
+    heroSrc.includes("currentPlan !== 'Explorer'"),
+    "Hero.tsx must guard non-Explorer plans via currentPlan !== 'Explorer' " +
+    'so Admin and BetaTester users are never shown the trial CTA',
+  );
+});
+
+check('H-10: Hero.tsx implements trialing-active state with trial notice', () => {
+  assert.ok(
+    heroSrc.includes("'trialing-active'"),
+    'Hero.tsx must have a trialing-active CTA state',
+  );
+  assert.ok(
+    heroSrc.includes('Your Pro trial is active.'),
+    'Hero.tsx must render "Your Pro trial is active." in the trialing-active state',
+  );
+});
+
+check('H-11: Signed-out trial CTA is gated by proTrialEnabled', () => {
+  assert.ok(
+    heroSrc.includes('proTrialEnabled'),
+    'Hero.tsx must reference the proTrialEnabled prop',
+  );
+  const hasSignupGate = /!isAuthenticated.*proTrialEnabled|proTrialEnabled.*!isAuthenticated/.test(heroSrc);
+  assert.ok(
+    hasSignupGate,
+    'Hero.tsx getHeroCTAState must require both !isAuthenticated AND proTrialEnabled for trial-signup state',
+  );
+});
+
+check('H-12: Hero.tsx has a default fallback state rendering "View Pricing →"', () => {
+  assert.ok(
+    heroSrc.includes("'default'"),
+    "Hero.tsx must have a 'default' CTA state as the final fallback",
+  );
+  assert.ok(
+    heroSrc.includes('View Pricing →'),
+    'Hero.tsx must render "View Pricing →" in the default fallback state',
+  );
+});
+
+check('H-13: Hero.tsx uses subscriptionStatusLoaded to prevent CTA flash', () => {
+  assert.ok(
+    heroSrc.includes('subscriptionStatusLoaded'),
+    'Hero.tsx must check the subscriptionStatusLoaded prop',
+  );
+  assert.ok(
+    heroSrc.includes("'loading'"),
+    "Hero.tsx must have a 'loading' CTA state that returns the neutral fallback while status is in-flight",
+  );
+});
+
+check('H-14: App.tsx passes subscriptionStatusLoaded to Hero', () => {
+  assert.ok(
+    appSrc.includes('subscriptionStatusLoaded={subscriptionStatusLoaded}'),
+    'App.tsx must pass subscriptionStatusLoaded={subscriptionStatusLoaded} to <Hero>',
+  );
+  assert.ok(
+    appSrc.includes('const subscriptionStatusLoaded'),
+    'App.tsx must define subscriptionStatusLoaded',
+  );
+});
+
+check('H-15: PricingTiers.tsx original trialEligible CTA logic is intact', () => {
+  const pricingSrc = fs.readFileSync(path.join(repoRoot, 'components', 'PricingTiers.tsx'), 'utf8');
+  assert.ok(
+    pricingSrc.includes('trialEligible'),
+    'PricingTiers.tsx must still reference trialEligible — the pricing page CTA must be unchanged',
+  );
+  assert.ok(
+    pricingSrc.includes('Start Free 7-Day Trial'),
+    'PricingTiers.tsx must still contain "Start Free 7-Day Trial" — its trial CTA must be intact',
+  );
 });
 
 // ── Run async tests, then report ──────────────────────────────────────────────

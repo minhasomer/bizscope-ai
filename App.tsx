@@ -10,7 +10,7 @@ import { OpportunityExplorer } from './components/OpportunityExplorer';
 import { SavedReports } from './components/SavedReports';
 import { SavedReportsService } from './services/savedReportsService';
 import { generateViabilityReport, generateAnonymousPreviewReport, ApiError } from './services/geminiService';
-import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess } from './src/config/appConfig';
+import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess, proTrialEnabled } from './src/config/appConfig';
 import type { ViabilityReport, OpportunityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { mockSavedReports } from './src/data/mockSavedReports.js';
@@ -835,6 +835,18 @@ const App: React.FC = () => {
     !!subscriptionStatus &&
     MANAGEABLE_SUBSCRIPTION_STATUSES.has(subscriptionStatus.status);
 
+  /**
+   * VITE_PRO_TRIAL_ENABLED gates the promotional CTA presentation only.
+   * Actual eligibility is server-computed (subscriptionStatus.trialEligible) from
+   * PRO_TRIAL_ENABLED, has_used_trial, and subscription state — never re-derived
+   * here. Client flag false → always shows "Get Pro". Client flag true + server
+   * flag false → CTA copy shows, but checkout creates a normal paid session.
+   */
+  const trialEligible = proTrialEnabled && !!(subscriptionStatus?.trialEligible);
+  const isTrialing = subscriptionStatus?.status === 'trialing';
+  // False only while a signed-in user's status fetch is still in-flight — prevents hero CTA flash.
+  const subscriptionStatusLoaded = !currentUser || subscriptionStatus !== null;
+
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
       navigate('settings');
@@ -971,6 +983,7 @@ const App: React.FC = () => {
               hasPaidSubscription={hasPaidSubscription}
               pricingActionLoading={pricingActionLoading}
               pricingActionError={pricingActionError}
+              trialEligible={trialEligible}
             />
           </div>
         );
@@ -1494,7 +1507,22 @@ const App: React.FC = () => {
       default: // Home
         return (
           <>
-            <Hero onSubmit={handleAnalysisRequest} onNavigate={navigate} isLoading={isLoading} hasResults={!!report || isLoading} currentPlan={userPlan} isAuthenticated={!!currentUser} />
+            <Hero
+              onSubmit={handleAnalysisRequest}
+              onNavigate={navigate}
+              isLoading={isLoading}
+              hasResults={!!report || isLoading}
+              currentPlan={userPlan}
+              isAuthenticated={!!currentUser}
+              trialEligible={trialEligible}
+              proTrialEnabled={proTrialEnabled}
+              hasPaidSubscription={hasPaidSubscription}
+              isTrialing={isTrialing}
+              subscriptionStatusLoaded={subscriptionStatusLoaded}
+              onProCheckout={() => handleCheckout('Pro')}
+              onSignUp={() => navigate('settings', 'signup')}
+              onGoToDashboard={() => navigate('billing')}
+            />
             
             {/* Results output block — compact preview; full report lives at 'report' view */}
             {(isLoading || error || report || showPreviewCTA) && (

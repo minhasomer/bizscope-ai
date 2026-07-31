@@ -42,7 +42,38 @@ async function handleSubscriptionStatus(
   const user = await verifyAuth(req.headers['authorization'] as string | undefined);
   if (!user) return json(res, 401, { error: 'Unauthorized.' });
 
+  // Server-authoritative trial feature flag.
+  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED?.trim() === 'true';
+
+  // Fetch trial/plan/role from profiles — never trust a client-supplied value.
+  const { data: profileData } = await getSupabaseAdmin()
+    .from('profiles')
+    .select('has_used_trial, subscription_tier, role')
+    .eq('id', user.userId)
+    .single();
+  const hasUsedTrial: boolean = profileData?.has_used_trial ?? false;
+
   const row = await getSubscriptionRow(user.userId);
+
+  // trialEligible: server-computed and returned so the client can rely on
+  // this field rather than independently re-deriving eligibility.
+  // Requires: trial feature enabled AND all of:
+  //   - no prior trial used
+  //   - no active/trialing/past_due subscription
+  //   - no historical Pro/Pro+ subscription row (former paid users are ineligible)
+  //   - profile tier not elevated to Pro/ProPlus without a Stripe sub
+  //   - role is not Admin or BetaTester (already have elevated access)
+  const activeStatuses = ['active', 'trialing', 'past_due'];
+  const hasHistoricalPaidPlan = ['Pro', 'Pro+'].includes(row?.plan ?? '');
+  const profileTierElevated   = ['Pro', 'ProPlus'].includes(profileData?.subscription_tier ?? '');
+  const roleElevated          = ['Admin', 'BetaTester'].includes(profileData?.role ?? '');
+  const trialEligible = proTrialEnabled &&
+    !hasUsedTrial &&
+    !activeStatuses.includes(row?.status ?? '') &&
+    !hasHistoricalPaidPlan &&
+    !profileTierElevated &&
+    !roleElevated;
+
   if (!row) {
     return json(res, 200, {
       plan:             'Explorer',
@@ -51,6 +82,9 @@ async function handleSubscriptionStatus(
       currentPeriodEnd: null,
       customerId:       null,
       subscriptionId:   null,
+      hasUsedTrial,
+      trialEligible,
+      proTrialEnabled,
     });
   }
 
@@ -62,6 +96,22 @@ async function handleSubscriptionStatus(
     row.cancel_at_period_end ||
     (cancelAt != null && new Date(cancelAt) > new Date());
 
+  const trialing = row.status === 'trialing';
+
+  // Include trial report usage for trialing subscribers so the billing page
+  // can show the 5-report cap progress without a separate API call.
+  let trialReportCount: number | undefined;
+  if (trialing) {
+    const { data: usageData } = await getSupabaseAdmin()
+      .from('usage_tracking')
+      .select('count')
+      .eq('user_id', user.userId)
+      .eq('report_type', 'standard')
+      .eq('month_key', 'trial')
+      .maybeSingle();
+    trialReportCount = usageData?.count ?? 0;
+  }
+
   return json(res, 200, {
     plan:             row.plan,
     status:           row.status,
@@ -69,6 +119,13 @@ async function handleSubscriptionStatus(
     currentPeriodEnd: row.current_period_end ?? null,
     customerId:       row.stripe_customer_id ?? null,
     subscriptionId:   row.stripe_subscription_id ?? null,
+    hasUsedTrial,
+    trialEligible,
+    proTrialEnabled,
+    trialing,
+    trialStartedAt:   row.trial_started_at ?? null,
+    trialEndsAt:      row.trial_ends_at    ?? null,
+    ...(trialReportCount !== undefined && { trialReportCount }),
   });
 }
 
@@ -96,15 +153,35 @@ async function handleCreateCheckout(
   // Reject if the user already has an active or trialing subscription.
   const { data: existing } = await getSupabaseAdmin()
     .from('subscriptions')
-    .select('status, stripe_customer_id')
+    .select('status, stripe_customer_id, plan')
     .eq('user_id', user.userId)
     .single();
 
-  if (existing && (existing.status === 'active' || existing.status === 'trialing')) {
+  if (existing && (existing.status === 'active' || existing.status === 'trialing' || existing.status === 'past_due')) {
     return json(res, 409, {
       code:  'ACTIVE_SUBSCRIPTION_EXISTS',
       error: 'An active subscription already exists. Use the Billing Portal to change plans.',
     });
+  }
+
+  // Server-side trial eligibility — authoritative, never trusts client input.
+  // Requires ALL of: PRO_TRIAL_ENABLED=true, plan=Pro (not Pro+),
+  // no prior trial, no active subscription, Explorer-only (no paid history).
+  const proTrialEnabled = process.env.PRO_TRIAL_ENABLED?.trim() === 'true';
+  let isTrialEligible = false;
+  if (proTrialEnabled && plan === 'Pro') {
+    const { data: profileData } = await getSupabaseAdmin()
+      .from('profiles')
+      .select('has_used_trial, subscription_tier, role')
+      .eq('id', user.userId)
+      .single();
+    // has_used_trial defaults to true on error so that a DB failure never
+    // accidentally grants a second trial.
+    const noPriorTrial        = !(profileData?.has_used_trial ?? true);
+    const hasHistoricalPaidPlan = ['Pro', 'Pro+'].includes(existing?.plan ?? '');
+    const profileTierElevated   = ['Pro', 'ProPlus'].includes(profileData?.subscription_tier ?? '');
+    const roleElevated          = ['Admin', 'BetaTester'].includes(profileData?.role ?? '');
+    isTrialEligible = noPriorTrial && !hasHistoricalPaidPlan && !profileTierElevated && !roleElevated;
   }
 
   const appUrl = process.env.APP_URL ?? process.env.VITE_APP_URL ?? '';
@@ -114,8 +191,10 @@ async function handleCreateCheckout(
     mode:                'subscription',
     line_items:          [{ price: priceId, quantity: 1 }],
     client_reference_id: user.userId,
+    payment_method_collection: 'always',
     subscription_data: {
       metadata: { userId: user.userId },
+      ...(isTrialEligible && { trial_period_days: 7 }),
     },
     success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${appUrl}/billing`,
@@ -128,7 +207,7 @@ async function handleCreateCheckout(
   }
 
   const session = await stripe.checkout.sessions.create(sessionParams);
-  return json(res, 200, { url: session.url });
+  return json(res, 200, { url: session.url, trialEligible: isTrialEligible });
 }
 
 // ─── Route: POST create-portal-session ──────────────────────────────────────
