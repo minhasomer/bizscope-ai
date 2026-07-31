@@ -48,10 +48,18 @@ export class StripeService {
     return isDemoMode;
   }
 
-  static async startCheckout(plan: 'Pro' | 'Pro+'): Promise<void> {
+  /**
+   * Create a Stripe Checkout Session and return the redirect URL.
+   * The caller is responsible for firing analytics events BEFORE navigating
+   * so that begin_checkout fires only after a confirmed URL is received.
+   * Returns null in demo mode (caller should skip redirect and analytics).
+   */
+  static async startCheckout(
+    plan: 'Pro' | 'Pro+',
+  ): Promise<{ url: string; trialEligible: boolean } | null> {
     if (this.isDemo()) {
       console.info('[Stripe] Demo mode active — skipping real checkout.');
-      return;
+      return null;
     }
     assertLiveService('Stripe /api/stripe/create-checkout-session');
 
@@ -66,11 +74,11 @@ export class StripeService {
 
     const data = await resp.json();
     if (resp.status === 409 && data.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
-      // Caller should redirect to portal instead.
       throw Object.assign(new Error(data.error), { code: 'ACTIVE_SUBSCRIPTION_EXISTS' });
     }
     if (!resp.ok) throw new Error(data.error || 'Failed to create Stripe checkout session.');
-    if (data.url) window.location.href = data.url;
+    if (!data.url) throw new Error('No checkout URL returned from server.');
+    return { url: data.url as string, trialEligible: !!(data.trialEligible) };
   }
 
   static async openPortal(): Promise<void> {

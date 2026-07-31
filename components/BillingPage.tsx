@@ -109,7 +109,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
     betaFullAccess && !isDemo && !subStatus?.customerId;
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4 min-h-[70vh] animate-fade-in space-y-6">
+    <div className="max-w-3xl mx-auto py-12 px-4 min-h-[70vh] animate-fade-in space-y-6" data-clarity-mask="True">
 
       {/* Page Header */}
       <div>

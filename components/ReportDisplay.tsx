@@ -883,7 +883,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
   };
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth">
+    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto scroll-smooth" data-clarity-mask="True">
         {/* Anonymous preview banner — shown when report was generated without an account */}
         {report.isPreview && (
           <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">

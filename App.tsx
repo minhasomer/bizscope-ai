@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { initAnalytics, trackPageView, trackEvent } from './src/utils/analytics';
+import { captureAttribution } from './src/utils/attribution';
 import { Hero } from './components/Hero';
 import { ReportDisplay } from './components/ReportDisplay';
 import { ReportErrorBoundary } from './components/ReportErrorBoundary';
@@ -131,6 +133,42 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  // SPA page_view tracking — fires once per view change (Strategy B: manual events).
+  // GA4 Enhanced Measurement auto page_view is disabled (send_page_view: false).
+  // This covers initial load, navigate() calls, and browser back/forward.
+  useEffect(() => {
+    const VIEW_TITLES: Record<string, string> = {
+      home:           'BizScope — AI-Powered Business Viability Analysis',
+      pricing:        'Pricing — BizScope',
+      opportunities:  'Market Gap Explorer — BizScope',
+      dashboard:      'Reports Dashboard — BizScope',
+      settings:       'Account Settings — BizScope',
+      billing:        'Billing — BizScope',
+      'reset-password': 'Reset Password — BizScope',
+      contact:        'Contact — BizScope',
+      privacy:        'Privacy Policy — BizScope',
+      terms:          'Terms of Service — BizScope',
+      samples:        'Sample Reports — BizScope',
+      report:         'Report — BizScope',
+      about:          'About BizScope',
+    };
+    const title = VIEW_TITLES[currentView] ?? 'BizScope';
+    trackPageView(currentView, title);
+    // pricing_viewed fires here as well (once per navigation to pricing).
+    if (currentView === 'pricing') {
+      trackEvent('pricing_viewed');
+    }
+    // Update the canonical <link> tag to reflect the current view so search
+    // engines index each view at its own URL rather than consolidating all to /.
+    try {
+      const canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (canonical) {
+        const base = 'https://www.bizscope.app';
+        canonical.href = currentView === 'home' ? `${base}/` : `${base}/?view=${encodeURIComponent(currentView)}`;
+      }
+    } catch { /* non-fatal */ }
+  }, [currentView]);
+
   // Keep the sessionStorage mirror in sync with the in-memory report.
   // Cleared on sign-out / new analysis via the existing setReport(null) calls.
   useEffect(() => {
@@ -203,6 +241,12 @@ const App: React.FC = () => {
 
   // Log active service configuration once on mount (collapsed console group).
   useEffect(() => { bootstrapGuardrails(); }, []);
+
+  // Initialize analytics and capture UTM attribution on first mount.
+  useEffect(() => {
+    captureAttribution();
+    initAnalytics();
+  }, []);
 
   // On mount: check for a pending analysis written before the tab was discarded.
   // sessionStorage survives Android Chrome tab discard/reload (cleared only on
@@ -600,6 +644,13 @@ const App: React.FC = () => {
       startedAt: Date.now(),
     }));
 
+    trackEvent('viability_report_started', {
+      report_type: 'preview',
+      subscription_tier: 'Explorer',
+      authenticated: false,
+      source_page: 'home',
+    });
+
     try {
       const previewReport = await generateAnonymousPreviewReport(
         businessType,
@@ -610,6 +661,12 @@ const App: React.FC = () => {
       UsageTrackerService.incrementAnonymousPreviewUsage();
       setReport(previewReport);
       sessionStorage.removeItem('bizscope_pending_preview');
+      trackEvent('viability_report_completed', {
+        report_type: 'preview',
+        subscription_tier: 'Explorer',
+        authenticated: false,
+        cached: false,
+      });
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -624,6 +681,13 @@ const App: React.FC = () => {
         return;
       }
       sessionStorage.removeItem('bizscope_pending_preview');
+      const errorCategory = isNetworkInterruption(rawMessage) ? 'network_interruption' : 'api_error';
+      trackEvent('viability_report_failed', {
+        report_type: 'preview',
+        subscription_tier: 'Explorer',
+        authenticated: false,
+        error_category: errorCategory,
+      });
       setError(rawMessage);
     } finally {
       setIsLoading(false);
@@ -662,6 +726,13 @@ const App: React.FC = () => {
       document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
 
+    trackEvent('viability_report_started', {
+      report_type: 'standard',
+      subscription_tier: userPlan,
+      authenticated: !!currentUser,
+      source_page: 'home',
+    });
+
     try {
       if (forceRegenerate) {
         await ReportCacheService.invalidate(businessType, location, 'standard', userPlan);
@@ -679,6 +750,12 @@ const App: React.FC = () => {
       );
       setReport(fullReport);
       sessionStorage.removeItem('bizscope_pending_analysis');
+      trackEvent('viability_report_completed', {
+        report_type: 'standard',
+        subscription_tier: userPlan,
+        authenticated: !!currentUser,
+        cached: !!(fullReport?.loadedFromCache),
+      });
       setTimeout(() => {
         const resultsElement = document.getElementById('results-section');
         if (resultsElement) resultsElement.scrollIntoView({ behavior: 'smooth' });
@@ -700,6 +777,11 @@ const App: React.FC = () => {
       // limit modal instead of the generic error banner.
       if (err instanceof ApiError && err.code === 'QUOTA_EXCEEDED') {
         setShowLimitModal(true);
+        trackEvent('report_limit_reached', {
+          report_type: 'standard',
+          subscription_tier: userPlan,
+          authenticated: !!currentUser,
+        });
         return;
       }
       // Plan gate rejection (api/analyze.ts 403) — Explorer plan cannot generate
@@ -720,6 +802,18 @@ const App: React.FC = () => {
         rawMessage.includes('GEMINI_API_KEY') ||
         rawMessage.includes('MISSING_API_KEY') ||
         rawMessage.toLowerCase().includes('missing gemini api key');
+      // Error category: controlled enum — no raw error messages sent.
+      const errorCategory = isNetworkInterruption(rawMessage)
+        ? 'network_interruption'
+        : isMissingKey
+          ? 'configuration_error'
+          : 'api_error';
+      trackEvent('viability_report_failed', {
+        report_type: 'standard',
+        subscription_tier: userPlan,
+        authenticated: !!currentUser,
+        error_category: errorCategory,
+      });
       setError(
         isMissingKey
           ? `${rawMessage} — Contact support if this issue persists.`
@@ -775,12 +869,20 @@ const App: React.FC = () => {
     let willCallApi = forceRegenerate;
 
     if (forceRegenerate) {
-      if (!isUnlimited && !currentUsage.canRunStandard) { setShowLimitModal(true); return; }
+      if (!isUnlimited && !currentUsage.canRunStandard) {
+        setShowLimitModal(true);
+        trackEvent('report_limit_reached', { report_type: 'standard', subscription_tier: userPlan, authenticated: true });
+        return;
+      }
     } else {
       const cachedReport = await ReportCacheService.get(businessType, location, 'standard', userPlan);
       if (!cachedReport) {
         willCallApi = true;
-        if (!isUnlimited && !currentUsage.canRunStandard) { setShowLimitModal(true); return; }
+        if (!isUnlimited && !currentUsage.canRunStandard) {
+          setShowLimitModal(true);
+          trackEvent('report_limit_reached', { report_type: 'standard', subscription_tier: userPlan, authenticated: true });
+          return;
+        }
       }
       // Cache hit → fall through; runAnalysis will serve it from cache immediately.
     }
@@ -854,8 +956,24 @@ const App: React.FC = () => {
     }
     setPricingActionError(null);
     setPricingActionLoading(true);
+    // plan_selected fires on click intent — before we confirm checkout URL.
+    trackEvent('plan_selected', {
+      subscription_tier: plan,
+      source_page: currentView,
+      trial_offered: proTrialEnabled && plan === 'Pro' && !!(subscriptionStatus?.trialEligible),
+      authenticated: true,
+    });
     try {
-      await StripeService.startCheckout(plan);
+      const result = await StripeService.startCheckout(plan);
+      if (!result) return; // demo mode — startCheckout returns null, no redirect
+      // Fire begin_checkout ONLY after the checkout URL is confirmed. Fires once
+      // per successful session creation. Never fires on failed requests.
+      trackEvent('begin_checkout', {
+        subscription_tier: plan,
+        trial_offered: result.trialEligible,
+        source_page: currentView,
+      });
+      window.location.href = result.url;
     } catch (err: any) {
       if (err?.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
         // Already subscribed — portal is the right path; routing logic should
@@ -1346,7 +1464,7 @@ const App: React.FC = () => {
             <div className="mb-8">
               <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Legal</span>
               <h1 className="text-3xl font-black tracking-tight text-gray-900 mt-1">Privacy Policy</h1>
-              <p className="text-gray-400 text-sm mt-1">Last updated: May 2026</p>
+              <p className="text-gray-400 text-sm mt-1">Last updated: July 2026</p>
             </div>
             <div className="prose prose-sm max-w-none space-y-6 text-gray-600 leading-relaxed">
               <section>
@@ -1383,11 +1501,20 @@ const App: React.FC = () => {
                 <p className="text-sm">BizScope uses: <strong>Supabase</strong> (authentication and database), <strong>Google Gemini API</strong> (AI analysis — your query text is sent to Google's servers), <strong>Stripe</strong> (billing), and <strong>Google OAuth</strong> (sign-in). Each service operates under its own privacy policy.</p>
               </section>
               <section>
-                <h2 className="text-base font-black text-gray-900 mb-2">6. Your Rights</h2>
+                <h2 className="text-base font-black text-gray-900 mb-2">6. Analytics &amp; Session Recording</h2>
+                <p className="text-sm">We use the following analytics tools to understand how visitors use BizScope so we can improve the product:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm mt-2">
+                  <li><strong>Google Analytics 4 (GA4):</strong> Collects anonymized, aggregated data about page views, feature usage (e.g. "report generated", "plan page viewed"), and session counts. IP addresses are anonymized before storage. We do not send names, email addresses, business descriptions, or report content to GA4. GA4 uses first-party cookies (_ga, _gid) to distinguish sessions.</li>
+                  <li><strong>Microsoft Clarity:</strong> Records anonymized session replays and heatmaps so we can identify usability issues. Clarity is configured to mask all form inputs and report output areas — your business descriptions, analysis text, and account details are never captured. Clarity does not receive your email address or any identifiable information.</li>
+                </ul>
+                <p className="mt-2 text-sm">You can opt out of GA4 by installing the <a href="https://tools.google.com/dlpage/gaoptout" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">Google Analytics Opt-out Browser Add-on</a>. You can opt out of Clarity by visiting <a href="https://clarity.microsoft.com/optout" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">clarity.microsoft.com/optout</a>.</p>
+              </section>
+              <section>
+                <h2 className="text-base font-black text-gray-900 mb-2">7. Your Rights</h2>
                 <p className="text-sm">You may request deletion of your account and associated data at any time by contacting us via the Contact page. We will process deletion requests within 30 days.</p>
               </section>
               <section>
-                <h2 className="text-base font-black text-gray-900 mb-2">7. Contact</h2>
+                <h2 className="text-base font-black text-gray-900 mb-2">8. Contact</h2>
                 <p className="text-sm">Questions about this policy? Use the <button onClick={() => navigate('contact')} className="text-indigo-600 hover:underline cursor-pointer">Contact page</button> to reach our team.</p>
               </section>
             </div>

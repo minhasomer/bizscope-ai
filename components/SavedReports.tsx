@@ -525,6 +525,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                     </div>
 
                   {/* Info details */}
+                  <div data-clarity-mask="True">
                   <h4 className="text-base font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors">
                     {report.businessType}
                   </h4>
@@ -532,6 +533,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                     <MapPin className="w-3.5 h-3.5 text-gray-400" />
                     {formatLocationDisplay(report.location)}
                   </p>
+                  </div>
                   
                   {/* Generated Date label */}
                   <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-3 pt-3 border-t border-gray-100">
@@ -603,7 +605,7 @@ export const SavedReports: React.FC<SavedReportsProps> = ({ reports, currentPlan
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-slate-900 flex items-center gap-1">
+                    <p className="text-sm font-semibold text-slate-900 flex items-center gap-1" data-clarity-mask="True">
                       <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       {mgr.location}
                     </p>

@@ -412,7 +412,7 @@ export const Hero: React.FC<HeroProps> = ({
                 {/* Input Form */}
                 <form onSubmit={handleSubmit} className="max-w-2xl mx-auto mb-8 relative">
                     <div className="bg-white/[0.07] backdrop-blur-md rounded-2xl p-5 md:p-7 border border-white/[0.1] shadow-2xl">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5" data-clarity-mask="True">
                             {/* Business Type Input */}
                             <div className="relative" ref={businessRef}>
                                 <label className="block text-white text-sm font-semibold mb-2 text-left">

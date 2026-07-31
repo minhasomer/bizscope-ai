@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthService, UserProfile, EmailConfirmationRequiredError, AmbiguousSignupStateError } from '../services/authService';
 import { isDemoMode, betaClosed } from '../src/config/appConfig';
+import { trackEvent } from '../src/utils/analytics';
 import {
   Lock,
   Mail,
@@ -85,12 +86,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
         const user = await AuthService.signUp(email, password, fullName.trim(), 'Explorer', new Date().toISOString());
         // signUp() only resolves (rather than throwing EmailConfirmationRequiredError)
         // when Supabase returned an active session, i.e. confirmation isn't pending.
+        // Fire sign_up ONLY on confirmed account creation — not on error paths.
+        trackEvent('sign_up', { method: 'email' });
         setSuccessMessage('Account created! Signing you in...');
         setTimeout(() => {
           onAuthSuccess(user);
         }, 1000);
       } else if (mode === 'login') {
         const user = await AuthService.signIn(email, password);
+        // Fire login ONLY after a confirmed successful sign-in.
+        trackEvent('login', { method: 'email' });
         onAuthSuccess(user);
       } else if (mode === 'forgot') {
         await AuthService.resetPassword(email);
@@ -141,7 +146,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
   // "check your inbox" screen with Sign In and Forgot Password as escape hatches.
   if (ambiguousSignupEmail) {
     return (
-      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative">
+      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative" data-clarity-mask="True">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-bl-full pointer-events-none -mr-4 -mt-4 opacity-50" />
         <div className="text-center mb-8 relative z-10">
           <div className="flex items-center justify-center gap-2 mb-1">
@@ -189,7 +194,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
   // ── Verification-pending screen (replaces form after signup when email confirmation is required) ──
   if (signupPendingEmail) {
     return (
-      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative">
+      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative" data-clarity-mask="True">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-bl-full pointer-events-none -mr-4 -mt-4 opacity-50" />
         <div className="text-center mb-8 relative z-10">
           <div className="flex items-center justify-center gap-2 mb-1">
@@ -246,7 +251,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose, 
   }
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative">
+    <div className="w-full max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-150 shadow-xl overflow-hidden relative" data-clarity-mask="True">
       
       {/* Environment mode indicators — development builds only */}
       {import.meta.env.DEV && isDemoMode && (
