@@ -361,12 +361,16 @@ async function handleInvoicePaymentSucceeded(inv: Stripe.Invoice): Promise<void>
   const { periodStart, periodEnd } = getPeriodTimestamps(sub);
 
   const cancelAt = getCancelAt(sub);
+  // Preserve 'trialing' — this event also fires for the $0 trial invoice paid
+  // at checkout. Hardcoding 'active' here would overwrite the correct trialing
+  // status and bypass trial quota enforcement for the full trial period.
+  const invoiceStatus = sub.status === 'trialing' ? 'trialing' : 'active';
   await upsertSubscription({
     userId:              row.user_id,
     stripeCustomerId:    customerId,
     stripeSubscriptionId: subscriptionId,
     plan,
-    status:              'active',
+    status:              invoiceStatus,
     periodStart,
     periodEnd,
     cancelAtPeriodEnd:   sub.cancel_at_period_end || cancelAt != null,
@@ -376,7 +380,7 @@ async function handleInvoicePaymentSucceeded(inv: Stripe.Invoice): Promise<void>
 
   console.log(
     `[Stripe] invoice.payment_succeeded — userId=${row.user_id} plan=${plan} ` +
-    `status=active (recovered from past_due)`,
+    `status=${invoiceStatus} (trialing preserved; active=past_due recovery)`,
   );
 }
 
