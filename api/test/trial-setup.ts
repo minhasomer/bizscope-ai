@@ -42,8 +42,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   });
 
   // Delete existing test user if present (clean slate).
-  const { data: existing } = await admin.auth.admin.listUsers();
-  const prev = existing?.users?.find(u => u.email === TEST_EMAIL);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: listData } = await (admin.auth.admin as any).listUsers();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prev = (listData?.users as any[])?.find((u: any) => u.email === TEST_EMAIL);
   if (prev) {
     await admin.auth.admin.deleteUser(prev.id);
   }
