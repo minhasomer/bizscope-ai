@@ -15,11 +15,33 @@ interface HeroProps {
   currentPlan: string;
   /** Whether a real account is signed in. Anonymous visitors get one free preview, not the Explorer monthly quota. */
   isAuthenticated?: boolean;
+  // ── Trial CTA props — all optional; fall back to "View Pricing" when absent ──
+  /** Server-confirmed trial eligibility. Never re-derived here; taken from subscriptionStatus.trialEligible. */
+  trialEligible?: boolean;
+  /** Client-side VITE_PRO_TRIAL_ENABLED — controls promotional display only. */
+  proTrialEnabled?: boolean;
+  /** True when the user has an active, trialing, or past_due Stripe subscription. */
+  hasPaidSubscription?: boolean;
+  /** True when subscriptionStatus.status === 'trialing'. Subset of hasPaidSubscription. */
+  isTrialing?: boolean;
+  /** False while the subscription-status fetch is still in-flight for a signed-in user. Prevents CTA flash. */
+  subscriptionStatusLoaded?: boolean;
+  /** Initiates Pro checkout (signed-in users only). */
+  onProCheckout?: () => void;
+  /** Navigates to the signup screen (signed-out visitors). */
+  onSignUp?: () => void;
+  /** Navigates to the billing dashboard. */
+  onGoToDashboard?: () => void;
 }
 
 // Location suggestions now live in src/data/locationSuggestionsData.ts (shared with OpportunityExplorer)
 
-export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, hasResults, currentPlan, isAuthenticated = true }) => {
+export const Hero: React.FC<HeroProps> = ({
+  onSubmit, onNavigate, isLoading, hasResults, currentPlan, isAuthenticated = true,
+  trialEligible = false, proTrialEnabled = false, hasPaidSubscription = false,
+  isTrialing = false, subscriptionStatusLoaded = true,
+  onProCheckout, onSignUp, onGoToDashboard,
+}) => {
   const [businessType, setBusinessType] = useState('');
   const [location, setLocation] = useState('');
   const [blockedError, setBlockedError] = useState<string | null>(null);
@@ -236,6 +258,123 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
   };
 
   const heightClass = hasResults ? "py-16 sm:py-20" : "min-h-[calc(100vh-64px)]";
+
+  // ── Hero CTA state machine ────────────────────────────────────────────────────
+  // Determines which bottom CTA to render. Order matters: more-specific states
+  // are checked first so that e.g. an active trialing user never sees the trial
+  // signup button.
+  type HeroCTAState =
+    | 'loading'          // status fetch in-flight → neutral pricing fallback
+    | 'trialing-active'  // currently trialing → dashboard + "Your trial is active"
+    | 'dashboard'        // active paid or elevated plan → dashboard only
+    | 'trial'            // signed-in eligible Explorer → trial checkout
+    | 'trial-signup'     // signed-out + toggle on → trial signup
+    | 'get-pro'          // signed-in ineligible Explorer → paid checkout
+    | 'default';         // toggle off / signed-out no-trial → pricing link
+
+  const getHeroCTAState = (): HeroCTAState => {
+    if (!subscriptionStatusLoaded) return 'loading';
+    if (isTrialing) return 'trialing-active';
+    if (hasPaidSubscription) return 'dashboard';
+    if (isAuthenticated && currentPlan !== 'Explorer') return 'dashboard';
+    if (trialEligible) return 'trial';
+    if (!isAuthenticated && proTrialEnabled) return 'trial-signup';
+    if (isAuthenticated) return 'get-pro';
+    return 'default';
+  };
+
+  const renderHeroCTA = () => {
+    if (!onNavigate) return null;
+    const ctaState = getHeroCTAState();
+
+    const discoverLink = (
+      <button
+        onClick={() => onNavigate('opportunities')}
+        className="text-indigo-300 hover:text-white font-semibold underline underline-offset-4 decoration-indigo-400/50 hover:decoration-white/60 transition-all cursor-pointer"
+      >
+        Discover underserved markets →
+      </button>
+    );
+
+    if (ctaState === 'trial' || ctaState === 'trial-signup') {
+      const handler = ctaState === 'trial' ? onProCheckout : onSignUp;
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+            <button
+              onClick={handler}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-xl transition-all cursor-pointer"
+            >
+              Start Free 7-Day Trial →
+            </button>
+            {discoverLink}
+          </div>
+          <p className="text-slate-400 text-[11px] text-center">
+            Includes up to 5 Pro reports. Payment method required. Then $29/month.
+          </p>
+        </div>
+      );
+    }
+
+    if (ctaState === 'trialing-active') {
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+            <button
+              onClick={onGoToDashboard}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 hover:border-white/35 text-slate-200 font-semibold rounded-xl transition-all cursor-pointer"
+            >
+              Go to Dashboard →
+            </button>
+            {discoverLink}
+          </div>
+          <p className="text-indigo-300 text-[11px] text-center">Your Pro trial is active.</p>
+        </div>
+      );
+    }
+
+    if (ctaState === 'dashboard') {
+      return (
+        <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+          <button
+            onClick={onGoToDashboard}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 hover:border-white/35 text-slate-200 font-semibold rounded-xl transition-all cursor-pointer"
+          >
+            Go to Dashboard →
+          </button>
+          {discoverLink}
+        </div>
+      );
+    }
+
+    if (ctaState === 'get-pro') {
+      return (
+        <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+          <button
+            onClick={onProCheckout}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 hover:border-white/35 text-slate-200 font-semibold rounded-xl transition-all cursor-pointer"
+          >
+            Get Pro →
+          </button>
+          {discoverLink}
+        </div>
+      );
+    }
+
+    // 'loading', 'default' → original pricing link (no flash, no trial copy).
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+        <button
+          onClick={() => onNavigate('pricing')}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 hover:border-white/35 text-slate-200 font-semibold rounded-xl transition-all cursor-pointer"
+        >
+          View Pricing →
+        </button>
+        <span className="text-slate-700">·</span>
+        {discoverLink}
+      </div>
+    );
+  };
 
   return (
     <div className={`relative ${heightClass} bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] flex items-center justify-center`}>
@@ -544,23 +683,7 @@ export const Hero: React.FC<HeroProps> = ({ onSubmit, onNavigate, isLoading, has
                     </div>
                 )}
 
-                {onNavigate && (
-                    <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
-                        <button
-                            onClick={() => onNavigate('pricing')}
-                            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 hover:border-white/35 text-slate-200 font-semibold rounded-xl transition-all cursor-pointer"
-                        >
-                            View Pricing →
-                        </button>
-                        <span className="text-slate-700">·</span>
-                        <button
-                            onClick={() => onNavigate('opportunities')}
-                            className="text-indigo-300 hover:text-white font-semibold underline underline-offset-4 decoration-indigo-400/50 hover:decoration-white/60 transition-all cursor-pointer"
-                        >
-                            Discover underserved markets →
-                        </button>
-                    </div>
-                )}
+                {renderHeroCTA()}
             </div>
         </div>
     </div>

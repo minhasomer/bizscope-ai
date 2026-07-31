@@ -680,6 +680,167 @@ check('E-5: subscription-status applies the same three additional gates', () => 
   assert.ok(roleCount >= 2, `roleElevated must appear in both handlers (found ${roleCount})`);
 });
 
+// ── 11. Homepage trial CTA — structural tests (H-1..H-15) ────────────────────
+//
+// These tests assert that the Hero component wiring and the App.tsx prop
+// connections match the ADD HOMEPAGE PRO TRIAL CTA spec.  All are pure source
+// scans — no runtime required.
+
+const heroSrc = fs.readFileSync(path.join(repoRoot, 'components', 'Hero.tsx'), 'utf8');
+const appSrc  = fs.readFileSync(path.join(repoRoot, 'App.tsx'), 'utf8');
+
+check('H-1: Hero.tsx renders "Start Free 7-Day Trial" CTA text', () => {
+  assert.ok(
+    heroSrc.includes('Start Free 7-Day Trial'),
+    'Hero.tsx must contain the trial CTA label "Start Free 7-Day Trial"',
+  );
+});
+
+check('H-2: Hero.tsx contains trial supporting copy', () => {
+  assert.ok(
+    heroSrc.includes('Includes up to 5 Pro reports'),
+    'Hero.tsx must include the supporting copy "Includes up to 5 Pro reports"',
+  );
+  assert.ok(
+    heroSrc.includes('Payment method required. Then $29/month.'),
+    'Hero.tsx must include the pricing disclosure text',
+  );
+});
+
+check('H-3: Hero.tsx invokes onProCheckout for the trial CTA', () => {
+  assert.ok(
+    heroSrc.includes('onProCheckout'),
+    'Hero.tsx must reference the onProCheckout callback',
+  );
+});
+
+check('H-4: Hero.tsx does not re-derive trial eligibility from raw profile fields', () => {
+  assert.ok(
+    !heroSrc.includes('has_used_trial'),
+    'Hero.tsx must not read has_used_trial — eligibility is server-computed and passed via trialEligible prop',
+  );
+  assert.ok(
+    !heroSrc.includes('subscription_tier'),
+    'Hero.tsx must not read subscription_tier — plan state is passed via currentPlan/hasPaidSubscription props',
+  );
+});
+
+check('H-5: App.tsx passes trialEligible prop to Hero', () => {
+  assert.ok(
+    appSrc.includes('trialEligible={trialEligible}'),
+    'App.tsx must pass trialEligible={trialEligible} to <Hero>',
+  );
+});
+
+check('H-6: Hero.tsx implements trial-signup state with onSignUp for signed-out visitors', () => {
+  assert.ok(
+    heroSrc.includes("'trial-signup'"),
+    'Hero.tsx must have a trial-signup CTA state for signed-out visitors',
+  );
+  assert.ok(
+    heroSrc.includes('onSignUp'),
+    'Hero.tsx must reference the onSignUp callback used by the trial-signup state',
+  );
+});
+
+check('H-7: Hero.tsx implements get-pro state with "Get Pro →" label', () => {
+  assert.ok(
+    heroSrc.includes("'get-pro'"),
+    'Hero.tsx must have a get-pro CTA state for ineligible signed-in users',
+  );
+  assert.ok(
+    heroSrc.includes('Get Pro →'),
+    'Hero.tsx must render "Get Pro →" in the get-pro state',
+  );
+});
+
+check('H-8: Hero.tsx implements dashboard state with "Go to Dashboard →" label', () => {
+  assert.ok(
+    heroSrc.includes("ctaState === 'dashboard'"),
+    'Hero.tsx must have a dashboard CTA state',
+  );
+  assert.ok(
+    heroSrc.includes('Go to Dashboard →'),
+    'Hero.tsx must render "Go to Dashboard →" in the dashboard state',
+  );
+});
+
+check('H-9: Hero.tsx routes non-Explorer plans (Admin/BetaTester) to dashboard, not trial', () => {
+  assert.ok(
+    heroSrc.includes("currentPlan !== 'Explorer'"),
+    "Hero.tsx must guard non-Explorer plans via currentPlan !== 'Explorer' " +
+    'so Admin and BetaTester users are never shown the trial CTA',
+  );
+});
+
+check('H-10: Hero.tsx implements trialing-active state with trial notice', () => {
+  assert.ok(
+    heroSrc.includes("'trialing-active'"),
+    'Hero.tsx must have a trialing-active CTA state',
+  );
+  assert.ok(
+    heroSrc.includes('Your Pro trial is active.'),
+    'Hero.tsx must render "Your Pro trial is active." in the trialing-active state',
+  );
+});
+
+check('H-11: Signed-out trial CTA is gated by proTrialEnabled', () => {
+  assert.ok(
+    heroSrc.includes('proTrialEnabled'),
+    'Hero.tsx must reference the proTrialEnabled prop',
+  );
+  const hasSignupGate = /!isAuthenticated.*proTrialEnabled|proTrialEnabled.*!isAuthenticated/.test(heroSrc);
+  assert.ok(
+    hasSignupGate,
+    'Hero.tsx getHeroCTAState must require both !isAuthenticated AND proTrialEnabled for trial-signup state',
+  );
+});
+
+check('H-12: Hero.tsx has a default fallback state rendering "View Pricing →"', () => {
+  assert.ok(
+    heroSrc.includes("'default'"),
+    "Hero.tsx must have a 'default' CTA state as the final fallback",
+  );
+  assert.ok(
+    heroSrc.includes('View Pricing →'),
+    'Hero.tsx must render "View Pricing →" in the default fallback state',
+  );
+});
+
+check('H-13: Hero.tsx uses subscriptionStatusLoaded to prevent CTA flash', () => {
+  assert.ok(
+    heroSrc.includes('subscriptionStatusLoaded'),
+    'Hero.tsx must check the subscriptionStatusLoaded prop',
+  );
+  assert.ok(
+    heroSrc.includes("'loading'"),
+    "Hero.tsx must have a 'loading' CTA state that returns the neutral fallback while status is in-flight",
+  );
+});
+
+check('H-14: App.tsx passes subscriptionStatusLoaded to Hero', () => {
+  assert.ok(
+    appSrc.includes('subscriptionStatusLoaded={subscriptionStatusLoaded}'),
+    'App.tsx must pass subscriptionStatusLoaded={subscriptionStatusLoaded} to <Hero>',
+  );
+  assert.ok(
+    appSrc.includes('const subscriptionStatusLoaded'),
+    'App.tsx must define subscriptionStatusLoaded',
+  );
+});
+
+check('H-15: PricingTiers.tsx original trialEligible CTA logic is intact', () => {
+  const pricingSrc = fs.readFileSync(path.join(repoRoot, 'components', 'PricingTiers.tsx'), 'utf8');
+  assert.ok(
+    pricingSrc.includes('trialEligible'),
+    'PricingTiers.tsx must still reference trialEligible — the pricing page CTA must be unchanged',
+  );
+  assert.ok(
+    pricingSrc.includes('Start Free 7-Day Trial'),
+    'PricingTiers.tsx must still contain "Start Free 7-Day Trial" — its trial CTA must be intact',
+  );
+});
+
 // ── Run async tests, then report ──────────────────────────────────────────────
 
 for (const { name, fn } of asyncTests) {

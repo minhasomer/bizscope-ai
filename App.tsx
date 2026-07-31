@@ -843,6 +843,9 @@ const App: React.FC = () => {
    * flag false → CTA copy shows, but checkout creates a normal paid session.
    */
   const trialEligible = proTrialEnabled && !!(subscriptionStatus?.trialEligible);
+  const isTrialing = subscriptionStatus?.status === 'trialing';
+  // False only while a signed-in user's status fetch is still in-flight — prevents hero CTA flash.
+  const subscriptionStatusLoaded = !currentUser || subscriptionStatus !== null;
 
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
@@ -1504,7 +1507,22 @@ const App: React.FC = () => {
       default: // Home
         return (
           <>
-            <Hero onSubmit={handleAnalysisRequest} onNavigate={navigate} isLoading={isLoading} hasResults={!!report || isLoading} currentPlan={userPlan} isAuthenticated={!!currentUser} />
+            <Hero
+              onSubmit={handleAnalysisRequest}
+              onNavigate={navigate}
+              isLoading={isLoading}
+              hasResults={!!report || isLoading}
+              currentPlan={userPlan}
+              isAuthenticated={!!currentUser}
+              trialEligible={trialEligible}
+              proTrialEnabled={proTrialEnabled}
+              hasPaidSubscription={hasPaidSubscription}
+              isTrialing={isTrialing}
+              subscriptionStatusLoaded={subscriptionStatusLoaded}
+              onProCheckout={() => handleCheckout('Pro')}
+              onSignUp={() => navigate('settings', 'signup')}
+              onGoToDashboard={() => navigate('billing')}
+            />
             
             {/* Results output block — compact preview; full report lives at 'report' view */}
             {(isLoading || error || report || showPreviewCTA) && (
