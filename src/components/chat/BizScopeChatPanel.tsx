@@ -6,8 +6,10 @@ import { useBizScopeChat, STARTER_QUESTIONS } from '../../hooks/useBizScopeChat'
 import type { PageContext } from '../../types/chat';
 
 interface Props {
-  onClose:      () => void;
-  pageContext?: PageContext;
+  onClose:          () => void;
+  pageContext?:     PageContext;
+  isAuthenticated?: boolean;
+  onSignIn?:        () => void;
 }
 
 /**
@@ -15,7 +17,7 @@ interface Props {
  * Renders as a sliding panel from the bottom-right on desktop,
  * and a near-full-screen drawer on mobile.
  */
-export function BizScopeChatPanel({ onClose, pageContext }: Props) {
+export function BizScopeChatPanel({ onClose, pageContext, isAuthenticated = false, onSignIn }: Props) {
   const {
     messages,
     status,
@@ -190,7 +192,20 @@ export function BizScopeChatPanel({ onClose, pageContext }: Props) {
           {/* Daily limit exhausted notice */}
           {dailyExhausted && !conversationLimitReached && (
             <div className="mx-1 mb-3 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600 leading-relaxed">
-              Today's limit reached. Your allowance resets at midnight UTC.
+              {isAuthenticated ? (
+                "You've reached your daily BizScope Assistant limit. Your allowance resets at midnight UTC."
+              ) : (
+                <>
+                  <p>{"You've reached today's BizScope Assistant limit. Sign in to continue using BizScope and access your account features."}</p>
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); onSignIn?.(); }}
+                    className="mt-2 inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium hover:underline underline-offset-2 transition-colors"
+                  >
+                    Sign In →
+                  </button>
+                </>
+              )}
             </div>
           )}
 
