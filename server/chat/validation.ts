@@ -5,8 +5,9 @@
  * All user-supplied content is untrusted and must pass these guards.
  */
 
-export const MAX_MESSAGE_LENGTH   = 2_000;   // characters per individual message
-export const MAX_HISTORY_MESSAGES = 20;      // total messages in conversation history
+export const MAX_MESSAGE_LENGTH   = parseInt(process.env.CHAT_MAX_USER_MESSAGE_CHARS ?? '1500', 10);
+export const MAX_HISTORY_MESSAGES = 12;    // 6 user + 6 assistant turns
+export const MAX_TOTAL_HISTORY_CHARS = 10_000; // total chars across all history messages
 export const MAX_ROUTE_LENGTH     = 200;
 export const MAX_REPORT_TYPE_LEN  = 50;
 
@@ -54,7 +55,7 @@ export function validateChatRequest(body: unknown): ValidationResult {
     return { ok: false, error: 'messages array cannot be empty.', code: 'EMPTY_MESSAGES' };
   }
 
-  // Silently truncate to the allowed history window (keep the most recent messages)
+  // Silently trim to the allowed history window (keep most recent)
   const rawMessages = raw.messages.slice(-MAX_HISTORY_MESSAGES);
 
   const messages: ChatMessage[] = [];
@@ -65,6 +66,7 @@ export function validateChatRequest(body: unknown): ValidationResult {
     }
     const msg = m as Record<string, unknown>;
 
+    // Reject browser-supplied system role
     if (!isValidRole(msg.role)) {
       return {
         ok: false,
@@ -94,14 +96,21 @@ export function validateChatRequest(body: unknown): ValidationResult {
     };
   }
 
+  // Total history character guard: trim oldest messages until under limit
+  let totalChars = messages.reduce((s, m) => s + m.content.length, 0);
+  while (messages.length > 1 && totalChars > MAX_TOTAL_HISTORY_CHARS) {
+    const removed = messages.shift()!;
+    totalChars -= removed.content.length;
+  }
+
   // ── pageContext (optional, untrusted) ─────────────────────────────────────
   const pc = raw.pageContext && typeof raw.pageContext === 'object'
     ? raw.pageContext as Record<string, unknown>
     : {};
 
   const pageContext: PageContext = {
-    route:      sanitizeString(pc.route,      MAX_ROUTE_LENGTH)      || undefined,
-    reportType: sanitizeString(pc.reportType, MAX_REPORT_TYPE_LEN)   || undefined,
+    route:      sanitizeString(pc.route,      MAX_ROUTE_LENGTH)    || undefined,
+    reportType: sanitizeString(pc.reportType, MAX_REPORT_TYPE_LEN) || undefined,
   };
 
   return { ok: true, data: { messages, pageContext } };

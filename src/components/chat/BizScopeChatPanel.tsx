@@ -16,22 +16,28 @@ interface Props {
  * and a near-full-screen drawer on mobile.
  */
 export function BizScopeChatPanel({ onClose, pageContext }: Props) {
-  const { messages, status, errorMessage, sendMessage, clearChat } = useBizScopeChat();
-  const [draft, setDraft] = useState('');
-  const bottomRef         = useRef<HTMLDivElement>(null);
-  const firstFocusRef     = useRef<HTMLButtonElement>(null);
+  const {
+    messages,
+    status,
+    errorMessage,
+    remainingMessages,
+    conversationLimitReached,
+    sendMessage,
+    clearChat,
+  } = useBizScopeChat();
 
-  // Auto-scroll to newest message
+  const [draft, setDraft]     = useState('');
+  const bottomRef             = useRef<HTMLDivElement>(null);
+  const firstFocusRef         = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, status]);
 
-  // Focus the close button when the panel opens for keyboard accessibility
   useEffect(() => {
     firstFocusRef.current?.focus();
   }, []);
 
-  // Trap Escape key to close
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -52,10 +58,23 @@ export function BizScopeChatPanel({ onClose, pageContext }: Props) {
     sendMessage(q, pageContext);
   }
 
-  const showStarters = messages.length <= 1 && status !== 'loading';
+  // Navigate within the SPA by dispatching a hashchange / custom event.
+  // Falls back to window.location if the app router isn't listening.
+  function handleCtaClick(path: string) {
+    onClose();
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('bizscope:navigate', { detail: { path } }));
+    }, 150);
+  }
+
+  const showStarters   = messages.length <= 1 && status !== 'loading';
+  const dailyExhausted = remainingMessages === 0;
+  const composerLocked = dailyExhausted || conversationLimitReached;
+
+  // Remaining-messages label (shown only when close to limit)
+  const showRemaining = remainingMessages !== null && remainingMessages <= 5 && !dailyExhausted;
 
   return (
-    /* Overlay backdrop on mobile */
     <div
       className="fixed inset-0 z-50 flex items-end justify-end sm:items-end sm:justify-end pointer-events-none"
       aria-hidden="false"
@@ -98,6 +117,12 @@ export function BizScopeChatPanel({ onClose, pageContext }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Remaining-messages indicator (subtle, shown only when low) */}
+            {showRemaining && (
+              <span className="text-[10px] text-indigo-200 mr-1">
+                {remainingMessages} left today
+              </span>
+            )}
             <button
               type="button"
               onClick={clearChat}
@@ -128,7 +153,7 @@ export function BizScopeChatPanel({ onClose, pageContext }: Props) {
         >
           {messages.map(msg => (
             <React.Fragment key={msg.id}>
-              <ChatMessage message={msg} />
+              <ChatMessage message={msg} onCtaClick={handleCtaClick} />
             </React.Fragment>
           ))}
 
@@ -148,10 +173,24 @@ export function BizScopeChatPanel({ onClose, pageContext }: Props) {
             </div>
           )}
 
-          {/* Error state */}
+          {/* Non-limit error state */}
           {status === 'error' && errorMessage && (
             <div className="mx-1 mb-3 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100 text-xs text-red-600 leading-relaxed" role="alert">
               {errorMessage}
+            </div>
+          )}
+
+          {/* Conversation limit notice */}
+          {conversationLimitReached && (
+            <div className="mx-1 mb-3 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-100 text-xs text-amber-700 leading-relaxed">
+              Conversation limit reached. Start a new chat to continue — your daily allowance is preserved.
+            </div>
+          )}
+
+          {/* Daily limit exhausted notice */}
+          {dailyExhausted && !conversationLimitReached && (
+            <div className="mx-1 mb-3 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600 leading-relaxed">
+              Today's limit reached. Your allowance resets at midnight UTC.
             </div>
           )}
 
@@ -182,8 +221,12 @@ export function BizScopeChatPanel({ onClose, pageContext }: Props) {
           value={draft}
           onChange={setDraft}
           onSubmit={handleSubmit}
-          disabled={status === 'loading'}
-          placeholder="Ask about BizScope…"
+          disabled={status === 'loading' || composerLocked}
+          placeholder={
+            conversationLimitReached ? 'Start a new chat to continue…' :
+            dailyExhausted           ? 'Daily limit reached…' :
+                                       'Ask about BizScope…'
+          }
         />
       </div>
     </div>

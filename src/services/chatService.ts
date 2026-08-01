@@ -8,33 +8,50 @@
 import type { ChatMessage, PageContext } from '../types/chat';
 import { supabase } from '../../services/supabaseClient';
 
-// Re-export for convenience
 export type { ChatMessage, PageContext };
 
-export interface ChatApiResponse {
-  reply: string;
+export interface ChatResult {
+  reply:             string;
+  remainingMessages?: number;   // undefined = unlimited; 0 = exhausted
+  dailyLimit?:        number;
+  redirected?:        boolean;  // true if this was a scope redirect
+  cta?:               { label: string; path: string };
 }
 
 export interface ChatApiError {
-  error:  string;
-  code?:  string;
+  error: string;
+  code?: string;
+  remainingMessages?: number;
+  dailyLimit?: number;
 }
 
 /**
- * Send a conversation to the server and receive the assistant reply.
- * Attaches the Supabase JWT when the user is authenticated.
+ * Tagged error that preserves the server error code for the hook layer.
+ */
+export class ChatError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: string,
+    public readonly remainingMessages?: number,
+  ) {
+    super(message);
+    this.name = 'ChatError';
+  }
+}
+
+/**
+ * Send a conversation to the server and receive the full response.
+ * Attaches the Supabase JWT when authenticated.
  */
 export async function sendChatMessage(
   messages:    ChatMessage[],
   pageContext?: PageContext,
-): Promise<string> {
-  // Build the payload — strip client-only fields (id, timestamp)
+): Promise<ChatResult> {
   const payload = {
-    messages: messages.map(m => ({ role: m.role, content: m.content })),
-    pageContext: pageContext ?? {},
+    messages:    messages.map(m => ({ role: m.role, content: m.content })),
+    pageContext:  pageContext ?? {},
   };
 
-  // Attach auth token if available
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -54,11 +71,21 @@ export async function sendChatMessage(
   const data = await res.json().catch(() => ({ error: 'Invalid server response.' })) as any;
 
   if (!res.ok) {
-    const msg = (data as ChatApiError).error ?? `Request failed (${res.status}).`;
-    throw new Error(msg);
+    const errData = data as ChatApiError;
+    throw new ChatError(
+      errData.error ?? `Request failed (${res.status}).`,
+      errData.code,
+      errData.remainingMessages,
+    );
   }
 
-  const reply = (data as ChatApiResponse).reply;
-  if (!reply) throw new Error('Empty response from assistant.');
-  return reply;
+  if (!data.reply) throw new ChatError('Empty response from assistant.');
+
+  return {
+    reply:             data.reply,
+    remainingMessages: data.remainingMessages,
+    dailyLimit:        data.dailyLimit,
+    redirected:        data.redirected ?? false,
+    cta:               data.cta,
+  };
 }

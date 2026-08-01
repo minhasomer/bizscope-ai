@@ -17,6 +17,7 @@ import type { SubscriptionPlan } from '../../src/utils/planUtils.js';
 
 export interface SafeChatUserContext {
   isAuthenticated: boolean;
+  userId?: string;  // verified Supabase user ID — never from request body
   plan?: string;
   role?: string;
   standardReportsUsed?: number;
@@ -99,6 +100,7 @@ export async function buildAuthenticatedContext(token: string): Promise<SafeChat
 
     return {
       isAuthenticated: true,
+      userId: user.id,
       plan,
       role: profile.role,
       standardReportsUsed:  Number(standardUsed),

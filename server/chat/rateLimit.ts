@@ -1,42 +1,40 @@
 /**
- * BizScope Assistant — In-Memory Rate Limiter
+ * BizScope Assistant — In-Memory Per-Minute Rate Limiter
  *
- * Mirrors the pattern used in api/contact.ts.
- * Two independent buckets: one keyed by IP (anonymous users),
- * one keyed by user ID (authenticated users).
+ * Provides burst protection (5 requests / 60 s per identity).
+ * Intentionally in-memory: the 60-second window is short enough that
+ * serverless cold-starts are not a meaningful bypass vector.
  *
- * Resets on cold-start — good enough for a low-traffic beta.
- * Replace with a Redis-backed approach for high-traffic production.
+ * Daily limits (the real enforcement boundary) are in dailyLimit.ts
+ * backed by Supabase and persist across instances and redeployments.
  */
 
-const WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-const ANON_MAX  = 10;  // requests per IP per hour (anonymous)
-const AUTH_MAX  = 40;  // requests per user-ID per hour (authenticated)
+const WINDOW_MS = 60 * 1000; // 1 minute
+const PM_MAX    = parseInt(process.env.CHAT_PER_MINUTE_LIMIT ?? '5', 10);
 
 interface Bucket { count: number; resetAt: number }
 
 const anonLog: Map<string, Bucket> = new Map();
 const authLog: Map<string, Bucket> = new Map();
 
-function check(store: Map<string, Bucket>, key: string, max: number): boolean {
-  const now  = Date.now();
+function check(store: Map<string, Bucket>, key: string): boolean {
+  const now   = Date.now();
   const entry = store.get(key);
   if (!entry || now > entry.resetAt) {
     store.set(key, { count: 1, resetAt: now + WINDOW_MS });
     return false; // not limited
   }
-  if (entry.count >= max) return true; // limited
+  if (entry.count >= PM_MAX) return true; // limited
   entry.count += 1;
   return false;
 }
 
-/** Returns true when the anonymous IP has exceeded its quota. */
+/** Returns true when the anonymous IP has exceeded the per-minute quota. */
 export function isAnonRateLimited(ip: string): boolean {
-  return check(anonLog, ip || 'unknown', ANON_MAX);
+  return check(anonLog, ip || 'unknown');
 }
 
-/** Returns true when the authenticated user has exceeded their quota. */
+/** Returns true when the authenticated user has exceeded the per-minute quota. */
 export function isAuthRateLimited(userId: string): boolean {
-  return check(authLog, userId, AUTH_MAX);
+  return check(authLog, userId);
 }

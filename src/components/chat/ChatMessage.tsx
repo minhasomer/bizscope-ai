@@ -3,10 +3,11 @@ import type { ChatMessage as ChatMessageType } from '../../types/chat';
 
 interface Props {
   message: ChatMessageType;
+  onCtaClick?: (path: string) => void;
 }
 
-/** Renders a single chat message bubble. */
-export function ChatMessage({ message }: Props) {
+/** Renders a single chat message bubble with optional redirect CTA. */
+export function ChatMessage({ message, onCtaClick }: Props) {
   const isUser = message.role === 'user';
 
   return (
@@ -21,20 +22,32 @@ export function ChatMessage({ message }: Props) {
           </svg>
         </div>
       )}
-      <div
-        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-          isUser
-            ? 'bg-indigo-600 text-white rounded-br-sm'
-            : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-        }`}
-      >
-        {/* Render content with basic whitespace preservation */}
-        {message.content.split('\n').map((line, i) => (
-          <React.Fragment key={i}>
-            {line}
-            {i < message.content.split('\n').length - 1 && <br />}
-          </React.Fragment>
-        ))}
+      <div className="flex flex-col max-w-[85%] gap-1.5">
+        <div
+          className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+            isUser
+              ? 'bg-indigo-600 text-white rounded-br-sm'
+              : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+          }`}
+        >
+          {message.content.split('\n').map((line, i, arr) => (
+            <React.Fragment key={i}>
+              {line}
+              {i < arr.length - 1 && <br />}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* CTA button for scope-redirect messages */}
+        {!isUser && message.cta && (
+          <button
+            type="button"
+            onClick={() => onCtaClick?.(message.cta!.path)}
+            className="self-start text-xs text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl px-3 py-1.5 transition-colors font-medium"
+          >
+            {message.cta.label} →
+          </button>
+        )}
       </div>
     </div>
   );
