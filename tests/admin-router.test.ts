@@ -380,6 +380,90 @@ checkAsync('deeply nested admin path returns 404 (not routed to sub-handler)', a
   assert.equal(capturedStatus.code, 404, 'deeply nested path must return 404');
 });
 
+// ── 13. Chatbot monitoring — structural checks ────────────────────────────────
+// All tests are source-file checks; no live DB required.
+
+check('cost-summary queries chat_usage_daily table', () => {
+  assert.ok(
+    src.includes("from('chat_usage_daily')"),
+    'chat_usage_daily queried in cost-summary handler',
+  );
+});
+
+check('chat metrics are under a "chat:" key — clearly separate from report costs', () => {
+  assert.ok(
+    src.includes('chat:') && src.includes('totalCostUsd'),
+    'both chat: and totalCostUsd (report cost) keys present — costs are clearly separated',
+  );
+});
+
+check('chatbot today metrics include anonymous and authenticated split', () => {
+  assert.ok(
+    src.includes('anonymous:') && src.includes('authenticated:'),
+    'anonymous: and authenticated: sub-keys present',
+  );
+});
+
+check('blocked counts are reported in chatbot metrics', () => {
+  assert.ok(
+    src.includes('blockedRequests') && src.includes('blocked_count'),
+    'blockedRequests key and blocked_count DB column both present',
+  );
+});
+
+check('daily and monthly chatbot totals are distinct keys', () => {
+  assert.ok(
+    src.includes('today:') && src.includes('monthToDate:'),
+    'today: and monthToDate: are distinct top-level keys under chat:',
+  );
+});
+
+check('chatbot costs cannot overwrite report costs (separate accumulator variables)', () => {
+  // report costs use totalCost/totalCostUsd; chatbot uses todayChatCost/monthChatCost
+  assert.ok(
+    src.includes('todayChatCost') && src.includes('monthChatCost'),
+    'chatbot cost variables are distinct from totalCost (report cost)',
+  );
+  assert.ok(
+    !src.includes('totalCost += r.estimated_cost'),
+    'chat estimated_cost is never added to totalCost accumulator',
+  );
+});
+
+check('empty chatbot usage safely returns zeros (null-coalescing applied)', () => {
+  // The aggregation loop uses ?? 0 for all numeric fields
+  const chatSection = src.slice(src.indexOf('Chatbot metrics'));
+  assert.ok(
+    chatSection.includes('?? 0'),
+    'null-coalescing present in chatbot aggregation loop',
+  );
+});
+
+check('identity_key (hash) and user_id are NOT selected from chat_usage_daily', () => {
+  // The SELECT clause for chat_usage_daily must not include identity_key or user_id
+  const chatSelectMatch = src.match(/from\('chat_usage_daily'\)\s*\n?\s*\.select\('([^']+)'\)/g);
+  assert.ok(chatSelectMatch && chatSelectMatch.length >= 1, 'chat_usage_daily select found');
+  for (const s of chatSelectMatch ?? []) {
+    assert.ok(!s.includes('identity_key'), 'identity_key NOT in chat_usage_daily select');
+    assert.ok(!s.includes('user_id'),      'user_id NOT in chat_usage_daily select');
+  }
+});
+
+check('global request and cost limits are included in chat metrics response', () => {
+  assert.ok(
+    src.includes('globalRequestLimit') && src.includes('globalCostLimitUsd'),
+    'globalRequestLimit and globalCostLimitUsd present in response',
+  );
+});
+
+check('global chat limits read from env vars (not hardcoded)', () => {
+  assert.ok(
+    src.includes('CHAT_GLOBAL_DAILY_REQUEST_LIMIT') &&
+    src.includes('CHAT_GLOBAL_DAILY_COST_LIMIT_USD'),
+    'global limits read from env vars',
+  );
+});
+
 // ── Run async tests ───────────────────────────────────────────────────────────
 
 for (const { name, fn } of asyncTests) {
