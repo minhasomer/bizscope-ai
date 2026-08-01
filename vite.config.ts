@@ -37,6 +37,12 @@ export default defineConfig(({ mode }) => {
         'process.env.VITE_CLARITY_PROJECT_ID': JSON.stringify(
           env.VITE_CLARITY_PROJECT_ID ?? process.env.VITE_CLARITY_PROJECT_ID ?? '',
         ),
+        // BizScope Assistant feature flag.
+        // Must be explicitly set to 'true' on staging — defaults to disabled.
+        // Do NOT set on production until the feature is fully approved.
+        'process.env.VITE_BIZSCOPE_CHAT_ENABLED': JSON.stringify(
+          (env.VITE_BIZSCOPE_CHAT_ENABLED ?? process.env.VITE_BIZSCOPE_CHAT_ENABLED ?? 'false').trim(),
+        ),
       },
       resolve: {
         alias: {

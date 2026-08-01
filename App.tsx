@@ -39,6 +39,8 @@ import { MarketGapsTemplate } from './components/seo/MarketGapsTemplate';
 import { SampleReports } from './components/SampleReports';
 import { ReportSummaryCard } from './components/ReportSummaryCard';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
+import { BizScopeChatButton } from './src/components/chat/BizScopeChatButton';
+import { chatEnabled } from './src/config/appConfig';
 
 /** Returns true when an error message is a browser-level network interruption
  *  (e.g. Android Chrome killed the TCP connection when the tab was backgrounded)
@@ -1864,6 +1866,15 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* BizScope Assistant — floating chat button (staging feature flag) */}
+      {chatEnabled && (
+        <BizScopeChatButton
+          pageContext={{ route: currentView }}
+          isAuthenticated={!!currentUser}
+          onSignIn={() => navigate('settings')}
+        />
       )}
 
       {showPlanModal && (
