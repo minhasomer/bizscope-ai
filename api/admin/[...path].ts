@@ -209,8 +209,13 @@ async function handleBetaAccess(
 
 // ─── Sub-handler: cost-summary ────────────────────────────────────────────────
 //
-// Behaviour is identical to the original api/admin/cost-summary.ts.
+// Returns AI cost metrics for reports (usage_logs) and chatbot (chat_usage_daily).
+// Report and chatbot costs are kept clearly labeled and separate.
 // Ordering: method guard → auth → NOT_CONFIGURED → query
+
+// Global chatbot ceiling (env overrides; defaults match api/chat.ts)
+const CHAT_GLOBAL_REQ_LIMIT  = parseInt(process.env.CHAT_GLOBAL_DAILY_REQUEST_LIMIT   ?? '2000', 10);
+const CHAT_GLOBAL_COST_LIMIT = parseFloat(process.env.CHAT_GLOBAL_DAILY_COST_LIMIT_USD ?? '10');
 
 async function handleCostSummary(
   req: IncomingMessage & { body?: any },
@@ -233,8 +238,14 @@ async function handleCostSummary(
   const days = Math.min(Math.max(parseInt(parsed.searchParams.get('days') ?? '30', 10), 1), 365);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+  // Today and month-start in UTC (YYYY-MM-DD format matching chat_usage_daily.usage_date)
+  const now = new Date();
+  const todayStr     = now.toISOString().slice(0, 10);           // e.g. "2026-08-01"
+  const monthStart   = now.toISOString().slice(0, 7) + '-01';   // e.g. "2026-08-01"
+
   try {
-    const [totalsRes, recentRes] = await Promise.all([
+    const [totalsRes, recentRes, chatTodayRes, chatMonthRes] = await Promise.all([
+      // Existing: report AI cost totals
       supabaseAdmin
         .from('usage_logs')
         .select('plan, user_role, estimated_cost_usd, within_hard_cap')
@@ -245,6 +256,16 @@ async function handleCostSummary(
         .gte('generated_at', since)
         .order('generated_at', { ascending: false })
         .limit(20),
+      // New: chatbot usage today (grouped by identity_type: 'anon' | 'user')
+      supabaseAdmin
+        .from('chat_usage_daily')
+        .select('identity_type, message_count, blocked_count, input_tokens, output_tokens, estimated_cost')
+        .eq('usage_date', todayStr),
+      // New: chatbot usage this calendar month
+      supabaseAdmin
+        .from('chat_usage_daily')
+        .select('message_count, estimated_cost')
+        .gte('usage_date', monthStart),
     ]);
 
     if (totalsRes.error) throw totalsRes.error;
@@ -268,7 +289,48 @@ async function handleCostSummary(
       byRole[rl].cost += r.estimated_cost_usd ?? 0;
     }
 
+    // ── Chatbot metrics ────────────────────────────────────────────────────────
+    // Aggregate by identity_type to separate anon vs authenticated.
+    // identity_key (hash) and user_id are NOT returned.
+    const chatToday = chatTodayRes.data ?? [];
+    const chatMonth = chatMonthRes.data ?? [];
+
+    type ChatRow = { identity_type: string; message_count: number; blocked_count: number; input_tokens: number; output_tokens: number; estimated_cost: number };
+
+    let todayAnonMessages = 0, todayAuthMessages = 0;
+    let todayAnonBlocked  = 0, todayAuthBlocked  = 0;
+    let todayInputTokens  = 0, todayOutputTokens = 0;
+    let todayChatCost     = 0;
+
+    for (const r of chatToday as ChatRow[]) {
+      const msgs    = r.message_count ?? 0;
+      const blocked = r.blocked_count ?? 0;
+      const inTok   = r.input_tokens  ?? 0;
+      const outTok  = r.output_tokens ?? 0;
+      const cost    = Number(r.estimated_cost ?? 0);
+
+      if (r.identity_type === 'anon') {
+        todayAnonMessages += msgs;
+        todayAnonBlocked  += blocked;
+      } else {
+        todayAuthMessages += msgs;
+        todayAuthBlocked  += blocked;
+      }
+      todayInputTokens  += inTok;
+      todayOutputTokens += outTok;
+      todayChatCost     += cost;
+    }
+
+    const todayMessages     = todayAnonMessages + todayAuthMessages;
+    const todayBlocked      = todayAnonBlocked  + todayAuthBlocked;
+
+    const monthMessages  = (chatMonth as Array<{ message_count: number; estimated_cost: number }>)
+      .reduce((s, r) => s + (r.message_count ?? 0), 0);
+    const monthChatCost  = (chatMonth as Array<{ message_count: number; estimated_cost: number }>)
+      .reduce((s, r) => s + Number(r.estimated_cost ?? 0), 0);
+
     return json(res, 200, {
+      // ── Report AI costs (unchanged) ──────────────────────────────────────────
       periodDays:   days,
       since,
       totalReports,
@@ -277,6 +339,28 @@ async function handleCostSummary(
       byPlan,
       byRole,
       recent:       recentRes.data ?? [],
+
+      // ── Chatbot AI costs (new) ───────────────────────────────────────────────
+      // Clearly labeled separately. identity_key / user_id never returned.
+      chat: {
+        today: {
+          messages:        todayMessages,
+          blockedRequests: todayBlocked,
+          anonymous:       { messages: todayAnonMessages, blocked: todayAnonBlocked },
+          authenticated:   { messages: todayAuthMessages, blocked: todayAuthBlocked },
+          inputTokens:     todayInputTokens,
+          outputTokens:    todayOutputTokens,
+          estimatedCostUsd: parseFloat(todayChatCost.toFixed(6)),
+          globalRequestsUsed:  todayMessages,
+          globalRequestLimit:  CHAT_GLOBAL_REQ_LIMIT,
+          globalCostUsedUsd:   parseFloat(todayChatCost.toFixed(6)),
+          globalCostLimitUsd:  CHAT_GLOBAL_COST_LIMIT,
+        },
+        monthToDate: {
+          messages:         monthMessages,
+          estimatedCostUsd: parseFloat(monthChatCost.toFixed(6)),
+        },
+      },
     });
   } catch (err: any) {
     console.error('[cost-summary] query error:', err.message);

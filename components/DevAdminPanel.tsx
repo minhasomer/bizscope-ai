@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Shield, Zap, Sparkles, Building2, FlaskConical, ShieldAlert,
   ChevronDown, ChevronUp, RotateCcw, Eye, Settings2,
-  CheckCircle2, AlertCircle, UserPlus, UserMinus, Users,
+  CheckCircle2, AlertCircle, UserPlus, UserMinus, Users, MessageSquare,
 } from 'lucide-react';
 import { SubscriptionPlan, previewRoleToEffectivePlan } from '../src/utils/planUtils';
 import { UserProfile } from '../services/authService';
@@ -135,6 +135,13 @@ const StatusRow: React.FC<StatusRowProps> = ({ label, live, liveLabel, mockLabel
   </div>
 );
 
+const MetricRow: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
+  <div className="flex items-center justify-between">
+    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+    <span className="text-[10px] font-mono text-gray-600">{value}</span>
+  </div>
+);
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
@@ -155,6 +162,11 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
   const [betaListExpanded, setBetaListExpanded] = useState(false);
   const betaStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Chat metrics state — only used when isAdminSession
+  const [chatExpanded, setChatExpanded] = useState(false);
+  const [chatMetrics, setChatMetrics] = useState<{ today: any; monthToDate: any } | null>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+
   // Load beta tester list when panel is opened by an admin
   useEffect(() => {
     if (minimized || !currentUser || currentUser.role !== 'Admin') return;
@@ -167,6 +179,23 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
         .then(r => r.json())
         .then(d => { if (d.betaTesters) setBetaTesters(d.betaTesters); })
         .catch(() => {});
+    });
+  }, [minimized, currentUser]);
+
+  // Load chat metrics when panel is opened by an admin
+  useEffect(() => {
+    if (minimized || !currentUser || currentUser.role !== 'Admin') return;
+    supabase?.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      if (!token) return;
+      setChatLoading(true);
+      fetch('/api/admin/cost-summary', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.json())
+        .then(d => { if (d.chat) setChatMetrics(d.chat); })
+        .catch(() => {})
+        .finally(() => setChatLoading(false));
     });
   }, [minimized, currentUser]);
 
@@ -477,6 +506,55 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
                 )}
                 {betaTesters.length === 0 && (
                   <p className="text-[10px] text-gray-300 text-center py-1">No beta testers yet.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Chat Metrics — Admin only */}
+        {isAdminSession && (
+          <div className="border-b border-gray-100">
+            <button
+              onClick={() => setChatExpanded(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-3 h-3 text-gray-400" />
+                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Chat Metrics</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {chatLoading && <span className="text-[9px] text-gray-300 uppercase tracking-widest">…</span>}
+                {chatExpanded ? <ChevronUp className="w-3 h-3 text-gray-400" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
+              </div>
+            </button>
+
+            {chatExpanded && (
+              <div className="px-4 pb-3 space-y-1.5">
+                {chatMetrics ? (
+                  <>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pt-0.5">Today</p>
+                    <MetricRow label="Messages" value={chatMetrics.today.messages} />
+                    <MetricRow label="Blocked" value={chatMetrics.today.blockedRequests} />
+                    <MetricRow label="Anon msgs" value={chatMetrics.today.anonymous.messages} />
+                    <MetricRow label="Auth msgs" value={chatMetrics.today.authenticated.messages} />
+                    <MetricRow label="Cost" value={`$${chatMetrics.today.estimatedCostUsd.toFixed(4)}`} />
+                    <MetricRow
+                      label="Req / limit"
+                      value={`${chatMetrics.today.globalRequestsUsed} / ${chatMetrics.today.globalRequestLimit}`}
+                    />
+                    <MetricRow
+                      label="Cost / limit"
+                      value={`$${chatMetrics.today.globalCostUsedUsd.toFixed(2)} / $${chatMetrics.today.globalCostLimitUsd.toFixed(2)}`}
+                    />
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pt-1.5">Month to date</p>
+                    <MetricRow label="Messages" value={chatMetrics.monthToDate.messages} />
+                    <MetricRow label="Cost" value={`$${chatMetrics.monthToDate.estimatedCostUsd.toFixed(4)}`} />
+                  </>
+                ) : (
+                  <p className="text-[10px] text-gray-300 text-center py-1">
+                    {chatLoading ? 'Loading…' : 'No data available.'}
+                  </p>
                 )}
               </div>
             )}
