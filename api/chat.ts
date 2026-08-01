@@ -161,7 +161,7 @@ export default async function handler(
   // ── Validate request body ─────────────────────────────────────────────────
   const body = req.body ?? {};
   const validation = validateChatRequest(body);
-  if (!validation.ok) {
+  if (validation.ok === false) {
     return json(res, 400, { error: validation.error, code: validation.code });
   }
 
