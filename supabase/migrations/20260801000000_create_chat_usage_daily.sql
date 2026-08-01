@@ -104,6 +104,7 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION public.chat_check_and_increment(TEXT, TEXT, UUID, DATE, INTEGER) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.chat_check_and_increment TO service_role;
 
 -- ── chat_log_cost ────────────────────────────────────────────────────────────
@@ -138,4 +139,5 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION public.chat_log_cost(TEXT, TEXT, DATE, INTEGER, INTEGER, NUMERIC) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.chat_log_cost TO service_role;

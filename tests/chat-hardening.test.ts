@@ -451,6 +451,20 @@ check('migration does not reference production tables', () => {
   assert.ok(!sql.includes('subscriptions'),  'must not touch subscriptions table');
 });
 
+check('migration revokes PUBLIC execute on chat RPCs (DoS protection)', () => {
+  const migDir  = path.join(root, 'supabase', 'migrations');
+  const migFile = fs.readdirSync(migDir).find(f => f.includes('chat_usage_daily'));
+  const sql = fs.readFileSync(path.join(migDir, migFile!), 'utf8');
+  assert.ok(
+    sql.includes('REVOKE EXECUTE ON FUNCTION public.chat_check_and_increment'),
+    'migration must revoke PUBLIC execute on chat_check_and_increment',
+  );
+  assert.ok(
+    sql.includes('REVOKE EXECUTE ON FUNCTION public.chat_log_cost'),
+    'migration must revoke PUBLIC execute on chat_log_cost',
+  );
+});
+
 // ── 10. Anonymous limit-reached UX ───────────────────────────────────────────
 
 const panelSrc = fs.readFileSync(
