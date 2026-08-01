@@ -54,7 +54,7 @@ Non-obvious decisions made during development. Captures the reasoning so future 
 
 ## 5. Webhook Idempotency via `stripe_event_log`
 
-**Decision:** Every Stripe webhook event is claimed via a `begin_stripe_event` RPC that upserts into `stripe_event_log` with a unique constraint on `stripe_event_id`. Events in `processed` state return 200 immediately without re-running.
+**Decision:** Every Stripe webhook event is claimed via a `begin_stripe_event` RPC that upserts into `stripe_event_log` with a PRIMARY KEY constraint on `event_id`. Events in `processed` state return 200 immediately without re-running.
 
 **Why:** Stripe guarantees at-least-once webhook delivery. Without idempotency, a retry of `checkout.session.completed` could double-upgrade a user's profile or double-set `has_used_trial`.
 

@@ -142,7 +142,8 @@ UPDATE public.usage_tracking
 SET count = 0, updated_at = NOW()
 WHERE user_id = (SELECT id FROM public.profiles WHERE email = 'friend@example.com')
   AND month_key = '2026-07'
-  AND report_type = 'standard';
+  AND report_type = 'standard'
+RETURNING user_id, month_key, report_type, count;
 
 COMMIT;
 ```
@@ -155,7 +156,8 @@ BEGIN;
 UPDATE public.usage_tracking
 SET count = 0, updated_at = NOW()
 WHERE user_id = (SELECT id FROM public.profiles WHERE email = 'friend@example.com')
-  AND month_key = 'trial';
+  AND month_key = 'trial'
+RETURNING user_id, month_key, report_type, count;
 
 COMMIT;
 ```
@@ -198,7 +200,8 @@ BEGIN;
 UPDATE public.usage_tracking
 SET count = 0, updated_at = NOW()
 WHERE user_id = (SELECT id FROM public.profiles WHERE email = 'friend@example.com')
-  AND month_key = 'trial';
+  AND month_key = 'trial'
+RETURNING user_id, month_key, report_type, count;
 
 COMMIT;
 ```
@@ -302,7 +305,7 @@ Run these periodically or when something seems wrong.
 **Stuck Stripe webhook events (processing > 5 min):**
 
 ```sql
-SELECT stripe_event_id, event_type, state, created_at, updated_at
+SELECT event_id, event_type, state, attempt_count, last_attempted_at, last_error, created_at
 FROM public.stripe_event_log
 WHERE state IN ('processing', 'failed')
 ORDER BY created_at DESC
@@ -324,7 +327,7 @@ WHERE s.id IS NULL
 **Recent hard-cap breaches (cost guard tripped):**
 
 ```sql
-SELECT ul.user_id, p.email, ul.report_type, ul.generated_at, ul.plan_at_time
+SELECT ul.user_id, p.email, ul.report_type, ul.generated_at, ul.plan
 FROM public.usage_logs ul
 JOIN public.profiles p ON p.id = ul.user_id
 WHERE ul.within_hard_cap = false
@@ -335,10 +338,10 @@ LIMIT 20;
 **Recent errors (report_activity_log):**
 
 ```sql
-SELECT ral.action, ral.report_id, ral.created_at, p.email
+SELECT ral.user_email, ral.report_type, ral.success, ral.error_message, ral.source, ral.duration_ms, ral.created_at
 FROM public.report_activity_log ral
-JOIN public.profiles p ON p.id = ral.user_id
-WHERE ral.created_at > NOW() - INTERVAL '24 hours'
+WHERE ral.success = false
+  AND ral.created_at > NOW() - INTERVAL '24 hours'
 ORDER BY ral.created_at DESC
 LIMIT 30;
 ```
@@ -424,7 +427,7 @@ All flags are environment variables in Vercel. `VITE_*` flags are baked into the
 | `VITE_BETA_CLOSED` | Client (build-time) | Blocks new signups with a "beta is closed" message. |
 | `VITE_PRO_TRIAL_ENABLED` | Client (build-time) | Shows trial CTA on pricing page and hero. |
 | `PRO_TRIAL_ENABLED` | Server (runtime) | Enables trial eligibility check at checkout. |
-| `VITE_BETA_ROLE_ENABLED` | Client (build-time) | Enables the BetaTester role-based access path in the client. |
+| `VITE_REAL_REPORTS_ENABLED` | Client (build-time) | Enables real Gemini AI report generation for beta roles (even in demo mode). |
 | `VITE_GA_MEASUREMENT_ID` | Client (build-time) | Enables GA4. Absent = GA4 disabled. |
 | `VITE_CLARITY_PROJECT_ID` | Client (build-time) | Enables Microsoft Clarity. Absent = Clarity disabled. |
 

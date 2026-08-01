@@ -70,7 +70,7 @@ sequenceDiagram
     App->>User: Render dashboard with correct plan features
 ```
 
-The `profiles` row is auto-created by the `trg_new_user` trigger on `auth.users` INSERT (migration `20260604000002_capture_auth_trigger.sql`).
+The `profiles` row is auto-created by the `on_auth_user_created` trigger on `auth.users` INSERT (migration `20260604000002_capture_auth_trigger.sql`).
 
 ---
 
@@ -99,18 +99,18 @@ sequenceDiagram
         API-->>App: 429 { error: 'quota_exceeded' }
         App->>User: Show upgrade CTA
     else Cache hit
-        API->>Cache: SELECT data WHERE cache_key = hash(input)
+        API->>Cache: SELECT report WHERE business_type+location+report_type+analysis_version match
         Cache-->>API: Cached report
         API->>Supabase: increment_usage_tracking() RPC
-        API->>Supabase: INSERT usage_logs (cached=true)
-        API-->>App: 200 { report, cached: true }
+        API->>Supabase: INSERT usage_logs (cache_status=hit)
+        API-->>App: 200 { report, source: cache }
     else Generate new
         API->>Gemini: generateContent(prompt)
         Gemini-->>API: Report JSON
         API->>Cache: INSERT INTO report_cache
         API->>Supabase: increment_usage_tracking() RPC
-        API->>Supabase: INSERT usage_logs (cached=false)
-        API-->>App: 200 { report, cached: false }
+        API->>Supabase: INSERT usage_logs (cache_status=miss)
+        API-->>App: 200 { report, source: generated }
         App->>User: Render report
     end
 ```
@@ -197,9 +197,9 @@ flowchart TD
     StdQuota -->|count >= PLAN_LIMITS| Block429Std[Return 429 quota_exceeded]
     StdQuota -->|under limit| CacheCheck
 
-    CacheCheck{Cache hit?} -->|yes| ReturnCached[Return cached report\nincrement_usage_tracking\nINSERT usage_logs cached=true]
+    CacheCheck{Cache hit?} -->|yes| ReturnCached[Return cached report\nincrement_usage_tracking\nINSERT usage_logs cache_status=hit]
     CacheCheck -->|no| Gemini[Call Google Gemini\ngenerateContent]
-    Gemini -->|success| ReturnNew[Return new report\nINSERT report_cache\nincrement_usage_tracking\nINSERT usage_logs cached=false]
+    Gemini -->|success| ReturnNew[Return new report\nINSERT report_cache\nincrement_usage_tracking\nINSERT usage_logs cache_status=miss]
     Gemini -->|error| Return500[Return 500 api_error]
 ```
 
@@ -243,11 +243,10 @@ erDiagram
         uuid id PK
         uuid user_id FK
         text report_type
-        text business_name
+        text business_type
         text location
-        jsonb data
+        jsonb report_data
         timestamptz created_at
-        timestamptz updated_at
     }
 
     usage_tracking {
@@ -265,28 +264,30 @@ erDiagram
         text report_type
         timestamptz generated_at
         bool within_hard_cap
-        text plan_at_time
-        bool cached
+        text plan
     }
 
     stripe_event_log {
-        uuid id PK
-        text stripe_event_id
+        text event_id PK
         text event_type
         text state
+        integer attempt_count
+        timestamptz last_attempted_at
+        timestamptz processed_at
+        text last_error
         timestamptz created_at
-        timestamptz updated_at
-        jsonb payload
     }
 
     report_cache {
         uuid id PK
-        text cache_key
+        text business_type
+        text location
         text report_type
-        jsonb data
-        int hits
+        text analysis_version
+        text plan_tier
+        jsonb report
         timestamptz created_at
-        timestamptz expires_at
+        timestamptz updated_at
     }
 
     profiles ||--o{ subscriptions : "user_id"
@@ -307,7 +308,7 @@ erDiagram
 
 **`ProPlus` vs `Pro+` mapping:** Postgres `CHECK` constraints require identifiers without special characters. The DB enum uses `ProPlus`; the UI and Stripe display `Pro+`. The mapping lives in `PLAN_TO_DB_TIER` and `DB_TIER_TO_PLAN` in `src/utils/planUtils.ts` and `api/stripe/_shared.ts`. All code must go through these maps.
 
-**Webhook idempotency via `stripe_event_log`:** Stripe may deliver the same webhook event multiple times (at-least-once delivery). The `begin_stripe_event` RPC uses a unique constraint on `stripe_event_id` to ensure only one handler claims each event. Subsequent deliveries of the same event ID return `processed` immediately.
+**Webhook idempotency via `stripe_event_log`:** Stripe may deliver the same webhook event multiple times (at-least-once delivery). The `begin_stripe_event` RPC uses a PRIMARY KEY constraint on `event_id` to ensure only one handler claims each event. Subsequent deliveries of the same event ID return `processed` immediately.
 
 **`protect_profile_columns` trigger:** Prevents authenticated users from escalating their own `role` or `subscription_tier` via the anon key client. The trigger inspects the session's JWT role and blocks writes to sensitive columns unless the session is `service_role`.
 

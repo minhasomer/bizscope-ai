@@ -213,7 +213,7 @@ const PLAN_TO_DB_TIER: Record<string, string> = {
 ```
 
 **Webhook idempotency:**
-- Every event passes through `begin_stripe_event(stripe_event_id, event_type)` RPC
+- Every event passes through `begin_stripe_event(p_event_id text, p_event_type text)` RPC
 - States: `processing` → `processed` / `failed`
 - Events in `processed` state return 200 immediately (no re-processing)
 - Events stuck in `processing` for > 120s are eligible for reclaim on Stripe retry
@@ -254,14 +254,24 @@ const PLAN_TO_DB_TIER: Record<string, string> = {
 
 ## Report Cache
 
-`report_cache` stores Gemini responses keyed by a hash of the input. If a cache hit is found, the Gemini call is skipped entirely (cost and latency win).
+`report_cache` stores Gemini responses keyed by a composite of four input dimensions. If a cache hit is found, the Gemini call is skipped entirely (cost and latency win).
 
-- `cache_key`: SHA-256 hash of the normalized input (business description + location + plan parameters)
-- `hits`: incremented on each cache hit
-- `expires_at`: TTL for cache validity
+The cache key is a composite UNIQUE constraint on four columns: `business_type`, `location`, `report_type`, `analysis_version`. There is no hash column, no hit counter, and no TTL — entries persist until explicitly deleted.
+
 - Cache reads happen in the API functions before calling Gemini
+- `plan_tier` is a metadata-only column (records which plan tier first generated the entry) and is NOT part of the cache key
 
 Do not truncate or clear the cache table carelessly — it directly reduces Gemini API costs.
+
+To invalidate a specific cache entry:
+
+```sql
+DELETE FROM public.report_cache
+WHERE business_type = '...'
+  AND location = '...'
+  AND report_type = '...'
+  AND analysis_version = 'v1';
+```
 
 ---
 
@@ -327,4 +337,11 @@ ls supabase/migrations/ | wc -l
 - Rule 5 of trial eligibility checks `subscriptions.plan NOT IN ('Pro', 'Pro+')`. If a user canceled and then subscriptions were deleted from the DB, this check passes incorrectly. Consider whether to keep cancelled subscription rows.
 
 **"Report cache is serving stale data"**
-- Check `expires_at` in `report_cache`. If the TTL is too long or expires_at is null, cache rows never expire. Use a targeted `DELETE FROM report_cache WHERE cache_key = '...'` to invalidate specific entries.
+- The `report_cache` table has no TTL — entries persist until explicitly deleted. Use a targeted DELETE with the 4-column composite key to invalidate specific entries:
+  ```sql
+  DELETE FROM public.report_cache
+  WHERE business_type = '...'
+    AND location = '...'
+    AND report_type = '...'
+    AND analysis_version = 'v1';
+  ```

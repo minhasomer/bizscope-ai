@@ -58,6 +58,7 @@ Complete reference for all environment variables used by BizScope AI.
 | `VITE_BETA_ROLES` | Comma-separated list of roles that can generate real reports (`Admin,BetaTester`) | Client (VITE_) | Public | `src/config/appConfig.ts`, `vite.config.ts` | No roles can use real reports in demo mode | Build-time flag; redeploy required |
 | `VITE_BETA_FULL_ACCESS` | When `true`, all authenticated non-Admin users receive effective Pro+ access | Client (VITE_) | Public | `src/config/appConfig.ts`, `vite.config.ts` | **Defaults to `false`** (safe); normal plan gates apply | Build-time flag; redeploy required to disable |
 | `VITE_BETA_CLOSED` | When `true`, public signup is hidden; only sign-in is available | Client (VITE_) | Public | `src/config/appConfig.ts`, `vite.config.ts` | **Defaults to `false`**; signup is publicly available | Build-time flag; redeploy required |
+| `ANONYMOUS_PREVIEW_ENABLED` | Server-side flag; when set to `'false'`, disables anonymous preview report generation in `api/preview.ts`; absent or any other value allows anonymous previews | Server | Public | `api/preview.ts` | Anonymous previews enabled | Update in Vercel env; no rebuild needed |
 
 ---
 
@@ -108,6 +109,7 @@ VITE_REAL_REPORTS_ENABLED=false
 VITE_BETA_ROLES=
 VITE_BETA_FULL_ACCESS=false
 VITE_BETA_CLOSED=false
+ANONYMOUS_PREVIEW_ENABLED=  # omit or set to any value other than 'false' to allow anonymous previews
 
 # Optional
 CONTACT_FROM_ADDRESS=BizScope Contact <contact@bizscope.ai>
