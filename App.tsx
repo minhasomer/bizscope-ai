@@ -1872,6 +1872,8 @@ const App: React.FC = () => {
       {chatEnabled && (
         <BizScopeChatButton
           pageContext={{ route: currentView }}
+          isAuthenticated={!!currentUser}
+          onSignIn={() => navigate('settings')}
         />
       )}
 

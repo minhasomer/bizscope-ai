@@ -451,7 +451,107 @@ check('migration does not reference production tables', () => {
   assert.ok(!sql.includes('subscriptions'),  'must not touch subscriptions table');
 });
 
-// ── 10. Serverless function count ─────────────────────────────────────────────
+// ── 10. Anonymous limit-reached UX ───────────────────────────────────────────
+
+const panelSrc = fs.readFileSync(
+  path.join(root, 'src', 'components', 'chat', 'BizScopeChatPanel.tsx'), 'utf8',
+);
+const buttonSrc = fs.readFileSync(
+  path.join(root, 'src', 'components', 'chat', 'BizScopeChatButton.tsx'), 'utf8',
+);
+const appSrc = fs.readFileSync(path.join(root, 'App.tsx'), 'utf8');
+const hookSrc = fs.readFileSync(
+  path.join(root, 'src', 'hooks', 'useBizScopeChat.ts'), 'utf8',
+);
+
+check('anonymous exhaustion: panel accepts isAuthenticated prop', () => {
+  assert.ok(panelSrc.includes('isAuthenticated'), 'BizScopeChatPanel must have isAuthenticated prop');
+});
+
+check('anonymous exhaustion: sign-in message present in panel', () => {
+  assert.ok(
+    panelSrc.includes("Sign in to continue using BizScope"),
+    'Panel must contain the anon sign-in message text',
+  );
+});
+
+check('anonymous exhaustion: Sign In CTA button present in panel', () => {
+  assert.ok(panelSrc.includes('onSignIn'), 'Panel must call onSignIn for the Sign In CTA');
+  assert.ok(panelSrc.includes('Sign In'), 'Panel must render a Sign In label');
+});
+
+check('authenticated exhaustion: panel shows reset message not sign-in wording', () => {
+  // The authenticated branch must reference midnight UTC reset
+  assert.ok(
+    panelSrc.includes('resets at midnight UTC'),
+    'Panel must show midnight UTC reset message for authenticated users',
+  );
+  // The two branches must be conditionally rendered based on isAuthenticated
+  const anonMsgIdx = panelSrc.indexOf('Sign in to continue using BizScope');
+  const authMsgIdx = panelSrc.indexOf('resets at midnight UTC');
+  const isAuthIdx  = panelSrc.indexOf('isAuthenticated');
+  assert.ok(isAuthIdx < Math.min(anonMsgIdx, authMsgIdx), 'isAuthenticated must gate both messages');
+});
+
+check('composer remains disabled when daily limit is exhausted', () => {
+  // composerLocked must include the dailyExhausted condition
+  assert.ok(
+    panelSrc.includes('dailyExhausted') && panelSrc.includes('composerLocked'),
+    'Panel must keep composer locked when daily limit is exhausted',
+  );
+  // The ChatComposer disabled prop must reference composerLocked
+  assert.ok(panelSrc.includes('disabled={status === \'loading\' || composerLocked}'));
+});
+
+check('starting a new conversation does not reset server-side daily limit', () => {
+  // clearChat must NOT reset remainingMessages
+  const clearIdx       = hookSrc.indexOf('clearChat');
+  const remainingReset = hookSrc.indexOf('setRemaining(null)', clearIdx);
+  const nextFn         = hookSrc.indexOf('useCallback', clearIdx + 10);
+  // remainingReset should not appear between clearChat and the next useCallback
+  assert.ok(
+    remainingReset === -1 || (nextFn !== -1 && remainingReset > nextFn),
+    'clearChat must not call setRemaining(null) — daily limit is server-side and persists',
+  );
+  // The comment must be explicit
+  assert.ok(
+    hookSrc.includes('daily limit persists') || hookSrc.includes('Do NOT reset remainingMessages'),
+    'clearChat comment must state that daily limit is preserved',
+  );
+});
+
+check('no extra API request after client knows limit is exhausted', () => {
+  // sendMessage must return early when remainingMessages === 0
+  assert.ok(
+    hookSrc.includes('remainingMessages === 0') && hookSrc.includes('return'),
+    'sendMessage must short-circuit when remainingMessages is 0',
+  );
+  // The guard must precede any sendChatMessage call
+  const guardIdx = hookSrc.indexOf('remainingMessages === 0');
+  const sendIdx  = hookSrc.indexOf('sendChatMessage(');
+  assert.ok(guardIdx < sendIdx, 'Daily-limit guard must precede sendChatMessage call');
+});
+
+check('App.tsx passes isAuthenticated to BizScopeChatButton', () => {
+  assert.ok(
+    appSrc.includes('isAuthenticated={!!currentUser}'),
+    'App.tsx must pass isAuthenticated based on currentUser to BizScopeChatButton',
+  );
+});
+
+check('App.tsx passes onSignIn to BizScopeChatButton', () => {
+  assert.ok(
+    appSrc.includes('onSignIn') && appSrc.includes("navigate('settings')"),
+    "App.tsx must pass onSignIn that calls navigate('settings')",
+  );
+});
+
+check('BizScopeChatButton threads isAuthenticated and onSignIn to panel', () => {
+  assert.ok(buttonSrc.includes('isAuthenticated'), 'BizScopeChatButton must accept isAuthenticated');
+  assert.ok(buttonSrc.includes('onSignIn'),        'BizScopeChatButton must accept onSignIn');
+});
+
+// ── 11. Serverless function count ─────────────────────────────────────────────
 
 check('Vercel function count remains at or below 12', () => {
   const apiDir = path.join(root, 'api');

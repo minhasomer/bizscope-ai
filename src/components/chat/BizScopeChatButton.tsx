@@ -4,7 +4,9 @@ import { BizScopeChatPanel } from './BizScopeChatPanel';
 import type { PageContext } from '../../types/chat';
 
 interface Props {
-  pageContext?: PageContext;
+  pageContext?:     PageContext;
+  isAuthenticated?: boolean;
+  onSignIn?:        () => void;
 }
 
 /**
@@ -12,7 +14,7 @@ interface Props {
  * Clicking opens the BizScopeChatPanel.
  * Only rendered when VITE_BIZSCOPE_CHAT_ENABLED=true.
  */
-export function BizScopeChatButton({ pageContext }: Props) {
+export function BizScopeChatButton({ pageContext, isAuthenticated, onSignIn }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -43,6 +45,8 @@ export function BizScopeChatButton({ pageContext }: Props) {
         <BizScopeChatPanel
           onClose={() => setIsOpen(false)}
           pageContext={pageContext}
+          isAuthenticated={isAuthenticated}
+          onSignIn={onSignIn}
         />
       )}
     </>
