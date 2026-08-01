@@ -81,6 +81,13 @@ const _proTrialEnabled: boolean =
   process.env.VITE_PRO_TRIAL_ENABLED === 'true' ||
   (process.env.VITE_PRO_TRIAL_ENABLED as unknown) === true;
 
+// BizScope Assistant chat feature flag (VITE_BIZSCOPE_CHAT_ENABLED=true).
+// Defaults to 'false' — must be explicitly enabled on staging.
+// Never enable in production until the feature is fully tested and approved.
+const _chatEnabled: boolean =
+  process.env.VITE_BIZSCOPE_CHAT_ENABLED === 'true' ||
+  (process.env.VITE_BIZSCOPE_CHAT_ENABLED as unknown) === true;
+
 // ─── App Config (frozen object — never mutate at runtime) ────────────────────
 
 export const appConfig = {
@@ -218,6 +225,17 @@ export const appConfig = {
    * this flag (their subscription is already in state 'trialing' in the DB).
    */
   proTrialEnabled: _proTrialEnabled,
+  /**
+   * BizScope Assistant chat enabled (VITE_BIZSCOPE_CHAT_ENABLED=true).
+   *
+   * Renders the floating chat button and panel throughout the app.
+   * The server flag BIZSCOPE_CHAT_ENABLED=true is also required for the
+   * api/chat endpoint to respond (the two flags are independent).
+   *
+   * Staging: set VITE_BIZSCOPE_CHAT_ENABLED=true + BIZSCOPE_CHAT_ENABLED=true
+   * Production: leave both unset until the feature is approved for production.
+   */
+  chatEnabled: _chatEnabled,
 } as const;
 
 // ─── Convenience named exports ───────────────────────────────────────────────
@@ -259,6 +277,16 @@ export const betaClosed: boolean = appConfig.betaClosed;
  * @see appConfig.proTrialEnabled
  */
 export const proTrialEnabled: boolean = appConfig.proTrialEnabled;
+
+/**
+ * True when VITE_BIZSCOPE_CHAT_ENABLED=true.
+ *
+ * Controls rendering of the floating BizScope Assistant button and panel.
+ * The server endpoint also requires BIZSCOPE_CHAT_ENABLED=true independently.
+ *
+ * @see appConfig.chatEnabled
+ */
+export const chatEnabled: boolean = appConfig.chatEnabled;
 
 // ─── Beta real-reports gate ──────────────────────────────────────────────────
 
