@@ -29,6 +29,14 @@ export default defineConfig(({ mode }) => {
         'process.env.VITE_PRO_TRIAL_ENABLED': JSON.stringify(
           (env.VITE_PRO_TRIAL_ENABLED ?? process.env.VITE_PRO_TRIAL_ENABLED ?? 'false').trim(),
         ),
+        // Analytics — both default to empty string so the tools are disabled
+        // in any build where the variables are absent (including CI and local dev).
+        'process.env.VITE_GA_MEASUREMENT_ID': JSON.stringify(
+          env.VITE_GA_MEASUREMENT_ID ?? process.env.VITE_GA_MEASUREMENT_ID ?? '',
+        ),
+        'process.env.VITE_CLARITY_PROJECT_ID': JSON.stringify(
+          env.VITE_CLARITY_PROJECT_ID ?? process.env.VITE_CLARITY_PROJECT_ID ?? '',
+        ),
       },
       resolve: {
         alias: {

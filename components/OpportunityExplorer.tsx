@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { trackEvent } from '../src/utils/analytics';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, MapPin, TrendingUp, DollarSign, Users, ChevronRight, ChevronDown, Info,
@@ -255,12 +256,23 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       startedAt: Date.now(),
     }));
 
+    trackEvent('market_gap_started', {
+      subscription_tier: currentPlan,
+      authenticated: isAuthenticated,
+      source_page: 'opportunities',
+    });
+
     try {
       const displayLocation = await resolveLocationDisplay(locationStr);
       if (displayLocation !== locationStr) setLocation(displayLocation);
       const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole, forceRegenerate);
       setReport(result);
       sessionStorage.removeItem('bizscope_pending_market_gap');
+      trackEvent('market_gap_completed', {
+        subscription_tier: currentPlan,
+        authenticated: isAuthenticated,
+        cached: !!(result?._cached),
+      });
 
       if (isAuthenticated && result) {
         SavedReportsService.saveMarketGapReport(result).catch((err) =>
@@ -274,6 +286,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       // Market Gap limit modal instead of the generic error banner.
       if (err instanceof ApiError && err.code === 'QUOTA_EXCEEDED') {
         sessionStorage.removeItem('bizscope_pending_market_gap');
+        trackEvent('report_limit_reached', { report_type: 'market_gap', subscription_tier: currentPlan });
+        trackEvent('market_gap_failed', { subscription_tier: currentPlan, authenticated: isAuthenticated, error_category: 'quota_exceeded' });
         setShowQuotaModal(true);
         return;
       }
@@ -281,11 +295,13 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       // backgrounded): show the recovery banner instead of a permanent failure, and
       // keep the pending key so reload/remount recovery can retry with forceRegenerate=false.
       if (isNetworkInterruption(rawMessage)) {
+        trackEvent('market_gap_failed', { subscription_tier: currentPlan, authenticated: isAuthenticated, error_category: 'network_interruption' });
         setPendingLocation(locationStr);
         setShowRecoveryBanner(true);
         return;
       }
       sessionStorage.removeItem('bizscope_pending_market_gap');
+      trackEvent('market_gap_failed', { subscription_tier: currentPlan, authenticated: isAuthenticated, error_category: 'api_error' });
       setError(rawMessage);
     } finally {
       setIsLoading(false);
@@ -310,12 +326,23 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       startedAt: Date.now(),
     }));
 
+    trackEvent('market_gap_started', {
+      subscription_tier: currentPlan,
+      authenticated: isAuthenticated,
+      source_page: 'opportunities',
+    });
+
     try {
       const displayLocation = await resolveLocationDisplay(location.trim());
       if (displayLocation !== location.trim()) setLocation(displayLocation);
       const result = await generateOpportunityReport(displayLocation, setLoadingMessage, userRole, forceRegenerate);
       setReport(result);
       sessionStorage.removeItem('bizscope_pending_market_gap');
+      trackEvent('market_gap_completed', {
+        subscription_tier: currentPlan,
+        authenticated: isAuthenticated,
+        cached: !!(result?._cached),
+      });
 
       // Auto-save for authenticated users — deduplicates by location, no quota consumed.
       if (isAuthenticated && result) {
@@ -330,6 +357,8 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       // Market Gap limit modal instead of the generic error banner.
       if (err instanceof ApiError && err.code === 'QUOTA_EXCEEDED') {
         sessionStorage.removeItem('bizscope_pending_market_gap');
+        trackEvent('report_limit_reached', { report_type: 'market_gap', subscription_tier: currentPlan });
+        trackEvent('market_gap_failed', { subscription_tier: currentPlan, authenticated: isAuthenticated, error_category: 'quota_exceeded' });
         setShowQuotaModal(true);
         return;
       }
@@ -337,11 +366,13 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
       // backgrounded): show the recovery banner instead of a permanent failure, and
       // keep the pending key so reload/remount recovery can retry with forceRegenerate=false.
       if (isNetworkInterruption(rawMessage)) {
+        trackEvent('market_gap_failed', { subscription_tier: currentPlan, authenticated: isAuthenticated, error_category: 'network_interruption' });
         setPendingLocation(location.trim());
         setShowRecoveryBanner(true);
         return;
       }
       sessionStorage.removeItem('bizscope_pending_market_gap');
+      trackEvent('market_gap_failed', { subscription_tier: currentPlan, authenticated: isAuthenticated, error_category: 'api_error' });
       setError(rawMessage);
     } finally {
       setIsLoading(false);
@@ -566,6 +597,7 @@ export const OpportunityExplorer: React.FC<OpportunityExplorerProps> = ({ curren
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-8"
+            data-clarity-mask="True"
           >
             {/* Market overview banner */}
             <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm relative overflow-hidden">

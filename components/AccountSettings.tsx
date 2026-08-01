@@ -78,7 +78,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 print:hidden animate-fade-in" id="account-settings-page">
+    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 print:hidden animate-fade-in" id="account-settings-page" data-clarity-mask="True">
       <div className="flex flex-col md:flex-row gap-8">
         
         {/* Left Side: Fast Action Summary Panel */}
