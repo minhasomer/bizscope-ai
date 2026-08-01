@@ -133,6 +133,13 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  // Initialize analytics and capture UTM attribution before the first page_view fires.
+  // Must be declared before the page_view effect so React runs it first on mount.
+  useEffect(() => {
+    captureAttribution();
+    initAnalytics();
+  }, []);
+
   // SPA page_view tracking — fires once per view change (Strategy B: manual events).
   // GA4 Enhanced Measurement auto page_view is disabled (send_page_view: false).
   // This covers initial load, navigate() calls, and browser back/forward.
@@ -242,11 +249,6 @@ const App: React.FC = () => {
   // Log active service configuration once on mount (collapsed console group).
   useEffect(() => { bootstrapGuardrails(); }, []);
 
-  // Initialize analytics and capture UTM attribution on first mount.
-  useEffect(() => {
-    captureAttribution();
-    initAnalytics();
-  }, []);
 
   // On mount: check for a pending analysis written before the tab was discarded.
   // sessionStorage survives Android Chrome tab discard/reload (cleared only on
