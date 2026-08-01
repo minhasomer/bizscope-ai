@@ -127,7 +127,9 @@ export function BizScopeChatPanel({ onClose, pageContext }: Props) {
           aria-label="Conversation"
         >
           {messages.map(msg => (
-            <ChatMessage key={msg.id} message={msg} />
+            <React.Fragment key={msg.id}>
+              <ChatMessage message={msg} />
+            </React.Fragment>
           ))}
 
           {/* Loading indicator */}
