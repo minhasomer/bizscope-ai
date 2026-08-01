@@ -23,6 +23,7 @@ View your app in AI Studio: https://ai.studio/apps/34419e77-15c9-46f5-b03b-bb0d4
 
 | Document | Description |
 |---|---|
+| [**BizScope Owner Reference**](docs/BIZSCOPE_OWNER_REFERENCE.md) | **START HERE — consolidated owner manual** |
 | [ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) | All environment variables — required, optional, scopes, VITE_ warning |
 | [DATABASE_OPERATIONS.md](docs/DATABASE_OPERATIONS.md) | Table schemas, read-only SQL queries, safe admin write SQL |
 | [BILLING_AND_TRIALS.md](docs/BILLING_AND_TRIALS.md) | Plan tiers, Stripe lifecycle, 7-day trial mechanics, entitlement types |
