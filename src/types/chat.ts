@@ -3,10 +3,12 @@
 export type ChatRole = 'user' | 'assistant';
 
 export interface ChatMessage {
-  id:        string;
-  role:      ChatRole;
-  content:   string;
-  timestamp: number;
+  id:          string;
+  role:        ChatRole;
+  content:     string;
+  timestamp:   number;
+  redirected?: boolean;                       // true: scope-redirect response
+  cta?:        { label: string; path: string }; // optional action button for redirect
 }
 
 export interface PageContext {

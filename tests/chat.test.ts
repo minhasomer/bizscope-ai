@@ -162,23 +162,23 @@ check('anonymous IP not rate-limited on first 10 unique IPs', () => {
 
 check('anonymous IP is rate-limited after exceeding quota', () => {
   const ip = `ratelimit-test-ip-${Date.now()}`;
-  // Exhaust the bucket (10 requests for anon)
-  for (let i = 0; i < 10; i++) isAnonRateLimited(ip);
-  assert.equal(isAnonRateLimited(ip), true, 'should be rate-limited after 10 requests');
+  // Exhaust the bucket (5 requests per minute)
+  for (let i = 0; i < 5; i++) isAnonRateLimited(ip);
+  assert.equal(isAnonRateLimited(ip), true, 'should be rate-limited after 5 requests');
 });
 
 check('auth user is rate-limited after exceeding quota', () => {
   const uid = `ratelimit-test-uid-${Date.now()}`;
-  // Exhaust the bucket (40 requests for auth)
-  for (let i = 0; i < 40; i++) isAuthRateLimited(uid);
-  assert.equal(isAuthRateLimited(uid), true, 'should be rate-limited after 40 requests');
+  // Exhaust the bucket (5 requests per minute)
+  for (let i = 0; i < 5; i++) isAuthRateLimited(uid);
+  assert.equal(isAuthRateLimited(uid), true, 'should be rate-limited after 5 requests');
 });
 
 check('different IPs have independent rate limit buckets', () => {
   const ip1 = `bucket-a-${Date.now()}`;
   const ip2 = `bucket-b-${Date.now()}`;
   // Exhaust ip1
-  for (let i = 0; i < 10; i++) isAnonRateLimited(ip1);
+  for (let i = 0; i < 5; i++) isAnonRateLimited(ip1);
   assert.equal(isAnonRateLimited(ip1), true,  'ip1 should be rate-limited');
   assert.equal(isAnonRateLimited(ip2), false, 'ip2 should not be rate-limited');
 });
