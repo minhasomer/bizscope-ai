@@ -28,3 +28,9 @@ dist-ssr
 
 .vercel
 .env*
+
+# Local build artifacts accidentally written to dev/null
+dev/
+
+# Local SQL debugging/testing scripts (not part of the application)
+scripts/
