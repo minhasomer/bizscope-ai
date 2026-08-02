@@ -49,9 +49,11 @@ import {
 } from '../src/utils/simulationToken.js';
 import type { SimPersona, SubState } from '../src/utils/simulationToken.js';
 
-// ─── Test secret ───────────────────────────────────────────────────────────────
+// ─── Test secret + fake admin identity ────────────────────────────────────────
 
-const TEST_SECRET = 'test-sim-secret-for-unit-tests-only';
+const TEST_SECRET         = 'test-sim-secret-for-unit-tests-only';
+const FAKE_ADMIN_JWT      = 'test-admin-user-jwt-for-handler-tests';
+const FAKE_ADMIN_USER_ID  = 'fake-admin-00000000-0000-0000-0000-0000000000aa';
 
 // ─── Helpers: build signed tokens ─────────────────────────────────────────────
 
@@ -112,16 +114,31 @@ const fakeSupabase = createServer(async (req: IncomingMessage, res: ServerRespon
   const url = new URL(req.url ?? '/', 'http://localhost');
   await consumeBody(req);
 
-  // Return 401 for every auth/user call so realVerifiedUserId stays null.
+  // Auth: admin JWT → admin user; anything else → 401.
   if (url.pathname === '/auth/v1/user') {
-    res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ code: 401, msg: 'Invalid JWT' }));
+    if (req.headers['authorization'] === `Bearer ${FAKE_ADMIN_JWT}`) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ id: FAKE_ADMIN_USER_ID, email: 'admin@test.com', role: 'authenticated' }));
+    } else {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ code: 401, msg: 'Invalid JWT' }));
+    }
     return;
   }
-  // Profiles: never reached in sim-only tests (auth failed) but serve a safe fallback.
+  // Profiles: .single() uses Accept: application/vnd.pgrst.object+json → single object.
   if (url.pathname === '/rest/v1/profiles') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify([{ role: 'Explorer', subscription_tier: 'Explorer' }]));
+    const accept = (req.headers['accept'] as string) ?? '';
+    const isAdmin = (req.url ?? '').includes(FAKE_ADMIN_USER_ID);
+    const row = isAdmin
+      ? { role: 'admin', subscription_tier: 'Enterprise' }
+      : { role: 'Explorer', subscription_tier: 'Explorer' };
+    if (accept.includes('pgrst.object')) {
+      res.writeHead(200, { 'Content-Type': 'application/vnd.pgrst.object+json' });
+      res.end(JSON.stringify(row));
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify([row]));
+    }
     return;
   }
   // RPC increment calls should never fire during simulation.
@@ -170,13 +187,18 @@ interface MockResponse { status: number; body: any; }
 async function callHandler(opts: {
   method?: string;
   authHeader?: string | null;
+  adminAuth?: boolean;
   simToken?: string;
   body?: any;
 }): Promise<MockResponse> {
   return new Promise<MockResponse>(resolve => {
     const captured: MockResponse = { status: 200, body: null };
     const headers: Record<string, string> = {};
-    if (opts.authHeader) headers['authorization'] = opts.authHeader;
+    if (opts.adminAuth) {
+      headers['authorization'] = `Bearer ${FAKE_ADMIN_JWT}`;
+    } else if (opts.authHeader) {
+      headers['authorization'] = opts.authHeader;
+    }
     if (opts.simToken) headers['x-sim-token'] = opts.simToken;
 
     const req: any = {
@@ -316,6 +338,7 @@ checkAsync('H9. ProPlus sim (0/10 used) → passes plan+quota gates → 401 MISS
   resetFake();
   const token = makeToken('ProPlus', { regionalUsed: 0 });
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'coffee shop' }, location: 'Austin, TX' },
   });
@@ -329,6 +352,7 @@ checkAsync('H10. ProPlus sim (10/10 used, quota exhausted) → 429 QUOTA_EXCEEDE
   resetFake();
   const token = makeToken('ProPlus', { regionalUsed: 10 });
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'coffee shop' }, location: 'Austin, TX' },
   });
@@ -342,6 +366,7 @@ checkAsync('H11. Enterprise sim → unlimited quota → 401 MISSING_API_KEY', as
   resetFake();
   const token = makeToken('Enterprise', { regionalUsed: 999 });
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'franchise' }, location: 'Chicago, IL' },
   });
@@ -355,6 +380,7 @@ checkAsync('H12. Explorer sim → 403 INSUFFICIENT_PLAN', async () => {
   resetFake();
   const token = makeToken('Explorer');
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'bakery' }, location: 'Denver, CO' },
   });
@@ -368,6 +394,7 @@ checkAsync('H13. Pro sim → 403 INSUFFICIENT_PLAN', async () => {
   resetFake();
   const token = makeToken('Pro');
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'gym' }, location: 'Seattle, WA' },
   });
@@ -381,6 +408,7 @@ checkAsync('H14. BetaTester sim → effective Pro+ → 401 MISSING_API_KEY', asy
   resetFake();
   const token = makeToken('BetaTester', { regionalUsed: 0 });
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'yoga studio' }, location: 'Portland, OR' },
   });
@@ -394,6 +422,7 @@ checkAsync('H15. ProPlus sim + betaFullAccess=true → unlimited quota → 401 M
   resetFake();
   const token = makeToken('ProPlus', { regionalUsed: 10, betaFullAccess: true });
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'spa' }, location: 'Miami, FL' },
   });
@@ -408,6 +437,7 @@ checkAsync('H16. ProPlus sim + subscriptionState=canceled → effective Explorer
   resetFake();
   const token = makeToken('ProPlus', { subscriptionState: 'canceled' });
   const r = await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'restaurant' }, location: 'Nashville, TN' },
   });
@@ -421,6 +451,7 @@ checkAsync('H17. ProPlus sim (0/10 used) → rpcCallCount=0 (increment_usage_tra
   resetFake();
   const token = makeToken('ProPlus', { regionalUsed: 0 });
   await callHandler({
+    adminAuth: true,
     simToken: token,
     body: { opportunity: { businessType: 'ice cream shop' }, location: 'Phoenix, AZ' },
   });

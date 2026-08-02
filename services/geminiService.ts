@@ -1249,7 +1249,7 @@ export const generateAnonymousPreviewReport = async (
   try {
     const response = await fetch('/api/preview', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getSimTokenHeaders() },
       body: JSON.stringify({ businessType, location, userLocation }),
     });
 

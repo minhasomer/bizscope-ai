@@ -9,7 +9,7 @@ import {
 } from '../src/config/aiBudget.js';
 import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
-import { getSimulationContext } from '../src/utils/simulationToken.js';
+import { resolveSimulatedRequest, getSimRegionalQuota } from './_simAuth.js';
 
 export const maxDuration = 60;
 
@@ -394,18 +394,17 @@ export default async function handler(
     supabaseAdminInitialized: !!supabaseAdmin,
   });
 
-  const { verifiedEmail, verifiedPlan: realVerifiedPlan, verifiedRole, verifiedUserId: realVerifiedUserId } = await verifyAndGetPlan(
+  const { verifiedEmail, verifiedPlan: realPlan, verifiedRole, verifiedUserId: realUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
 
-  // ── Simulation context override (Preview-only) ─────────────────────────────
-  // If a valid signed simulation token is present, use its plan and usage counts
-  // instead of the real DB values. Real Admin identity is still required for the
-  // simulation token to have been issued; real quota DB is not mutated.
-  const simCtx = getSimulationContext(req.headers as Record<string, string | string[] | undefined>);
-
-  const verifiedPlan    = simCtx ? simCtx.effectivePlan : realVerifiedPlan;
-  const verifiedUserId  = simCtx && simCtx.persona === 'Anonymous' ? null : (realVerifiedUserId ?? (simCtx ? 'sim-user' : null));
+  const _simAuth = resolveSimulatedRequest(
+    req.headers as Record<string, string | string[] | undefined>,
+    realUserId, verifiedRole, realPlan, _serverBetaFullAccess,
+  );
+  const verifiedPlan   = _simAuth.effectivePlan;
+  const verifiedUserId = _simAuth.simulationActive && _simAuth.effectivePersona === 'Anonymous'
+    ? null : realUserId;
 
   // Plan-based gate: unauthenticated, Explorer, and Pro users are blocked.
   // Admin always passes. BETA_FULL_ACCESS=true promotes all authenticated users to Pro+.
@@ -449,22 +448,9 @@ export default async function handler(
   // ── Regional quota gate ───────────────────────────────────────────────────
   // During simulation: use the token's regionalUsed count to drive quota logic
   // instead of the real DB count. Real quota records are never mutated.
-  const effectiveBetaFullAccess = simCtx ? simCtx.betaFullAccess : _serverBetaFullAccess;
-  let quota: Awaited<ReturnType<typeof checkRegionalQuota>>;
-  if (simCtx) {
-    // Simulate quota check inline — mirrors checkRegionalQuota logic without a DB call.
-    const simPlanLimits: Record<string, number | null | undefined> = {
-      'Pro+': 10, 'Enterprise': null, 'Pro': 0, 'Explorer': 0,
-    };
-    // Use undefined-check (not ??) so null ("unlimited") is preserved and not coalesced to 0.
-    const rawLimit = simPlanLimits[verifiedPlan];
-    const limit: number | null = rawLimit !== undefined ? rawLimit : 0;
-    const used  = simCtx.regionalUsed;
-    const allowed = limit === null || simCtx.betaFullAccess || (limit > 0 && used < limit);
-    quota = { allowed, used, limit };
-  } else {
-    quota = await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, effectiveBetaFullAccess);
-  }
+  const quota = _simAuth.simulationActive
+    ? getSimRegionalQuota(_simAuth)
+    : await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
   if (!quota.allowed) {
     return json(res, 429, {
       error: 'Monthly regional report limit reached for your plan.',
@@ -630,7 +616,7 @@ Output valid JSON only. No markdown wrappers.
     }
 
     // Skip real quota DB writes during simulation — never mutate real usage records.
-    if (!simCtx) {
+    if (!_simAuth.simulationActive) {
       await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
       await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'opportunity_dossier');
     }

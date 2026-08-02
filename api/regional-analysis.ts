@@ -6,6 +6,7 @@ import {
   getReportBudget,
 } from '../src/config/aiBudget.js';
 import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
+import { resolveSimulatedRequest, getSimRegionalQuota } from './_simAuth.js';
 
 export const maxDuration = 90;
 
@@ -214,9 +215,17 @@ export default async function handler(
     return json(res, 405, { error: 'Method not allowed.', code: 'METHOD_NOT_ALLOWED' });
   }
 
-  const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
+  const { verifiedEmail, verifiedPlan: realPlan, verifiedRole, verifiedUserId: realUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
+
+  const _simAuth = resolveSimulatedRequest(
+    req.headers as Record<string, string | string[] | undefined>,
+    realUserId, verifiedRole, realPlan, _serverBetaFullAccess,
+  );
+  const verifiedPlan   = _simAuth.effectivePlan;
+  const verifiedUserId = _simAuth.simulationActive && _simAuth.effectivePersona === 'Anonymous'
+    ? null : realUserId;
 
   // Auth gate
   if (!verifiedUserId) {
@@ -245,13 +254,10 @@ export default async function handler(
     return json(res, 400, { error: 'Missing or invalid location.', code: 'INVALID_INPUT' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return json(res, 503, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
-  }
-
   // Quota check — after plan gate, before Gemini call
-  const quota = await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  const quota = _simAuth.simulationActive
+    ? getSimRegionalQuota(_simAuth)
+    : await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
   if (!quota.allowed) {
     console.warn(`[RegionalAnalysis] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
     return json(res, 429, {
@@ -260,6 +266,11 @@ export default async function handler(
       used: quota.used,
       limit: quota.limit,
     });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return json(res, 503, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
   }
 
   const normalizedPlan = normalizeTierToBudgetPlan(verifiedPlan);
@@ -335,7 +346,9 @@ ${isZip
     }
 
     // Increment usage — only after confirmed successful generation
-    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+    if (!_simAuth.simulationActive) {
+      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+    }
     incrementOk = true;
 
     return json(res, 200, parsed);

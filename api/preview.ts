@@ -10,6 +10,7 @@ import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/block
 import { detectFranchise } from '../src/utils/franchiseDetection.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 import { normalizeViabilityReport } from '../src/utils/reportNormalization.js';
+import { getSimulationContext } from '../src/utils/simulationToken.js';
 
 export const maxDuration = 60;
 
@@ -295,6 +296,18 @@ export default async function handler(
     return json(res, 405, { error: 'Method not allowed.', code: 'METHOD_NOT_ALLOWED' });
   }
 
+  // ── Simulation context (preview-only path) ────────────────────────────────
+  // preview.ts has no real auth; the HMAC-signed token is sufficient proof that
+  // an Admin issued this simulation. Only the token's anonPreviewConsumed flag
+  // is read — it gates whether the simulated Anonymous user can see a preview.
+  const _simCtx = getSimulationContext(req.headers as Record<string, string | string[] | undefined>);
+  if (_simCtx?.anonPreviewConsumed) {
+    return json(res, 429, {
+      error: 'Anonymous preview has already been used for this simulated session.',
+      code: 'PREVIEW_CONSUMED',
+    });
+  }
+
   const requestStartMs = Date.now();
   const body = req.body ?? {};
   const { businessType, location, userLocation } = body;
@@ -324,7 +337,7 @@ export default async function handler(
   // Secondary protection: if > 200 anonymous previews have been generated in the
   // last hour globally, return 429. Primary protection is client-side
   // UsageTrackerService (1 per browser, never resets).
-  if (supabaseAdmin) {
+  if (!_simCtx && supabaseAdmin) {
     try {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { count } = await supabaseAdmin
@@ -533,8 +546,9 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     };
 
     // Log to usage_logs for cost tracking (non-fatal if insert fails).
+    // Skip during simulation — do not write real DB records for simulated previews.
     try {
-      if (supabaseAdmin) {
+      if (!_simCtx && supabaseAdmin) {
         const { error: usageLogError } = await supabaseAdmin.from('usage_logs').insert({
           user_id: null,
           user_email: 'anonymous@bizscope.ai',
@@ -562,7 +576,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     console.log('[ActivityLog] attempt preview success');
     try {
-      if (supabaseAdmin) {
+      if (!_simCtx && supabaseAdmin) {
         const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
           user_id: null,
           user_email: null,
