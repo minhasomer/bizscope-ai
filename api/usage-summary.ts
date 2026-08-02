@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { normalizeTierToBudgetPlan } from '../src/config/aiBudget.js';
 import { getPlanLimits } from '../src/config/plans.js';
 import { getCurrentMonthKey } from '../src/config/usageTracking.js';
+import { resolveSimulatedRequest } from './_simAuth.js';
 
 // ─── Response helper ──────────────────────────────────────────────────────────
 
@@ -33,26 +34,27 @@ function getServerSidePlan(role: string, subscription_tier: string): string {
 
 async function verifyUser(authHeader: string | undefined): Promise<{
   userId: string | null;
+  role: string;
   plan: string;
-} > {
+}> {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
-  if (!supabaseAdmin || !token) return { userId: null, plan: 'Explorer' };
+  if (!supabaseAdmin || !token) return { userId: null, role: '', plan: 'Explorer' };
 
   try {
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError || !user) return { userId: null, plan: 'Explorer' };
+    if (userError || !user) return { userId: null, role: '', plan: 'Explorer' };
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role, subscription_tier')
       .eq('id', user.id)
       .single();
-    if (profileError || !profile) return { userId: user.id, plan: 'Explorer' };
+    if (profileError || !profile) return { userId: user.id, role: '', plan: 'Explorer' };
 
-    return { userId: user.id, plan: getServerSidePlan(profile.role, profile.subscription_tier) };
+    return { userId: user.id, role: profile.role ?? '', plan: getServerSidePlan(profile.role, profile.subscription_tier) };
   } catch (err: any) {
     console.error('[UsageSummary] verifyUser exception:', err.message);
-    return { userId: null, plan: 'Explorer' };
+    return { userId: null, role: '', plan: 'Explorer' };
   }
 }
 
@@ -66,13 +68,45 @@ export default async function handler(
     return json(res, 405, { error: 'Method not allowed.', code: 'METHOD_NOT_ALLOWED' });
   }
 
-  const { userId, plan } = await verifyUser(req.headers['authorization'] as string | undefined);
-  if (!userId) {
+  const { userId: realUserId, role: realRole, plan: realPlan } = await verifyUser(req.headers['authorization'] as string | undefined);
+  if (!realUserId) {
     return json(res, 401, { error: 'Authentication required.', code: 'UNAUTHENTICATED' });
   }
 
-  const limits = getPlanLimits(plan as any);
-  const monthKey = getCurrentMonthKey();
+  const _simAuth = resolveSimulatedRequest(
+    req.headers as Record<string, string | string[] | undefined>,
+    realUserId, realRole, realPlan, _serverBetaFullAccess,
+  );
+
+  const activePlan = _simAuth.effectivePlan;
+  const limits     = getPlanLimits(activePlan as any);
+  const monthKey   = getCurrentMonthKey();
+
+  if (_simAuth.simulationActive) {
+    return json(res, 200, {
+      plan: activePlan,
+      monthKey,
+      betaFullAccess: _simAuth.betaFullAccess,
+      standard: {
+        used: _simAuth.standardUsed,
+        limit: limits.standardReportsPerCycle,
+        remaining: limits.standardReportsPerCycle === null
+          ? null
+          : Math.max(0, limits.standardReportsPerCycle - _simAuth.standardUsed),
+      },
+      regional: {
+        used: _simAuth.regionalUsed,
+        limit: limits.regionalReportsPerCycle,
+        remaining: limits.regionalReportsPerCycle === null
+          ? null
+          : Math.max(0, limits.regionalReportsPerCycle - _simAuth.regionalUsed),
+      },
+      opportunityDossier: {
+        used: _simAuth.regionalUsed,
+        limit: null,
+      },
+    });
+  }
 
   let standardUsed = 0;
   let regionalUsed = 0;
@@ -82,7 +116,7 @@ export default async function handler(
     const { data, error } = await supabaseAdmin
       .from('usage_tracking')
       .select('report_type, count')
-      .eq('user_id', userId)
+      .eq('user_id', realUserId)
       .eq('month_key', monthKey)
       .in('report_type', ['standard', 'regional', 'opportunity_dossier']);
 
@@ -98,7 +132,7 @@ export default async function handler(
   }
 
   return json(res, 200, {
-    plan,
+    plan: realPlan,
     monthKey,
     betaFullAccess: _serverBetaFullAccess,
     standard: {

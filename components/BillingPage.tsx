@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
   CreditCard, CheckCircle, AlertCircle, Clock, ExternalLink,
-  Sparkles, ArrowRight, Receipt, RefreshCw, Shield, Zap, Building
+  Sparkles, ArrowRight, Receipt, RefreshCw, Shield, Zap, Building, FlaskConical,
 } from 'lucide-react';
 import { SubscriptionPlan } from '../src/utils/planUtils';
 import { UserProfile } from '../services/authService';
 import { StripeService, SubscriptionStatus } from '../services/stripeService';
 import { isDemoMode, betaFullAccess } from '../src/config/appConfig';
+import { buildSimBillingDisplay } from '../src/utils/billingSimState';
 
 interface BillingPageProps {
   currentPlan: SubscriptionPlan;
   user: UserProfile;
   onNavigate: (page: string) => void;
+  /** True when the Admin simulator is active. Skips Stripe fetch; shows simulated state. */
+  simulationActive?: boolean;
+  /** Simulated subscription state from the signed sim token (display-only). */
+  simulatedSubscriptionState?: string | null;
 }
 
 const PLAN_PRICES: Record<string, string> = {
@@ -63,14 +68,29 @@ const StatusBadge: React.FC<{ status: SubscriptionStatus['status']; betaAccess?:
   );
 };
 
-export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onNavigate }) => {
+export const BillingPage: React.FC<BillingPageProps> = ({
+  currentPlan,
+  user,
+  onNavigate,
+  simulationActive = false,
+  simulatedSubscriptionState,
+}) => {
   const isDemo = isDemoMode;
   const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusLoading, setStatusLoading] = useState(!simulationActive);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
+  const simDisplay = simulationActive
+    ? buildSimBillingDisplay(currentPlan, simulatedSubscriptionState)
+    : null;
+
   useEffect(() => {
+    if (simulationActive) {
+      setSubStatus(null);
+      setStatusLoading(false);
+      return;
+    }
     const load = async () => {
       setStatusLoading(true);
       try {
@@ -83,7 +103,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
       }
     };
     load();
-  }, [currentPlan]);
+  }, [currentPlan, simulationActive]);
 
   const handleManageBilling = async () => {
     setPortalError(null);
@@ -97,7 +117,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
     }
   };
 
-  const activePlan = subStatus?.plan ?? currentPlan;
+  const activePlan = simulationActive ? currentPlan : (subStatus?.plan ?? currentPlan);
   const planColor = PLAN_COLORS[activePlan] ?? PLAN_COLORS.Explorer;
 
   // Private-beta grant: full access is unlocked without a Stripe customer/subscription,
@@ -106,7 +126,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
   // the Stripe-derived plan, which legitimately reads "Explorer"/none for a beta user who
   // has never subscribed. Billing only renders for signed-in users (protected route).
   const betaGranted =
-    betaFullAccess && !isDemo && !subStatus?.customerId;
+    !simulationActive && betaFullAccess && !isDemo && !subStatus?.customerId;
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 min-h-[70vh] animate-fade-in space-y-6" data-clarity-mask="True">
@@ -116,6 +136,21 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
         <h1 className="text-3xl font-black text-gray-900 tracking-tight">Billing & Subscription</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your plan and payment details.</p>
       </div>
+
+      {/* Simulation Banner */}
+      {simulationActive && simDisplay && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl p-4 text-sm">
+          <FlaskConical className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-amber-900">Simulated Billing State</p>
+            <p className="text-amber-800 text-xs mt-0.5 leading-relaxed">
+              Showing simulated state: <strong>{simDisplay.statusLabel}</strong> for plan{' '}
+              <strong>{activePlan}</strong>. No real Stripe data was fetched. No subscription is
+              being changed. Real billing controls are disabled during simulation.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Demo Mode Banner */}
       {isDemo && (
@@ -138,7 +173,14 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Current Plan</h2>
-          {subStatus && <StatusBadge status={subStatus.status} betaAccess={betaGranted} />}
+          {simulationActive && simDisplay ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border bg-amber-100 border-amber-300 text-amber-800">
+              <FlaskConical className="w-3 h-3" />
+              SIM · {simDisplay.statusLabel}
+            </span>
+          ) : subStatus ? (
+            <StatusBadge status={subStatus.status} betaAccess={betaGranted} />
+          ) : null}
         </div>
 
         <div className="flex items-center gap-4">
@@ -167,8 +209,20 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
           </div>
         )}
 
-        {/* Billing cycle details from Stripe */}
-        {subStatus && ['active', 'trialing', 'past_due'].includes(subStatus.status) && subStatus.currentPeriodEnd ? (
+        {/* Billing cycle details — simulated or real */}
+        {simulationActive && simDisplay ? (
+          simDisplay.periodEndNote ? (
+            <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-xl p-3 border border-amber-100">
+              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>{simDisplay.periodEndNote}</span>
+            </div>
+          ) : simDisplay.subscriptionState === 'none' ? (
+            <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-3 border border-gray-100">
+              <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span>Simulated: no active subscription.</span>
+            </div>
+          ) : null
+        ) : subStatus && ['active', 'trialing', 'past_due'].includes(subStatus.status) && subStatus.currentPeriodEnd ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
               <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -209,7 +263,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
-          {isDemo ? (
+          {simulationActive ? (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+              Stripe subscription management is unavailable during simulation.
+            </p>
+          ) : isDemo ? (
             <button
               onClick={() => onNavigate('pricing')}
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-sm"
@@ -294,7 +352,13 @@ export const BillingPage: React.FC<BillingPageProps> = ({ currentPlan, user, onN
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Invoice History</h2>
         </div>
 
-        {isDemo ? (
+        {simulationActive ? (
+          <div className="text-center py-8 text-amber-400">
+            <FlaskConical className="w-8 h-8 mx-auto mb-3 opacity-40" />
+            <p className="text-xs font-semibold text-amber-700">Invoice history is not available during simulation.</p>
+            <p className="text-xs mt-1 text-amber-600 opacity-70">Real invoices are only accessible when simulation is cleared.</p>
+          </div>
+        ) : isDemo ? (
           <div className="text-center py-8 text-gray-400">
             <Receipt className="w-8 h-8 mx-auto mb-3 opacity-30" />
             <p className="text-xs font-semibold">Invoice history is not available in Sandbox mode.</p>

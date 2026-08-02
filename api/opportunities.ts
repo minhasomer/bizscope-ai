@@ -8,6 +8,7 @@ import {
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
 import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
+import { resolveSimulatedRequest, getSimRegionalQuota } from './_simAuth.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 
@@ -487,18 +488,26 @@ export default async function handler(
     betaFullAccess:          _serverBetaFullAccess,
   });
 
-  const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
+  const { verifiedEmail, verifiedPlan: realPlan, verifiedRole, verifiedUserId: realUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
 
-  // Gate: must be authenticated and have an upgraded plan.
+  const _simAuth = resolveSimulatedRequest(
+    req.headers as Record<string, string | string[] | undefined>,
+    realUserId, verifiedRole, realPlan, _serverBetaFullAccess,
+  );
+  const verifiedPlan   = _simAuth.effectivePlan;
+  const verifiedUserId = _simAuth.simulationActive && _simAuth.effectivePersona === 'Anonymous'
+    ? null : realUserId;
+
+  // Gate: must be authenticated and on Pro+ or Enterprise.
   // When BETA_FULL_ACCESS=true, getServerSidePlan() already promotes any
   // authenticated non-Admin user to Pro+, so this check passes transparently.
   // Unauthenticated users always fall back to verifiedUserId=null / plan=Explorer.
-  if (!verifiedUserId || verifiedPlan === 'Explorer') {
+  if (!verifiedUserId || (verifiedPlan !== 'Pro+' && verifiedPlan !== 'Enterprise')) {
     console.warn(`[Opportunities] Rejected — userId=${verifiedUserId ?? 'null'} plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
     return json(res, 403, {
-      error: 'Market Gap analysis with real AI requires a Pro or higher plan.',
+      error: 'Market Gap analysis requires a Pro+ or Enterprise plan.',
       code: 'INSUFFICIENT_PLAN',
     });
   }
@@ -573,13 +582,10 @@ export default async function handler(
     console.log(`[MarketGapCache] BYPASS (forceRegenerate) — ${canonLocation}`);
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
-  }
-
-  // ── Server-side quota check — standard reports (after cache, before Gemini) ─
-  const quota = await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  // ── Server-side quota check — regional (after cache, before Gemini) ─────────
+  const quota = _simAuth.simulationActive
+    ? getSimRegionalQuota(_simAuth)
+    : await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
   if (!quota.allowed) {
     console.warn(`[Opportunities] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
     return json(res, 429, {
@@ -588,6 +594,11 @@ export default async function handler(
       used: quota.used,
       limit: quota.limit,
     });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
   }
 
   // Hoisted so the failure-path catch block (outside the try below) can still
@@ -829,7 +840,9 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     }
 
     // Quota counter — only fresh, successful, non-cached generations count.
-    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+    if (!_simAuth.simulationActive) {
+      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+    }
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;

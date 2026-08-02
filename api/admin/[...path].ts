@@ -6,11 +6,17 @@
  *
  * Supported routes (explicit allowlist — unknown paths return 404):
  *
- *   GET  /api/admin/beta-access        → list current BetaTesters
- *   POST /api/admin/beta-access        → grant or revoke a single email
- *                                          body: { email: string, action: 'grant' | 'revoke' }
+ *   GET  /api/admin/beta-access          → list current BetaTesters
+ *   POST /api/admin/beta-access          → grant or revoke a single email
+ *                                            body: { email: string, action: 'grant' | 'revoke' }
  *
- *   GET  /api/admin/cost-summary       → AI cost report (optional ?days=N, 1–365)
+ *   GET  /api/admin/cost-summary         → AI cost report (optional ?days=N, 1–365)
+ *
+ *   POST /api/admin/simulation-token     → issue a signed Preview-only simulation token
+ *                                            body: SimulationTokenRequest
+ *                                            Preview + Admin only; requires ADMIN_SIMULATION_ENABLED=true
+ *
+ *   POST /api/admin/simulation-clear     → no-op acknowledgement (client clears sessionStorage)
  *
  * All routes require a valid Admin-role Supabase session token in the
  * Authorization: Bearer <token> header.
@@ -18,6 +24,12 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
+import {
+  signSimulationToken,
+  SIMULATION_PERSONAS,
+  SUBSCRIPTION_STATES,
+  TOKEN_TTL_SECONDS,
+} from '../../src/utils/simulationToken.js';
 
 // maxDuration is the higher of the two original values (beta-access=15, cost-summary=10)
 export const maxDuration = 15;
@@ -94,6 +106,26 @@ async function verifyAdminRole(authHeader: string | undefined): Promise<boolean>
     return !profileError && profile?.role === 'Admin';
   } catch {
     return false;
+  }
+}
+
+// Returns the verified Admin's user ID, or null if the caller is not an Admin.
+async function getVerifiedAdminUserId(authHeader: string | undefined): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token) return null;
+  try {
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !user) return null;
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    if (profileError || profile?.role !== 'Admin') return null;
+    return user.id;
+  } catch {
+    return null;
   }
 }
 
@@ -368,6 +400,109 @@ async function handleCostSummary(
   }
 }
 
+// ─── Sub-handler: simulation-token ────────────────────────────────────────────
+//
+// Issues a signed, short-lived simulation token for Preview-only "Test as User".
+//
+// Security guards (all must pass):
+//   1. ADMIN_SIMULATION_ENABLED === 'true'        — not set in Production
+//   2. VERCEL_ENV !== 'production'                — belt-and-suspenders
+//   3. ADMIN_SIM_SECRET is configured             — signing secret absent in Production
+//   4. Real authenticated caller is Admin         — cannot be obtained by non-Admins
+//   5. Persona and subscriptionState in allowlist — no arbitrary fields
+//
+// Does NOT set any cookies — the signed token is returned in the JSON body.
+// The client stores it in sessionStorage and sends it as X-Sim-Token header.
+
+async function handleSimulationToken(
+  req: IncomingMessage & { body?: any },
+  res: ServerResponse,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    return json(res, 405, { error: 'Method not allowed.', code: 'METHOD_NOT_ALLOWED' });
+  }
+
+  // ── Guard 1: Preview-only feature ─────────────────────────────────────────
+  if (process.env.ADMIN_SIMULATION_ENABLED !== 'true') {
+    return json(res, 503, {
+      error: 'Admin simulation is not enabled in this environment.',
+      code: 'SIMULATION_DISABLED',
+    });
+  }
+
+  // ── Guard 2: Belt-and-suspenders production check ─────────────────────────
+  if (process.env.VERCEL_ENV === 'production') {
+    return json(res, 503, {
+      error: 'Admin simulation is not available in Production.',
+      code: 'SIMULATION_DISABLED',
+    });
+  }
+
+  // ── Guard 3: Signing secret ────────────────────────────────────────────────
+  const secret = process.env.ADMIN_SIM_SECRET;
+  if (!secret) {
+    return json(res, 503, {
+      error: 'Simulation signing secret is not configured.',
+      code: 'SIMULATION_DISABLED',
+    });
+  }
+
+  // ── Guard 4: Real Admin auth ───────────────────────────────────────────────
+  const adminUserId = await getVerifiedAdminUserId(req.headers['authorization'] as string | undefined);
+  if (!adminUserId) {
+    return json(res, 403, { error: 'Admin access required.', code: 'FORBIDDEN' });
+  }
+
+  // ── Guard 5: Validate request body ────────────────────────────────────────
+  const body = req.body ?? {};
+  const { persona, standardUsed = 0, regionalUsed = 0, anonPreviewConsumed = false, subscriptionState = 'none', betaFullAccess = false } = body;
+
+  if (!(SIMULATION_PERSONAS as readonly string[]).includes(persona)) {
+    return json(res, 400, {
+      error: `Invalid persona. Must be one of: ${SIMULATION_PERSONAS.join(', ')}.`,
+      code: 'INVALID_PERSONA',
+    });
+  }
+  if (!(SUBSCRIPTION_STATES as readonly string[]).includes(subscriptionState)) {
+    return json(res, 400, {
+      error: `Invalid subscriptionState. Must be one of: ${SUBSCRIPTION_STATES.join(', ')}.`,
+      code: 'INVALID_STATE',
+    });
+  }
+  if (typeof standardUsed !== 'number' || standardUsed < 0 || !Number.isInteger(standardUsed)) {
+    return json(res, 400, { error: 'standardUsed must be a non-negative integer.', code: 'INVALID_INPUT' });
+  }
+  if (typeof regionalUsed !== 'number' || regionalUsed < 0 || !Number.isInteger(regionalUsed)) {
+    return json(res, 400, { error: 'regionalUsed must be a non-negative integer.', code: 'INVALID_INPUT' });
+  }
+
+  // ── Issue token ────────────────────────────────────────────────────────────
+  const token = signSimulationToken(
+    { issuedForUserId: adminUserId, persona, standardUsed, regionalUsed, anonPreviewConsumed: !!anonPreviewConsumed, subscriptionState, betaFullAccess: !!betaFullAccess },
+    secret,
+  );
+
+  const expiresAt = new Date(Date.now() + TOKEN_TTL_SECONDS * 1000).toISOString();
+  console.log(`[simulation-token] issued: persona=${persona} subscriptionState=${subscriptionState} betaFullAccess=${betaFullAccess} issuedForUserId=${adminUserId}`);
+
+  return json(res, 200, { token, expiresAt, persona, ttlSeconds: TOKEN_TTL_SECONDS });
+}
+
+// ─── Sub-handler: simulation-clear ────────────────────────────────────────────
+//
+// No-op acknowledgement — the client is responsible for clearing sessionStorage.
+// No auth required (clearing simulation is never harmful).
+
+async function handleSimulationClear(
+  req: IncomingMessage & { body?: any },
+  res: ServerResponse,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    return json(res, 405, { error: 'Method not allowed.', code: 'METHOD_NOT_ALLOWED' });
+  }
+  return json(res, 200, { cleared: true });
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -377,8 +512,10 @@ export default async function handler(
   const subPath = getAdminSubPath(req);
 
   switch (subPath) {
-    case 'beta-access':  return handleBetaAccess(req, res);
-    case 'cost-summary': return handleCostSummary(req, res);
-    default:             return json(res, 404, { error: 'Not found.', code: 'NOT_FOUND' });
+    case 'beta-access':        return handleBetaAccess(req, res);
+    case 'cost-summary':       return handleCostSummary(req, res);
+    case 'simulation-token':   return handleSimulationToken(req, res);
+    case 'simulation-clear':   return handleSimulationClear(req, res);
+    default:                   return json(res, 404, { error: 'Not found.', code: 'NOT_FOUND' });
   }
 }

@@ -17,6 +17,19 @@ import { assertLiveService } from '../src/lib/guardrails';
 import { supabase } from './supabaseClient';
 import { normalizeViabilityReport } from '../src/utils/reportNormalization';
 
+// sessionStorage key for the admin simulation token (Preview only).
+// Must match the key used by DevAdminPanel when storing the token.
+const SIM_TOKEN_SS_KEY = 'bizscope_sim_token';
+
+function getSimTokenHeaders(): Record<string, string> {
+  try {
+    const token = sessionStorage.getItem(SIM_TOKEN_SS_KEY);
+    return token ? { 'x-sim-token': token } : {};
+  } catch {
+    return {};
+  }
+}
+
 // Preserves structured fields (code, used, limit) from API error responses
 // (e.g. 429 QUOTA_EXCEEDED) so callers can branch on them instead of just
 // the message string.
@@ -661,6 +674,7 @@ export const generateViabilityReport = async (
                 'x-plan-tier': planTier,
                 'x-user-email': localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai',
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...getSimTokenHeaders(),
             },
             body: JSON.stringify({
                 businessType,
@@ -992,6 +1006,7 @@ export const generateOpportunityReport = async (
         headers: {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...getSimTokenHeaders(),
         },
         body: JSON.stringify({ location, forceRegenerate: !!forceRegenerate })
     });
@@ -1029,6 +1044,7 @@ export const generateOpportunityDossier = async (
         headers: {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...getSimTokenHeaders(),
         },
         body: JSON.stringify({ opportunity, location }),
     });
@@ -1178,6 +1194,7 @@ export const generateRegionalAnalysis = async (
         'x-plan-tier': planTier,
         'x-user-email': localStorage.getItem('bizscope_user_email') || 'anonymous@bizscope.ai',
         ...(regToken ? { 'Authorization': `Bearer ${regToken}` } : {}),
+        ...getSimTokenHeaders(),
       },
       body: JSON.stringify({
         businessType,
@@ -1232,7 +1249,7 @@ export const generateAnonymousPreviewReport = async (
   try {
     const response = await fetch('/api/preview', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getSimTokenHeaders() },
       body: JSON.stringify({ businessType, location, userLocation }),
     });
 

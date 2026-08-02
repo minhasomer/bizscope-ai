@@ -9,6 +9,7 @@ import {
 } from '../src/config/aiBudget.js';
 import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
+import { resolveSimulatedRequest, getSimRegionalQuota } from './_simAuth.js';
 
 export const maxDuration = 60;
 
@@ -393,9 +394,17 @@ export default async function handler(
     supabaseAdminInitialized: !!supabaseAdmin,
   });
 
-  const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
+  const { verifiedEmail, verifiedPlan: realPlan, verifiedRole, verifiedUserId: realUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
+
+  const _simAuth = resolveSimulatedRequest(
+    req.headers as Record<string, string | string[] | undefined>,
+    realUserId, verifiedRole, realPlan, _serverBetaFullAccess,
+  );
+  const verifiedPlan   = _simAuth.effectivePlan;
+  const verifiedUserId = _simAuth.simulationActive && _simAuth.effectivePersona === 'Anonymous'
+    ? null : realUserId;
 
   // Plan-based gate: unauthenticated, Explorer, and Pro users are blocked.
   // Admin always passes. BETA_FULL_ACCESS=true promotes all authenticated users to Pro+.
@@ -437,7 +446,11 @@ export default async function handler(
   }
 
   // ── Regional quota gate ───────────────────────────────────────────────────
-  const quota = await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  // During simulation: use the token's regionalUsed count to drive quota logic
+  // instead of the real DB count. Real quota records are never mutated.
+  const quota = _simAuth.simulationActive
+    ? getSimRegionalQuota(_simAuth)
+    : await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
   if (!quota.allowed) {
     return json(res, 429, {
       error: 'Monthly regional report limit reached for your plan.',
@@ -602,9 +615,11 @@ Output valid JSON only. No markdown wrappers.
       console.error('[ActivityLog] failed opportunity-dossier success:', logErr.message ?? logErr);
     }
 
-    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
-    // Visibility counter — tracks dossier-specific usage for the dashboard display.
-    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'opportunity_dossier');
+    // Skip real quota DB writes during simulation — never mutate real usage records.
+    if (!_simAuth.simulationActive) {
+      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'opportunity_dossier');
+    }
 
     return json(res, 200, normalized);
   } catch (err: any) {

@@ -16,7 +16,7 @@ import { isDemoMode, isBetaRoleEnabled, appConfig, betaFullAccess, proTrialEnabl
 import type { ViabilityReport, OpportunityReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { mockSavedReports } from './src/data/mockSavedReports.js';
-import { AlertTriangle, Sparkles, Lock } from 'lucide-react';
+import { AlertTriangle, Sparkles, Lock, Eye } from 'lucide-react';
 import { SubscriptionPlan, canSaveReports, isAdmin, previewRoleToEffectivePlan } from './src/utils/planUtils';
 import { DevAdminPanel, PreviewRole } from './components/DevAdminPanel';
 import { UsageTrackerService, UsageDetails } from './services/usageTrackerService';
@@ -73,6 +73,18 @@ const formatResetTime = (date: Date | null): string => {
 // sessionStorage key mirroring the in-memory report so browser Back/Forward
 // across a document reload (OAuth/Stripe redirects, refresh) can restore it.
 const ACTIVE_REPORT_KEY = 'bizscope_active_report';
+
+// sessionStorage key for the admin simulation token (Preview env only).
+// Must match the key used in DevAdminPanel.tsx and services/geminiService.ts.
+const SIM_TOKEN_KEY = 'bizscope_sim_token';
+
+// True when the simulator feature is enabled client-side.
+// In local dev (DEV=true) the simulator UI is always available.
+// In Preview it requires VITE_ADMIN_SIMULATION_ENABLED=true.
+// Intentionally NOT a reactive value — the env flag is a build-time constant.
+const isSimulationEnabled =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_ADMIN_SIMULATION_ENABLED === 'true';
 
 const App: React.FC = () => {
   const [seoRoute] = useState<SEORouteMatch | null>(() => parseSEORoute(window.location.pathname));
@@ -218,6 +230,8 @@ const App: React.FC = () => {
 
   // Role being previewed in DevAdminPanel (null = viewing as real self).
   const [previewRole, setPreviewRole] = useState<PreviewRole | null>(null);
+  // Simulated subscription state from the signed token — display-only; server enforces authorization.
+  const [simSubscriptionState, setSimSubscriptionState] = useState<string | null>(null);
 
   // Pending live-mode report request waiting for admin confirmation.
   const [pendingLiveRequest, setPendingLiveRequest] = useState<{
@@ -243,8 +257,16 @@ const App: React.FC = () => {
     isAnonymousPreview?: boolean;
   } | null>(null);
 
-  // Effective plan driving all feature gating — preview only active in local dev.
-  const userPlan: SubscriptionPlan = (import.meta.env.DEV && previewRole !== null)
+  // True when the signed-in user is Admin AND the simulator is enabled in this env.
+  // This gate governs whether persona activation issues a signed server token
+  // (Preview) vs. simple UI-only role switching (local dev without the flag).
+  const canSimulate = isSimulationEnabled && isAdmin(currentUser?.role ?? '');
+
+  // Effective plan driving all feature gating.
+  // In simulation mode (canSimulate=true, token in sessionStorage) the plan is
+  // also driven by previewRole, resolved server-side by the sim token.
+  // In local dev preview mode (import.meta.env.DEV only) it's resolved client-side.
+  const userPlan: SubscriptionPlan = ((import.meta.env.DEV || canSimulate) && previewRole !== null)
     ? previewRoleToEffectivePlan(previewRole) as SubscriptionPlan
     : baseUserPlan;
 
@@ -349,6 +371,7 @@ const App: React.FC = () => {
           setBaseUserPlan(user.plan as SubscriptionPlan);
           localStorage.setItem('bizscope_user_email', user.email);
         } else {
+          sessionStorage.removeItem(SIM_TOKEN_KEY);
           setReport(null);
           setError(null);
           setBaseUserPlan('Explorer');
@@ -570,18 +593,22 @@ const App: React.FC = () => {
 
   const handleSignOut = async () => {
     await AuthService.signOut();
+    sessionStorage.removeItem(SIM_TOKEN_KEY);
     setCurrentUser(null);
     setReport(null);
     setError(null);
     navigate('home');
     setBaseUserPlan('Explorer');
     setPreviewRole(null);
+    setSimSubscriptionState(null);
   };
 
-  const handleSetPreview = (role: PreviewRole | null) => {
+  const handleSetPreview = async (role: PreviewRole | null, subState?: string | null) => {
+    if (role === null) sessionStorage.removeItem(SIM_TOKEN_KEY);
     setPreviewRole(role);
+    setSimSubscriptionState(role !== null ? (subState ?? 'active') : null);
     const plan = role !== null ? previewRoleToEffectivePlan(role) as SubscriptionPlan : baseUserPlan;
-    const u = UsageTrackerService.getDetails(plan);
+    const u = await refreshUsage(plan);
     setUsage(u);
     setReportsRunCount(u.standardUsed);
   };
@@ -861,8 +888,10 @@ const App: React.FC = () => {
     // ── End anonymous branch ───────────────────────────────────────────────────
 
     const role = currentUser?.role ?? '';
-    // Admin and Enterprise users have unlimited quota — never hit the client-side limit modal.
-    const isUnlimited = isAdmin(role) || userPlan === 'Enterprise';
+    // Admin quota bypass is suspended during simulation so the simulator exercises
+    // the real quota gate. Enterprise plan (simulated or real) still bypasses limits.
+    const simActive = previewRole !== null;
+    const isUnlimited = (!simActive && isAdmin(role)) || userPlan === 'Enterprise';
     // Use the already-loaded `usage` state (server-side for authenticated users via
     // refreshUsage, localStorage fallback otherwise) instead of re-reading localStorage
     // directly — keeps this client-side pre-check consistent with the displayed quota.
@@ -1252,6 +1281,8 @@ const App: React.FC = () => {
             currentPlan={userPlan}
             user={currentUser!}
             onNavigate={navigate}
+            simulationActive={previewRole !== null}
+            simulatedSubscriptionState={simSubscriptionState}
           />
         );
       case 'settings':
@@ -1766,6 +1797,24 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* TEST MODE banner — shown when a simulation persona is active in Preview */}
+      {canSimulate && previewRole !== null && (
+        <div className="print:hidden bg-indigo-950 border-b border-indigo-800/60 px-4 py-1.5 flex items-center justify-center gap-3 text-[11px] font-medium">
+          <Eye className="w-3 h-3 text-indigo-400" />
+          <span className="text-indigo-200 font-semibold">TEST MODE</span>
+          <span className="text-indigo-600">·</span>
+          <span className="text-indigo-300">
+            Simulating <strong className="text-white">{previewRole}</strong> — no real DB writes
+          </span>
+          <button
+            onClick={() => handleSetPreview(null)}
+            className="ml-2 px-2 py-0.5 bg-indigo-800 hover:bg-indigo-700 text-indigo-200 text-[10px] font-bold rounded-lg border border-indigo-700 cursor-pointer transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {import.meta.env.DEV && isDemoMode && (() => {
         const role = currentUser?.role ?? '';
         const isLiveCapable = isBetaRoleEnabled(role);
@@ -1807,6 +1856,7 @@ const App: React.FC = () => {
         currentUser={currentUser}
         onSetPreview={handleSetPreview}
         isVisible={import.meta.env.DEV || isAdmin(currentUser?.role ?? '')}
+        canSimulate={canSimulate}
       />
 
       {/* Live-mode cost protection — only shown to Admin users, never in Demo Mode */}

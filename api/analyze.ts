@@ -8,6 +8,7 @@ import {
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
 import { checkStandardQuota, checkTrialQuota, incrementUsageTracking, incrementTrialUsage } from '../src/config/usageTracking.js';
+import { resolveSimulatedRequest, getSimStandardQuota } from './_simAuth.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection.js';
 import {
@@ -710,9 +711,17 @@ export default async function handler(
 
   // Auth + plan gate.
   // [3]-[7] are logged inside verifyAndGetPlan at every exit point.
-  const { verifiedEmail, verifiedPlan, verifiedRole, verifiedUserId } = await verifyAndGetPlan(
+  const { verifiedEmail, verifiedPlan: realPlan, verifiedRole, verifiedUserId: realUserId } = await verifyAndGetPlan(
     req.headers['authorization'] as string | undefined,
   );
+
+  const _simAuth = resolveSimulatedRequest(
+    req.headers as Record<string, string | string[] | undefined>,
+    realUserId, verifiedRole, realPlan, _serverBetaFullAccess,
+  );
+  const verifiedPlan   = _simAuth.effectivePlan;
+  const verifiedUserId = _simAuth.simulationActive && _simAuth.effectivePersona === 'Anonymous'
+    ? null : realUserId;
 
   // Block unauthenticated requests unconditionally — BETA_FULL_ACCESS never
   // extends to anonymous visitors.
@@ -730,7 +739,7 @@ export default async function handler(
   // 5 reports total (not monthly), enforced via checkTrialQuota. The subscription
   // status is authoritative — never trust a client-supplied flag.
   let _isTrialing = false;
-  if (verifiedPlan === 'Pro' && supabaseAdmin) {
+  if (!_simAuth.simulationActive && verifiedPlan === 'Pro' && supabaseAdmin) {
     try {
       const { data: _subRow } = await supabaseAdmin
         .from('subscriptions')
@@ -803,9 +812,11 @@ export default async function handler(
         console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
       }
       // Enforce quota on cache hits — a served report consumes a slot regardless of AI cost
-      const cacheQuota = _isTrialing
-        ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
-        : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+      const cacheQuota = _simAuth.simulationActive
+        ? getSimStandardQuota(_simAuth)
+        : _isTrialing
+          ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
+          : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
       if (!cacheQuota.allowed) {
         console.warn(`[Analyze] Quota exceeded (cache hit) — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${cacheQuota.used} limit=${cacheQuota.limit}`);
         return json(res, 429, {
@@ -815,10 +826,12 @@ export default async function handler(
           limit: cacheQuota.limit,
         });
       }
-      if (_isTrialing) {
-        await incrementTrialUsage(supabaseAdmin, verifiedUserId);
-      } else {
-        await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+      if (!_simAuth.simulationActive) {
+        if (_isTrialing) {
+          await incrementTrialUsage(supabaseAdmin, verifiedUserId);
+        } else {
+          await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+        }
       }
       return json(res, 200, {
         ...normalizeViabilityReport(cacheHit.report),
@@ -834,15 +847,12 @@ export default async function handler(
     console.log(`[Analyze] forceRegenerate=true — bypassing cache for ${businessType} / ${location}`);
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
-  }
-
   // ── Server-side quota check — standard reports (after cache, before Gemini) ─
-  const quota = _isTrialing
-    ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
-    : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  const quota = _simAuth.simulationActive
+    ? getSimStandardQuota(_simAuth)
+    : _isTrialing
+      ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
+      : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
   if (!quota.allowed) {
     console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${quota.used} limit=${quota.limit}`);
     return json(res, 429, {
@@ -851,6 +861,11 @@ export default async function handler(
       used:  quota.used,
       limit: quota.limit,
     });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
   }
 
   // Hoisted so the failure-path catch block (outside the try below) can still
@@ -1397,10 +1412,12 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     }
 
     // Quota counter — only fresh, successful, non-cached generations count.
-    if (_isTrialing) {
-      await incrementTrialUsage(supabaseAdmin, verifiedUserId);
-    } else {
-      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+    if (!_simAuth.simulationActive) {
+      if (_isTrialing) {
+        await incrementTrialUsage(supabaseAdmin, verifiedUserId);
+      } else {
+        await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
+      }
     }
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
