@@ -7,7 +7,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
-import { incrementUsageTracking } from '../src/config/usageTracking.js';
+import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 
 export const maxDuration = 60;
@@ -434,6 +434,17 @@ export default async function handler(
     });
   }
 
+  // ── Regional quota gate ───────────────────────────────────────────────────
+  const quota = await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  if (!quota.allowed) {
+    return json(res, 429, {
+      error: 'Monthly regional report limit reached for your plan.',
+      code: 'QUOTA_EXCEEDED',
+      used: quota.used,
+      limit: quota.limit,
+    });
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return json(res, 401, { error: 'Gemini API key is not configured.', code: 'MISSING_API_KEY' });
@@ -589,7 +600,8 @@ Output valid JSON only. No markdown wrappers.
       console.error('[ActivityLog] failed opportunity-dossier success:', logErr.message ?? logErr);
     }
 
-    // Visibility-only — not enforced as a quota cap, no separate report_type limit defined yet.
+    await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+    // Visibility counter — tracks dossier-specific usage for the dashboard display.
     await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'opportunity_dossier');
 
     return json(res, 200, normalized);
