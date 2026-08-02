@@ -25,6 +25,10 @@ export type PreviewRole =
   | 'BetaTester'
   | 'Admin';
 
+// sessionStorage key for the simulation token.
+// Must match the key used in geminiService.ts and App.tsx.
+const SIM_TOKEN_SS_KEY = 'bizscope_sim_token';
+
 interface DevAdminPanelProps {
   /** The currently active subscription plan driving all UI gating. */
   currentPlan: SubscriptionPlan;
@@ -36,6 +40,13 @@ interface DevAdminPanelProps {
   onSetPreview: (role: PreviewRole | null) => void;
   /** Whether the panel should render at all. Computed by App.tsx. */
   isVisible: boolean;
+  /**
+   * When true, the panel runs in "Full Simulation" mode (Preview env only):
+   * persona activation calls /api/admin/simulation-token and stores a signed
+   * HMAC token in sessionStorage. When false (local dev), role previews are
+   * UI-only with no token or server call.
+   */
+  canSimulate?: boolean;
 }
 
 // ─── Role definitions ───────────────────────────────────────────────────────
@@ -150,9 +161,19 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
   currentUser,
   onSetPreview,
   isVisible,
+  canSimulate = false,
 }) => {
   const [minimized, setMinimized] = useState(true);
   const [envExpanded, setEnvExpanded] = useState(false);
+
+  // Simulation state (used when canSimulate=true — Preview env only)
+  const [simStandardUsed, setSimStandardUsed] = useState(0);
+  const [simRegionalUsed, setSimRegionalUsed] = useState(0);
+  const [simAnonConsumed, setSimAnonConsumed] = useState(false);
+  const [simSubState, setSimSubState] = useState<'none' | 'active' | 'trialing' | 'past_due' | 'canceled'>('active');
+  const [simBetaAccess, setSimBetaAccess] = useState(false);
+  const [simLoading, setSimLoading] = useState(false);
+  const [simError, setSimError] = useState<string | null>(null);
 
   // Beta access state — only used when isAdminSession
   const [betaEmail, setBetaEmail] = useState('');
@@ -240,6 +261,48 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
       if (betaStatusTimer.current) clearTimeout(betaStatusTimer.current);
       betaStatusTimer.current = setTimeout(() => setBetaStatus(null), 6000);
     }
+  }
+
+  async function handleActivateSimulation(persona: PreviewRole) {
+    const sessionResult = await supabase?.auth.getSession();
+    const token = sessionResult?.data.session?.access_token;
+    if (!token) {
+      setSimError('No session token — sign in again.');
+      return;
+    }
+    setSimLoading(true);
+    setSimError(null);
+    try {
+      const res = await fetch('/api/admin/simulation-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          persona,
+          standardUsed: simStandardUsed,
+          regionalUsed: simRegionalUsed,
+          anonPreviewConsumed: simAnonConsumed,
+          subscriptionState: simSubState,
+          betaFullAccess: simBetaAccess,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSimError(data.error ?? `Error ${res.status}`);
+        return;
+      }
+      sessionStorage.setItem(SIM_TOKEN_SS_KEY, data.token);
+      onSetPreview(persona);
+    } catch {
+      setSimError('Network error — try again.');
+    } finally {
+      setSimLoading(false);
+    }
+  }
+
+  function handleClearSimulation() {
+    sessionStorage.removeItem(SIM_TOKEN_SS_KEY);
+    onSetPreview(null);
+    setSimError(null);
   }
 
   if (!isVisible) return null;
@@ -561,15 +624,15 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
           </div>
         )}
 
-        {/* Preview role selector */}
+        {/* Role selector — Full Simulation (Preview) or UI-only Preview (local dev) */}
         <div className="p-3 space-y-1">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-              Preview as Role
+              {canSimulate ? 'Full Simulation' : 'Preview as Role'}
             </p>
             {previewActive && (
               <button
-                onClick={() => onSetPreview(null)}
+                onClick={canSimulate ? handleClearSimulation : () => onSetPreview(null)}
                 className="text-[9px] font-black text-gray-400 hover:text-gray-600 uppercase tracking-wide cursor-pointer transition-colors"
               >
                 Reset →real self
@@ -579,10 +642,77 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
 
           {!previewActive && (
             <p className="text-[11px] text-gray-400 leading-normal mb-2.5">
-              {isAdminSession
-                ? 'UI-only preview — no DB writes, real session unchanged.'
-                : 'Preview plan-gated features. UI only — no subscription changes.'}
+              {canSimulate
+                ? 'Server-authoritative simulation — signed token, no real DB writes.'
+                : isAdminSession
+                  ? 'UI-only preview — no DB writes, real session unchanged.'
+                  : 'Preview plan-gated features. UI only — no subscription changes.'}
             </p>
+          )}
+
+          {/* Simulation parameters — only shown in Full Simulation mode */}
+          {canSimulate && !previewActive && (
+            <div className="space-y-2 pb-2 border-b border-gray-100 mb-2">
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Std used</label>
+                  <input
+                    type="number"
+                    min={0} max={99}
+                    value={simStandardUsed}
+                    onChange={e => setSimStandardUsed(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full text-[11px] px-2 py-1 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Regional used</label>
+                  <input
+                    type="number"
+                    min={0} max={99}
+                    value={simRegionalUsed}
+                    onChange={e => setSimRegionalUsed(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full text-[11px] px-2 py-1 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Subscription state</label>
+                <select
+                  value={simSubState}
+                  onChange={e => setSimSubState(e.target.value as typeof simSubState)}
+                  className="w-full text-[11px] px-2 py-1 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                >
+                  <option value="active">active</option>
+                  <option value="trialing">trialing</option>
+                  <option value="past_due">past_due</option>
+                  <option value="canceled">canceled</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={simAnonConsumed}
+                    onChange={e => setSimAnonConsumed(e.target.checked)}
+                    className="rounded border-slate-300 accent-amber-500"
+                  />
+                  <span className="text-[10px] text-gray-500">Anon preview consumed</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={simBetaAccess}
+                    onChange={e => setSimBetaAccess(e.target.checked)}
+                    className="rounded border-slate-300 accent-amber-500"
+                  />
+                  <span className="text-[10px] text-gray-500">Beta full access</span>
+                </label>
+              </div>
+              {simError && (
+                <p className="text-[10px] bg-red-50 text-red-600 border border-red-200 rounded-lg px-2 py-1">{simError}</p>
+              )}
+            </div>
           )}
 
           {ROLES.map(role => {
@@ -590,8 +720,16 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
             return (
               <button
                 key={role.id}
-                onClick={() => onSetPreview(isActive ? null : role.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all duration-150 cursor-pointer ${
+                disabled={simLoading}
+                onClick={() => {
+                  if (canSimulate) {
+                    if (isActive) handleClearSimulation();
+                    else handleActivateSimulation(role.id);
+                  } else {
+                    onSetPreview(isActive ? null : role.id);
+                  }
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all duration-150 cursor-pointer disabled:opacity-50 ${
                   isActive ? role.active : role.idle
                 }`}
               >
@@ -610,7 +748,7 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
                 </div>
                 {isActive ? (
                   <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-white/20 border border-white/25 text-white ml-2 shrink-0">
-                    Active
+                    {canSimulate ? 'Simulating' : 'Active'}
                   </span>
                 ) : (
                   <span className={`text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded shrink-0 ml-2 ${

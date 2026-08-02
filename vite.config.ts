@@ -43,6 +43,13 @@ export default defineConfig(({ mode }) => {
         'process.env.VITE_BIZSCOPE_CHAT_ENABLED': JSON.stringify(
           (env.VITE_BIZSCOPE_CHAT_ENABLED ?? process.env.VITE_BIZSCOPE_CHAT_ENABLED ?? 'false').trim(),
         ),
+        // Admin "Test as User" simulator flag.
+        // Set to 'true' on Vercel Preview only — never on Production.
+        // In local dev, import.meta.env.DEV also enables the simulator (no flag needed).
+        // Defaults to 'false' so the simulator is always off in production builds.
+        'process.env.VITE_ADMIN_SIMULATION_ENABLED': JSON.stringify(
+          (env.VITE_ADMIN_SIMULATION_ENABLED ?? process.env.VITE_ADMIN_SIMULATION_ENABLED ?? 'false').trim(),
+        ),
       },
       resolve: {
         alias: {
