@@ -7,7 +7,7 @@
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --packages=external --sourcemap --outfile=dist/server.js",
     "start": "node dist/server.js",
-    "test": "tsx tests/audit-regression.test.ts && tsx tests/chat.test.ts && tsx tests/admin-router.test.ts && tsx tests/chat-hardening.test.ts && tsx tests/opportunity-dossier-quota.test.ts && tsx tests/opportunity-dossier-handler.test.ts && tsx tests/admin-simulator.test.ts && tsx tests/sim-enforcement.test.ts"
+    "test": "tsx tests/audit-regression.test.ts && tsx tests/chat.test.ts && tsx tests/admin-router.test.ts && tsx tests/chat-hardening.test.ts && tsx tests/opportunity-dossier-quota.test.ts && tsx tests/opportunity-dossier-handler.test.ts && tsx tests/admin-simulator.test.ts && tsx tests/sim-enforcement.test.ts && tsx tests/sim-dashboard-usage.test.ts && tsx tests/sim-billing-display.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.27.0",

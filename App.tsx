@@ -230,6 +230,8 @@ const App: React.FC = () => {
 
   // Role being previewed in DevAdminPanel (null = viewing as real self).
   const [previewRole, setPreviewRole] = useState<PreviewRole | null>(null);
+  // Simulated subscription state from the signed token — display-only; server enforces authorization.
+  const [simSubscriptionState, setSimSubscriptionState] = useState<string | null>(null);
 
   // Pending live-mode report request waiting for admin confirmation.
   const [pendingLiveRequest, setPendingLiveRequest] = useState<{
@@ -598,13 +600,15 @@ const App: React.FC = () => {
     navigate('home');
     setBaseUserPlan('Explorer');
     setPreviewRole(null);
+    setSimSubscriptionState(null);
   };
 
-  const handleSetPreview = (role: PreviewRole | null) => {
+  const handleSetPreview = async (role: PreviewRole | null, subState?: string | null) => {
     if (role === null) sessionStorage.removeItem(SIM_TOKEN_KEY);
     setPreviewRole(role);
+    setSimSubscriptionState(role !== null ? (subState ?? 'active') : null);
     const plan = role !== null ? previewRoleToEffectivePlan(role) as SubscriptionPlan : baseUserPlan;
-    const u = UsageTrackerService.getDetails(plan);
+    const u = await refreshUsage(plan);
     setUsage(u);
     setReportsRunCount(u.standardUsed);
   };
@@ -1277,6 +1281,8 @@ const App: React.FC = () => {
             currentPlan={userPlan}
             user={currentUser!}
             onNavigate={navigate}
+            simulationActive={previewRole !== null}
+            simulatedSubscriptionState={simSubscriptionState}
           />
         );
       case 'settings':

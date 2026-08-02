@@ -36,8 +36,8 @@ interface DevAdminPanelProps {
   previewRole: PreviewRole | null;
   /** The signed-in user (null = not logged in). */
   currentUser: UserProfile | null;
-  /** Callback to activate or clear a preview role. */
-  onSetPreview: (role: PreviewRole | null) => void;
+  /** Callback to activate or clear a preview role. Second arg is the simulated subscription state (only set on activation). */
+  onSetPreview: (role: PreviewRole | null, subscriptionState?: string | null) => void;
   /** Whether the panel should render at all. Computed by App.tsx. */
   isVisible: boolean;
   /**
@@ -291,7 +291,7 @@ export const DevAdminPanel: React.FC<DevAdminPanelProps> = ({
         return;
       }
       sessionStorage.setItem(SIM_TOKEN_SS_KEY, data.token);
-      onSetPreview(persona);
+      onSetPreview(persona, simSubState);
     } catch {
       setSimError('Network error — try again.');
     } finally {

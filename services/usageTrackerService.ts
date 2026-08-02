@@ -213,9 +213,13 @@ export class UsageTrackerService {
       const token = sessionResult?.data?.session?.access_token ?? null;
       if (!token) return fallback();
 
+      const reqHeaders: Record<string, string> = { 'Authorization': `Bearer ${token}` };
+      const simToken = sessionStorage.getItem('bizscope_sim_token');
+      if (simToken) reqHeaders['x-sim-token'] = simToken;
+
       const response = await fetch('/api/usage-summary', {
         method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: reqHeaders,
       });
       if (!response.ok) return fallback();
 
