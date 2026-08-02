@@ -397,17 +397,19 @@ export default async function handler(
     req.headers['authorization'] as string | undefined,
   );
 
-  // Plan-based gate: unauthenticated and Explorer users are blocked.
+  // Plan-based gate: unauthenticated, Explorer, and Pro users are blocked.
   // Admin always passes. BETA_FULL_ACCESS=true promotes all authenticated users to Pro+.
+  // Pro is blocked here (not at quota-check) because regional is feature-locked
+  // for Pro — consistent with api/regional-analysis.ts and PLAN_CAPABILITIES.
   if (!verifiedUserId) {
     return json(res, 401, {
       error: 'Authentication required for dossier generation.',
       code: 'UNAUTHENTICATED',
     });
   }
-  if (verifiedPlan === 'Explorer') {
+  if (verifiedPlan !== 'Pro+' && verifiedPlan !== 'Enterprise') {
     return json(res, 403, {
-      error: 'Full opportunity dossiers require a Pro or higher plan.',
+      error: 'Full opportunity dossiers require a Pro+ or Enterprise plan.',
       code: 'INSUFFICIENT_PLAN',
     });
   }
