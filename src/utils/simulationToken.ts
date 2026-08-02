@@ -28,6 +28,7 @@ export type SubState = typeof SUBSCRIPTION_STATES[number];
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export interface SimulationPayload {
+  issuedForUserId: string;  // Admin user ID that requested the token — verified at use time
   persona: SimPersona;
   standardUsed: number;
   regionalUsed: number;
@@ -115,6 +116,9 @@ export function verifySimulationToken(
     if (typeof payload.regionalUsed !== 'number' || payload.regionalUsed < 0) return null;
     if (typeof payload.betaFullAccess !== 'boolean') return null;
     if (typeof payload.anonPreviewConsumed !== 'boolean') return null;
+
+    // Reject tokens that predate the issuedForUserId field (old format)
+    if (typeof payload.issuedForUserId !== 'string' || !payload.issuedForUserId) return null;
 
     return payload;
   } catch {

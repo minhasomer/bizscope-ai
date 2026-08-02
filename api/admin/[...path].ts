@@ -109,6 +109,26 @@ async function verifyAdminRole(authHeader: string | undefined): Promise<boolean>
   }
 }
 
+// Returns the verified Admin's user ID, or null if the caller is not an Admin.
+async function getVerifiedAdminUserId(authHeader: string | undefined): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token) return null;
+  try {
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !user) return null;
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    if (profileError || profile?.role !== 'Admin') return null;
+    return user.id;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Sub-handler: beta-access ─────────────────────────────────────────────────
 //
 // Behaviour is identical to the original api/admin/beta-access.ts.
@@ -428,11 +448,8 @@ async function handleSimulationToken(
   }
 
   // ── Guard 4: Real Admin auth ───────────────────────────────────────────────
-  if (!supabaseAdmin) {
-    return json(res, 503, { error: 'Database not configured.', code: 'NOT_CONFIGURED' });
-  }
-  const isAdmin = await verifyAdminRole(req.headers['authorization'] as string | undefined);
-  if (!isAdmin) {
+  const adminUserId = await getVerifiedAdminUserId(req.headers['authorization'] as string | undefined);
+  if (!adminUserId) {
     return json(res, 403, { error: 'Admin access required.', code: 'FORBIDDEN' });
   }
 
@@ -461,12 +478,12 @@ async function handleSimulationToken(
 
   // ── Issue token ────────────────────────────────────────────────────────────
   const token = signSimulationToken(
-    { persona, standardUsed, regionalUsed, anonPreviewConsumed: !!anonPreviewConsumed, subscriptionState, betaFullAccess: !!betaFullAccess },
+    { issuedForUserId: adminUserId, persona, standardUsed, regionalUsed, anonPreviewConsumed: !!anonPreviewConsumed, subscriptionState, betaFullAccess: !!betaFullAccess },
     secret,
   );
 
   const expiresAt = new Date(Date.now() + TOKEN_TTL_SECONDS * 1000).toISOString();
-  console.log(`[simulation-token] issued: persona=${persona} subscriptionState=${subscriptionState} betaFullAccess=${betaFullAccess}`);
+  console.log(`[simulation-token] issued: persona=${persona} subscriptionState=${subscriptionState} betaFullAccess=${betaFullAccess} issuedForUserId=${adminUserId}`);
 
   return json(res, 200, { token, expiresAt, persona, ttlSeconds: TOKEN_TTL_SECONDS });
 }

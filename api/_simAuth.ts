@@ -59,6 +59,23 @@ export function resolveSimulatedRequest(
 
   const simCtx = isRealAdmin ? getSimulationContext(headers) : null;
 
+  // Binding check: token must have been issued for this exact Admin's user ID
+  if (simCtx && simCtx.issuedForUserId !== realUserId) {
+    return {
+      realUserId,
+      realRole,
+      isRealAdmin,
+      simulationActive: false,
+      effectivePlan: realPlan,
+      effectivePersona: null,
+      effectiveSubscriptionState: null,
+      standardUsed: 0,
+      regionalUsed: 0,
+      anonymousPreviewConsumed: false,
+      betaFullAccess: serverBetaFullAccess,
+    };
+  }
+
   if (!simCtx) {
     return {
       realUserId,

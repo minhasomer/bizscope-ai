@@ -63,6 +63,7 @@ import type { AddressInfo } from 'node:net';
 
 import {
   signSimulationToken,
+  verifySimulationToken,
   resolveSimulationContext,
 } from '../src/utils/simulationToken.js';
 import { resolveSimulatedRequest } from '../api/_simAuth.js';
@@ -70,11 +71,13 @@ import type { SimPersona, SubState } from '../src/utils/simulationToken.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const TEST_SECRET        = 'test-sim-secret-enforcement-suite';
-const FAKE_ADMIN_JWT     = 'test-admin-enforcement-jwt';
-const FAKE_USER_JWT      = 'test-regularuser-enforcement-jwt';
-const FAKE_ADMIN_USER_ID = 'fake-admin-ee000000-0000-0000-0000-000000000000';
-const FAKE_USER_ID       = 'fake-user-ee000000-0000-0000-0000-000000000000';
+const TEST_SECRET          = 'test-sim-secret-enforcement-suite';
+const FAKE_ADMIN_JWT       = 'test-admin-enforcement-jwt';
+const FAKE_ADMIN_B_JWT     = 'test-admin-b-enforcement-jwt';
+const FAKE_USER_JWT        = 'test-regularuser-enforcement-jwt';
+const FAKE_ADMIN_USER_ID   = 'fake-admin-ee000000-0000-0000-0000-000000000000';
+const FAKE_ADMIN_B_USER_ID = 'fake-admin-b-ee000000-0000-0000-0000-000000000000';
+const FAKE_USER_ID         = 'fake-user-ee000000-0000-0000-0000-000000000000';
 const FAKE_SR_JWT        =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' +
   '.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoidGVzdCIsImlhdCI6MTAwMDAwMH0' +
@@ -94,14 +97,16 @@ function makeToken(
     subscriptionState?: SubState;
     betaFullAccess?: boolean;
     anonPreviewConsumed?: boolean;
+    issuedForUserId?: string;
   } = {},
 ): string {
   const {
     regionalUsed = 0, standardUsed = 0, subscriptionState = 'active',
     betaFullAccess = false, anonPreviewConsumed = false,
+    issuedForUserId = FAKE_ADMIN_USER_ID,
   } = opts;
   return signSimulationToken(
-    { persona, regionalUsed, standardUsed, subscriptionState, betaFullAccess, anonPreviewConsumed },
+    { issuedForUserId, persona, regionalUsed, standardUsed, subscriptionState, betaFullAccess, anonPreviewConsumed },
     TEST_SECRET,
   );
 }
@@ -126,6 +131,9 @@ const fakeSupabase = createServer(async (req: IncomingMessage, res: ServerRespon
     if (authHeader === `Bearer ${FAKE_ADMIN_JWT}`) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ id: FAKE_ADMIN_USER_ID, email: 'admin@test.com', role: 'authenticated' }));
+    } else if (authHeader === `Bearer ${FAKE_ADMIN_B_JWT}`) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ id: FAKE_ADMIN_B_USER_ID, email: 'adminb@test.com', role: 'authenticated' }));
     } else if (authHeader === `Bearer ${FAKE_USER_JWT}`) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ id: FAKE_USER_ID, email: 'user@test.com', role: 'authenticated' }));
@@ -139,7 +147,7 @@ const fakeSupabase = createServer(async (req: IncomingMessage, res: ServerRespon
   // Profiles: .single() uses Accept: application/vnd.pgrst.object+json → single object.
   if (url.pathname === '/rest/v1/profiles') {
     const accept = (req.headers['accept'] as string) ?? '';
-    const isAdmin = (req.url ?? '').includes(FAKE_ADMIN_USER_ID);
+    const isAdmin = (req.url ?? '').includes(FAKE_ADMIN_USER_ID) || (req.url ?? '').includes(FAKE_ADMIN_B_USER_ID);
     const row = isAdmin
       ? { role: 'admin', subscription_tier: 'Enterprise' }
       : { role: 'Explorer', subscription_tier: 'Explorer' };
@@ -202,6 +210,7 @@ async function call(
   opts: {
     method?: string;
     adminAuth?: boolean;
+    adminBAuth?: boolean;
     userAuth?: boolean;
     simToken?: string;
     body?: any;
@@ -211,6 +220,7 @@ async function call(
     const captured: MockResponse = { status: 200, body: null };
     const headers: Record<string, string> = {};
     if (opts.adminAuth)  headers['authorization'] = `Bearer ${FAKE_ADMIN_JWT}`;
+    if (opts.adminBAuth) headers['authorization'] = `Bearer ${FAKE_ADMIN_B_JWT}`;
     if (opts.userAuth)   headers['authorization'] = `Bearer ${FAKE_USER_JWT}`;
     if (opts.simToken)   headers['x-sim-token']   = opts.simToken;
 
@@ -496,6 +506,7 @@ checkAsync('B1. betaFullAccess=true + Explorer persona → effectivePlan=Pro+ �
 
 checkAsync('B2. betaFullAccess=true + Anonymous persona → effectivePlan stays Explorer (not elevated)', async () => {
   const payload = {
+    issuedForUserId: FAKE_ADMIN_USER_ID,
     persona: 'Anonymous' as SimPersona,
     subscriptionState: 'none' as SubState,
     betaFullAccess: true,
@@ -517,6 +528,84 @@ checkAsync('I1. non-admin user sends valid ProPlus sim token → sim NOT activat
   // Sim not activated (non-admin) → real plan = Explorer → 403 INSUFFICIENT_PLAN
   assert.equal(r.status, 403, `non-admin sim token replay must be rejected with 403, got ${r.status}`);
   assert.equal(r.body?.code, 'INSUFFICIENT_PLAN');
+});
+
+// ─── J1. Admin A uses own token → sim activated ───────────────────────────────
+
+checkAsync('J1. resolveSimulatedRequest: Admin A token + Admin A as realUser → simulationActive=true', async () => {
+  const token = makeToken('ProPlus'); // issuedForUserId defaults to FAKE_ADMIN_USER_ID
+  const result = resolveSimulatedRequest(
+    { 'x-sim-token': token },
+    FAKE_ADMIN_USER_ID,
+    'admin',
+    'Enterprise',
+    false,
+  );
+  assert.equal(result.simulationActive, true, 'token issued for Admin A must activate when Admin A uses it');
+  assert.equal(result.effectivePlan, 'Pro+');
+});
+
+// ─── J2. Admin B uses Admin A's token → binding mismatch → sim NOT activated ──
+
+checkAsync('J2. resolveSimulatedRequest: Admin A token + Admin B as realUser → simulationActive=false (binding mismatch)', async () => {
+  const token = makeToken('ProPlus'); // issuedForUserId = FAKE_ADMIN_USER_ID (Admin A)
+  const result = resolveSimulatedRequest(
+    { 'x-sim-token': token },
+    FAKE_ADMIN_B_USER_ID,
+    'admin',
+    'Enterprise',
+    false,
+  );
+  assert.equal(result.simulationActive, false, 'token issued for Admin A must not activate for Admin B');
+  assert.equal(result.isRealAdmin, true, 'Admin B is still a real admin');
+  assert.equal(result.effectivePlan, 'Enterprise', 'Admin B falls back to their own real plan');
+});
+
+// ─── J3. Old-format token (no issuedForUserId) → verifySimulationToken → null ─
+
+checkAsync('J3. verifySimulationToken: old-format token without issuedForUserId → null', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const oldPayload = {
+    persona: 'ProPlus' as SimPersona,
+    standardUsed: 0, regionalUsed: 0,
+    anonPreviewConsumed: false, subscriptionState: 'active' as SubState,
+    betaFullAccess: false, iat: now, exp: now + 7200,
+    // issuedForUserId intentionally absent — simulates a pre-binding-feature token
+  };
+  const encoded = b64url(Buffer.from(JSON.stringify(oldPayload), 'utf8'));
+  const sig = b64url(createHmac('sha256', TEST_SECRET).update(encoded).digest());
+  const result = verifySimulationToken(`${encoded}.${sig}`, TEST_SECRET);
+  assert.equal(result, null, 'old-format token without issuedForUserId must be rejected');
+});
+
+// ─── J4. Tampered issuedForUserId → HMAC mismatch → null ─────────────────────
+
+checkAsync('J4. verifySimulationToken: tampered issuedForUserId → HMAC invalid → null', async () => {
+  const validToken = makeToken('ProPlus'); // issuedForUserId = FAKE_ADMIN_USER_ID
+  const dot = validToken.lastIndexOf('.');
+  const encoded = validToken.slice(0, dot);
+  const sig = validToken.slice(dot + 1);
+
+  // Decode payload, swap issuedForUserId to Admin B, re-encode → original sig now mismatches
+  const decoded = JSON.parse(Buffer.from(encoded.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  decoded.issuedForUserId = FAKE_ADMIN_B_USER_ID;
+  const tamperedEncoded = b64url(Buffer.from(JSON.stringify(decoded), 'utf8'));
+  const result = verifySimulationToken(`${tamperedEncoded}.${sig}`, TEST_SECRET);
+  assert.equal(result, null, 'tampered issuedForUserId must invalidate the HMAC signature');
+});
+
+// ─── J5. Admin B replays Admin A's exhausted Explorer token → binding rejected ─
+//
+// If binding check works: Admin B's real Enterprise plan is used → analyze passes quota
+//   → reaches Gemini gate → 401 MISSING_API_KEY.
+// If binding check were absent: sim activates with Explorer/3-used → 429 QUOTA_EXCEEDED.
+
+checkAsync('J5. analyze: Admin B sends Admin A exhausted-Explorer token → binding rejected → Admin B Enterprise plan → 401 MISSING_API_KEY', async () => {
+  resetFake();
+  const token = makeToken('Explorer', { standardUsed: 3, issuedForUserId: FAKE_ADMIN_USER_ID });
+  const r = await call(analyzeHandler, { adminBAuth: true, simToken: token, body: analyzeBody });
+  assert.equal(r.status, 401, `binding mismatch must fall back to Admin B's Enterprise plan (passes quota), got ${r.status}: ${JSON.stringify(r.body)}`);
+  assert.equal(r.body?.code, 'MISSING_API_KEY');
 });
 
 // ─── Run all tests ─────────────────────────────────────────────────────────────

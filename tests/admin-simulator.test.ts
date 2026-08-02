@@ -76,7 +76,7 @@ function makeToken(
     betaFullAccess = false, anonPreviewConsumed = false,
   } = opts;
   return signSimulationToken(
-    { persona, regionalUsed, standardUsed, subscriptionState, betaFullAccess, anonPreviewConsumed },
+    { issuedForUserId: FAKE_ADMIN_USER_ID, persona, regionalUsed, standardUsed, subscriptionState, betaFullAccess, anonPreviewConsumed },
     TEST_SECRET,
   );
 }
@@ -85,6 +85,7 @@ function makeToken(
 function makeExpiredToken(persona: SimPersona): string {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
+    issuedForUserId: FAKE_ADMIN_USER_ID,
     persona, regionalUsed: 0, standardUsed: 0, subscriptionState: 'active' as SubState,
     betaFullAccess: false, anonPreviewConsumed: false,
     iat: now - 7201,
@@ -277,6 +278,7 @@ checkAsync('U4. expired token → verifySimulationToken returns null', async () 
 
 checkAsync('U5. personaToPlan: ProPlus + canceled subscription → Explorer plan', async () => {
   const payload = {
+    issuedForUserId: FAKE_ADMIN_USER_ID,
     persona: 'ProPlus' as SimPersona,
     subscriptionState: 'canceled' as SubState,
     betaFullAccess: false,
@@ -294,6 +296,7 @@ checkAsync('U5. personaToPlan: ProPlus + canceled subscription → Explorer plan
 
 checkAsync('U6. personaToPlan: BetaTester → Pro+ effective plan', async () => {
   const payload = {
+    issuedForUserId: FAKE_ADMIN_USER_ID,
     persona: 'BetaTester' as SimPersona,
     subscriptionState: 'active' as SubState,
     betaFullAccess: false,
@@ -308,6 +311,7 @@ checkAsync('U6. personaToPlan: BetaTester → Pro+ effective plan', async () => 
 
 checkAsync('U7. betaFullAccess=true + Anonymous persona → effectivePlan stays Explorer', async () => {
   const payload = {
+    issuedForUserId: FAKE_ADMIN_USER_ID,
     persona: 'Anonymous' as SimPersona,
     subscriptionState: 'none' as SubState,
     betaFullAccess: true,
@@ -322,6 +326,7 @@ checkAsync('U7. betaFullAccess=true + Anonymous persona → effectivePlan stays 
 
 checkAsync('U8. betaFullAccess=true + Explorer persona → effectivePlan is Pro+', async () => {
   const payload = {
+    issuedForUserId: FAKE_ADMIN_USER_ID,
     persona: 'Explorer' as SimPersona,
     subscriptionState: 'active' as SubState,
     betaFullAccess: true,
