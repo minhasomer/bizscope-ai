@@ -26,6 +26,8 @@ interface HeroProps {
   isTrialing?: boolean;
   /** False while the subscription-status fetch is still in-flight for a signed-in user. Prevents CTA flash. */
   subscriptionStatusLoaded?: boolean;
+  /** True while the initial auth session is still resolving. Suppresses guest-specific copy to prevent flash. */
+  authResolving?: boolean;
   /** Initiates Pro checkout (signed-in users only). */
   onProCheckout?: () => void;
   /** Navigates to the signup screen (signed-out visitors). */
@@ -39,7 +41,7 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({
   onSubmit, onNavigate, isLoading, hasResults, currentPlan, isAuthenticated = true,
   trialEligible = false, proTrialEnabled = false, hasPaidSubscription = false,
-  isTrialing = false, subscriptionStatusLoaded = true,
+  isTrialing = false, subscriptionStatusLoaded = true, authResolving = false,
   onProCheckout, onSignUp, onGoToDashboard,
 }) => {
   const [businessType, setBusinessType] = useState('');
@@ -89,6 +91,7 @@ export const Hero: React.FC<HeroProps> = ({
   // Previously Hero read its own stale localStorage copy which never updated on
   // plan switches or auth events, so it always showed Explorer's "3 reports/month".
   const getPlanAccessLabel = (plan: string): string => {
+    if (authResolving) return '';
     // Anonymous visitors don't have the Explorer monthly quota — they get a
     // single no-account preview. Showing "3 reports/month" here misleads
     // first-time visitors who then hit the preview paywall on attempt one.

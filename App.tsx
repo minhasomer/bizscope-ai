@@ -979,8 +979,8 @@ const App: React.FC = () => {
    */
   const trialEligible = proTrialEnabled && !!(subscriptionStatus?.trialEligible);
   const isTrialing = subscriptionStatus?.status === 'trialing';
-  // False only while a signed-in user's status fetch is still in-flight — prevents hero CTA flash.
-  const subscriptionStatusLoaded = !currentUser || subscriptionStatus !== null;
+  // False while auth is resolving OR a signed-in user's status fetch is in-flight — prevents hero CTA flash.
+  const subscriptionStatusLoaded = !authLoading && (!currentUser || subscriptionStatus !== null);
 
   const handleCheckout = async (plan: 'Pro' | 'Pro+') => {
     if (!currentUser) {
@@ -1680,6 +1680,7 @@ const App: React.FC = () => {
               proTrialEnabled={proTrialEnabled}
               hasPaidSubscription={hasPaidSubscription}
               isTrialing={isTrialing}
+              authResolving={authLoading}
               subscriptionStatusLoaded={subscriptionStatusLoaded}
               onProCheckout={() => handleCheckout('Pro')}
               onSignUp={() => navigate('settings', 'signup')}
