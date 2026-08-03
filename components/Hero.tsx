@@ -676,7 +676,7 @@ export const Hero: React.FC<HeroProps> = ({
         </section>
 
         {/* Section 3: Built for different decisions — tinted bg, white cards */}
-        <section className="bg-slate-100 py-14 sm:py-16">
+        <section className="bg-slate-200 py-14 sm:py-16">
           <div className="max-w-5xl mx-auto px-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-3">
               Built for different decisions
@@ -691,7 +691,7 @@ export const Hero: React.FC<HeroProps> = ({
                 { icon: '📍', title: 'Expansion planning', desc: 'Evaluate new markets before extending an existing business.' },
                 { icon: '🔍', title: 'Opportunity discovery', desc: 'Identify underserved markets with room for growth.' },
               ].map(({ icon, title, desc }) => (
-                <div key={title} className="flex flex-col gap-2 p-5 rounded-2xl bg-white border border-slate-200 shadow-md">
+                <div key={title} className="flex flex-col gap-2 p-5 rounded-2xl bg-white border border-slate-300 shadow-md">
                   <span className="text-2xl">{icon}</span>
                   <p className="text-sm font-bold text-slate-900">{title}</p>
                   <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
