@@ -15,8 +15,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 
-const heroSrc = fs.readFileSync(path.join(repoRoot, 'components', 'Hero.tsx'), 'utf8');
-const appSrc  = fs.readFileSync(path.join(repoRoot, 'App.tsx'), 'utf8');
+const heroSrc    = fs.readFileSync(path.join(repoRoot, 'components', 'Hero.tsx'), 'utf8');
+const appSrc     = fs.readFileSync(path.join(repoRoot, 'App.tsx'), 'utf8');
+const authSvcSrc = fs.readFileSync(path.join(repoRoot, 'services', 'authService.ts'), 'utf8');
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -115,6 +116,89 @@ check('authResolving is not used to add a second Hero render', () => {
   assert.ok(
     !authResolvingBranch.test(heroSrc) && !authResolvingBranch.test(appSrc),
     'authResolving must not gate a second Hero render — it is a data prop only',
+  );
+});
+
+// ── 7. Residual token-refresh flash: guard in subscription callback ──────────
+//
+// When Supabase fires SIGNED_OUT (or any transient null event) before a
+// persisted session token has been removed from localStorage, the subscription
+// callback must NOT prematurely set authLoading=false with currentUser=null.
+// The existing 5 s safety timeout acts as the bounded fallback.
+
+check('App.tsx subscription callback has hasPersistedSession guard for null user', () => {
+  assert.ok(
+    appSrc.includes('!user && AuthService.hasPersistedSession()'),
+    'hasPersistedSession guard missing from subscription callback — a transient null will flash guest content',
+  );
+});
+
+check('App.tsx guard returns early before any state mutation or setAuthLoading', () => {
+  assert.ok(
+    appSrc.includes('!user && AuthService.hasPersistedSession()) return;'),
+    'guard must early-return without calling setAuthLoading or mutating auth state',
+  );
+});
+
+check('App.tsx subscription guard is ordered before setAuthLoading(false)', () => {
+  const guardIdx    = appSrc.indexOf('!user && AuthService.hasPersistedSession()');
+  const loadingIdx  = appSrc.indexOf('setAuthLoading(false)', guardIdx);
+  assert.ok(guardIdx   !== -1, 'hasPersistedSession guard not found in App.tsx');
+  assert.ok(loadingIdx !== -1, 'setAuthLoading(false) not found after guard in App.tsx');
+  assert.ok(guardIdx < loadingIdx, 'guard must precede setAuthLoading(false) in the callback');
+});
+
+check('authService propagates null to onUserChange only on SIGNED_OUT', () => {
+  const signedOutIdx       = authSvcSrc.indexOf("event === 'SIGNED_OUT'");
+  const onUserChangeNullIdx = authSvcSrc.indexOf('onUserChange(null)');
+  assert.ok(signedOutIdx !== -1, "SIGNED_OUT branch missing from authService subscription handler");
+  assert.ok(onUserChangeNullIdx !== -1, 'onUserChange(null) call missing from authService');
+  assert.ok(
+    signedOutIdx < onUserChangeNullIdx,
+    'onUserChange(null) must reside inside the SIGNED_OUT branch, not at the top level',
+  );
+});
+
+check('authService does not call onUserChange(null) for null INITIAL_SESSION', () => {
+  // The second branch only fires onUserChange when session?.user is truthy.
+  // Verify the condition guards the call: if null session, the branch is skipped.
+  assert.ok(
+    authSvcSrc.includes("session?.user &&"),
+    'session?.user guard missing — onUserChange could fire with a user-less INITIAL_SESSION',
+  );
+  // Confirm that no bare onUserChange(null) exists outside the SIGNED_OUT block
+  // by ensuring there is exactly one occurrence of onUserChange(null) in the file.
+  const occurrences = authSvcSrc.split('onUserChange(null)').length - 1;
+  assert.strictEqual(occurrences, 1, `onUserChange(null) should appear exactly once (inside SIGNED_OUT); found ${occurrences}`);
+});
+
+check('App.tsx 5-second safety timeout provides bounded fallback if subscription stalls', () => {
+  assert.ok(
+    appSrc.includes('loadingTimeout'),
+    'loadingTimeout safety net missing — auth loading could stall indefinitely',
+  );
+  assert.ok(
+    appSrc.includes('5000'),
+    '5000 ms safety timeout value not found — bounded fallback may be absent',
+  );
+});
+
+check('App.tsx sign-out cleanup path still intact after the null guard', () => {
+  // The else branch must still exist for genuine SIGNED_OUT events where
+  // hasPersistedSession() is false (session already cleared by Supabase).
+  assert.ok(
+    appSrc.includes('sessionStorage.removeItem(SIM_TOKEN_KEY)'),
+    'Sign-out session cleanup removed — explicit sign-out would leave stale simulator state',
+  );
+  const navigateHomeIdx = appSrc.indexOf("navigate('home')");
+  const guardIdx        = appSrc.indexOf('!user && AuthService.hasPersistedSession()');
+  assert.ok(
+    navigateHomeIdx !== -1 && guardIdx !== -1,
+    "sign-out navigation or guard not found",
+  );
+  assert.ok(
+    guardIdx < navigateHomeIdx,
+    "guard must precede navigate('home') so it fires first and can skip the sign-out path",
   );
 });
 

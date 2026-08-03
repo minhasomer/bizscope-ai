@@ -366,6 +366,11 @@ const App: React.FC = () => {
     // 1. Subscribe first so OAuth redirects & token refreshes are never missed
     const unsubscribe = AuthService.subscribeToAuthChanges(
       (user) => {
+        // A persisted session token means the null is transient (e.g. spurious
+        // SIGNED_OUT before TOKEN_REFRESHED completes). Hold the loading state;
+        // the next auth event with a real user will resolve it. The 5 s safety
+        // timeout in initAuth acts as the bounded fallback.
+        if (!user && AuthService.hasPersistedSession()) return;
         setCurrentUser(user);
         if (user) {
           setBaseUserPlan(user.plan as SubscriptionPlan);
