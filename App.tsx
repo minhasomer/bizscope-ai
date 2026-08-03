@@ -399,6 +399,14 @@ const App: React.FC = () => {
       // Safety net: covers only getSession() hangs (e.g. Supabase navigator.locks
       // Web Lock contention). 5 s is enough since we no longer wait for a DB call.
       const loadingTimeout = setTimeout(() => {
+        // Only force false when there is no persisted session. If a session
+        // token still exists, getInitialSession() is blocked on the Web Lock
+        // and will resolve on its own when the lock releases — forcing false
+        // here would flash guest content prematurely.
+        if (AuthService.hasPersistedSession()) {
+          console.warn('[Auth] initAuth safety timeout: session token present, Web Lock still held — holding authLoading');
+          return;
+        }
         console.error('[Auth] initAuth safety timeout fired after 5s — forcing authLoading=false');
         setAuthLoading(false);
       }, 5000);

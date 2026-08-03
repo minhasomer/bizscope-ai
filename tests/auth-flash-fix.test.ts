@@ -172,15 +172,26 @@ check('authService does not call onUserChange(null) for null INITIAL_SESSION', (
   assert.strictEqual(occurrences, 1, `onUserChange(null) should appear exactly once (inside SIGNED_OUT); found ${occurrences}`);
 });
 
-check('App.tsx 5-second safety timeout provides bounded fallback if subscription stalls', () => {
+check('App.tsx safety timeout guards hasPersistedSession before forcing authLoading=false', () => {
+  // The safety timeout must NOT unconditionally fire setAuthLoading(false) —
+  // if a session token still exists the Web Lock is still held, and forcing
+  // false would flash guest content while getInitialSession() is still awaiting.
+  const timeoutSrc = appSrc.slice(appSrc.indexOf('loadingTimeout'));
   assert.ok(
-    appSrc.includes('loadingTimeout'),
-    'loadingTimeout safety net missing — auth loading could stall indefinitely',
+    timeoutSrc.includes('AuthService.hasPersistedSession()'),
+    'safety timeout missing hasPersistedSession guard — Web Lock delay will flash guest content',
   );
-  assert.ok(
-    appSrc.includes('5000'),
-    '5000 ms safety timeout value not found — bounded fallback may be absent',
-  );
+});
+
+check('App.tsx safety timeout only forces authLoading=false when no session is present', () => {
+  // Guard must appear BEFORE setAuthLoading(false) inside the timeout callback.
+  const timeoutStart = appSrc.indexOf('loadingTimeout = setTimeout');
+  const guardInTimeout = appSrc.indexOf('AuthService.hasPersistedSession()', timeoutStart);
+  const setFalseInTimeout = appSrc.indexOf('setAuthLoading(false)', guardInTimeout);
+  assert.ok(timeoutStart !== -1, 'loadingTimeout setTimeout not found');
+  assert.ok(guardInTimeout !== -1, 'hasPersistedSession guard not found inside timeout callback');
+  assert.ok(setFalseInTimeout !== -1, 'setAuthLoading(false) not found after guard in timeout');
+  assert.ok(guardInTimeout < setFalseInTimeout, 'guard must precede setAuthLoading(false) in timeout');
 });
 
 check('App.tsx sign-out cleanup path still intact after the null guard', () => {
