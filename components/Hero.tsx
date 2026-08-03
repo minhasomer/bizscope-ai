@@ -608,11 +608,11 @@ export const Hero: React.FC<HeroProps> = ({
                         </div>
 
                         {/* CTA Button */}
-                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                        <div className="flex flex-col items-center gap-2">
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full sm:w-auto flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold uppercase tracking-wide bg-white text-slate-900 hover:bg-indigo-50 rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-wait shadow-xl ring-1 ring-white/30 hover:ring-white/50 hover:-translate-y-0.5 active:translate-y-0"
+                                className="w-full flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold uppercase tracking-wide bg-white text-slate-900 hover:bg-indigo-50 rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-wait shadow-xl ring-1 ring-white/30 hover:ring-white/50 hover:-translate-y-0.5 active:translate-y-0"
                             >
                                 {isLoading ? (
                                   <>
@@ -631,7 +631,7 @@ export const Hero: React.FC<HeroProps> = ({
                                   </>
                                 )}
                             </button>
-                            <span className="text-slate-400 text-xs font-medium shrink-0">
+                            <span className="text-slate-400 text-xs font-medium text-center">
                                 {getPlanAccessLabel(currentPlan)}
                             </span>
                         </div>
