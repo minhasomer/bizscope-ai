@@ -400,9 +400,12 @@ export const Hero: React.FC<HeroProps> = ({
         <div className="relative z-10 w-full px-4">
             <div className="max-w-4xl mx-auto text-center">
                 {/* Main Headline */}
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-2 leading-tight tracking-tight">
                     Validate a Business Idea Before You Invest
                 </h1>
+                <p className="text-lg sm:text-xl font-bold text-indigo-300 mb-5">
+                    For Startups, Franchises &amp; Local Markets
+                </p>
 
                 <p className="text-base md:text-lg text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
                     Evaluate startups, franchises, and local markets with structured AI-powered research.
