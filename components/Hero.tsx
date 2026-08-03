@@ -648,13 +648,13 @@ export const Hero: React.FC<HeroProps> = ({
     {/* ── Below-hero sections — hidden once a report is in progress ── */}
     {!hasResults && (
       <>
-        {/* Section 2: What BizScope gives you */}
-        <section className="bg-white py-16 sm:py-20">
+        {/* Section 2: What BizScope gives you — white bg, tinted cards */}
+        <section className="bg-white py-14 sm:py-16">
           <div className="max-w-5xl mx-auto px-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-3">
               What BizScope gives you
             </h2>
-            <p className="text-slate-500 text-center mb-10 max-w-xl mx-auto text-sm leading-relaxed">
+            <p className="text-slate-500 text-center mb-8 max-w-xl mx-auto text-sm leading-relaxed">
               No prompt engineering required — BizScope structures the research so you get consistent, comparable results without knowing every question to ask.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -663,9 +663,9 @@ export const Hero: React.FC<HeroProps> = ({
                 { Icon: MapPin,        title: 'Local market context', desc: 'Research tailored to a city, ZIP code, or region — not a generic national overview.' },
                 { Icon: Layers,        title: 'Save and compare opportunities', desc: 'Review multiple ideas using the same evaluation framework.' },
               ] as const).map(({ Icon, title, desc }) => (
-                <div key={title} className="flex flex-col gap-3 p-6 rounded-2xl border border-slate-100 bg-slate-50">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
-                    <Icon className="w-5 h-5 text-indigo-600" />
+                <div key={title} className="flex flex-col gap-3 p-6 rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+                  <div className="w-10 h-10 bg-indigo-200 rounded-xl flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5 text-indigo-700" />
                   </div>
                   <p className="text-sm font-bold text-slate-900">{title}</p>
                   <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
@@ -675,13 +675,13 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
         </section>
 
-        {/* Section 3: Built for different decisions */}
-        <section className="bg-slate-100/70 py-16 sm:py-20">
+        {/* Section 3: Built for different decisions — tinted bg, white cards */}
+        <section className="bg-slate-100 py-14 sm:py-16">
           <div className="max-w-5xl mx-auto px-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-3">
               Built for different decisions
             </h2>
-            <p className="text-slate-500 text-center mb-10 text-sm">
+            <p className="text-slate-500 text-center mb-8 text-sm">
               From early-stage ideas to expansion planning — one consistent framework.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -691,7 +691,7 @@ export const Hero: React.FC<HeroProps> = ({
                 { icon: '📍', title: 'Expansion planning', desc: 'Evaluate new markets before extending an existing business.' },
                 { icon: '🔍', title: 'Opportunity discovery', desc: 'Identify underserved markets with room for growth.' },
               ].map(({ icon, title, desc }) => (
-                <div key={title} className="flex flex-col gap-2 p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                <div key={title} className="flex flex-col gap-2 p-5 rounded-2xl bg-white border border-slate-200 shadow-md">
                   <span className="text-2xl">{icon}</span>
                   <p className="text-sm font-bold text-slate-900">{title}</p>
                   <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
@@ -701,16 +701,16 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
         </section>
 
-        {/* Section 4: More than a general AI conversation */}
-        <section className="bg-white py-16 sm:py-20">
-          <div className="max-w-3xl mx-auto px-4">
+        {/* Section 4: More than a general AI conversation — wider content */}
+        <section className="bg-white py-14 sm:py-16">
+          <div className="max-w-4xl mx-auto px-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-3">
               More than a general AI conversation
             </h2>
-            <p className="text-slate-500 text-center mb-10 text-sm">
+            <p className="text-slate-500 text-center mb-8 text-sm">
               BizScope isn't a chatbot. It's a structured research tool built around business decisions.
             </p>
-            <div className="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+            <div className="flex flex-col divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
               {[
                 { label: 'Structured reports', desc: 'Every analysis follows the same framework — demand, competition, costs, and risk — so results are comparable across ideas.' },
                 { label: 'Location-aware research', desc: 'Outputs are tailored to the city or region you specify, not a generic national summary.' },
@@ -729,15 +729,15 @@ export const Hero: React.FC<HeroProps> = ({
         </section>
 
         {/* Final CTA */}
-        <section className="bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] py-16 sm:py-20">
+        <section className="bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] py-14 sm:py-16 border-t border-white/10">
           <div className="max-w-2xl mx-auto px-4 text-center">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
               Ready to evaluate your idea?
             </h2>
-            <p className="text-slate-400 mb-8 text-sm">
+            <p className="text-slate-400 mb-6 text-sm">
               Enter a business type and location above to get started.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-slate-900 hover:bg-indigo-50 font-bold rounded-xl transition-all shadow-lg cursor-pointer"
