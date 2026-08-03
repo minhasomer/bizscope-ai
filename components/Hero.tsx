@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ClipboardList, MapPin, Scale, Layers, Zap } from 'lucide-react';
+import { ClipboardList, MapPin, Layers } from 'lucide-react';
 import { searchBusinessTypes, DEFAULT_SUGGESTIONS, BusinessSuggestion } from '../src/data/businessSuggestionsData';
 import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSuggestions, fetchLocationAutocomplete } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
@@ -292,7 +292,7 @@ export const Hero: React.FC<HeroProps> = ({
         onClick={() => onNavigate('opportunities')}
         className="text-indigo-300 hover:text-white font-semibold underline underline-offset-4 decoration-indigo-400/50 hover:decoration-white/60 transition-all cursor-pointer"
       >
-        Discover underserved markets →
+        Explore Market Gaps →
       </button>
     );
 
@@ -377,6 +377,7 @@ export const Hero: React.FC<HeroProps> = ({
   };
 
   return (
+    <>
     <div className={`relative ${heightClass} bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] flex items-center justify-center`}>
         {/* Background Graphics - Absolute positioning */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -399,14 +400,15 @@ export const Hero: React.FC<HeroProps> = ({
         <div className="relative z-10 w-full px-4">
             <div className="max-w-4xl mx-auto text-center">
                 {/* Main Headline */}
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
-                    Validate Business Ideas Before You Invest Time or Money
-                    <br />
-                    <span className="text-indigo-300 font-bold">For Startups, Franchises & Local Markets</span>
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-2 leading-tight tracking-tight">
+                    Validate a Business Idea Before You Invest
                 </h1>
+                <p className="text-lg sm:text-xl font-bold text-indigo-300 mb-5">
+                    For Startups, Franchises &amp; Local Markets
+                </p>
 
                 <p className="text-base md:text-lg text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-                    Enter a business idea and target market to uncover demand, competition, startup costs, and growth potential before investing.
+                    Evaluate startups, franchises, and local markets with structured AI-powered research.
                 </p>
 
                 {/* Input Form */}
@@ -589,7 +591,7 @@ export const Hero: React.FC<HeroProps> = ({
                         <div className="mb-4">
                             <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-2 text-left">Try an example</p>
                             <div className="flex flex-wrap gap-1.5">
-                                {['Coffee Shop', 'Auto Detailing Business', 'HVAC Company', 'Daycare Center', 'House Cleaning Service', 'SaaS Startup', 'AI Consulting Firm', 'Pet Grooming Business', 'Roofing Company', 'Physical Therapy Clinic'].map((ex) => (
+                                {['Coffee Shop', 'HVAC Company', 'Med Spa', 'Daycare Center', 'Roofing Company'].map((ex) => (
                                     <button
                                         key={ex}
                                         type="button"
@@ -619,7 +621,7 @@ export const Hero: React.FC<HeroProps> = ({
                                   </>
                                 ) : (
                                   <>
-                                    Run Viability Analysis
+                                    Analyze My Business Idea
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                     </svg>
@@ -641,51 +643,126 @@ export const Hero: React.FC<HeroProps> = ({
                   </div>
                 )}
 
-                {/* Use-case trust chips */}
-                <div className="flex flex-wrap justify-center gap-2 mb-5">
-                    {[
-                        { icon: '🚀', text: 'Startup validation' },
-                        { icon: '🏪', text: 'Franchise evaluation' },
-                        { icon: '📍', text: 'Expansion planning' },
-                        { icon: '🔍', text: 'Opportunity discovery' },
-                    ].map(({ icon, text }) => (
-                        <span key={text} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.07] border border-white/[0.12] text-slate-300 text-xs rounded-full">
-                            {icon} {text}
-                        </span>
-                    ))}
-                </div>
-
-                {!hasResults && (
-                    <div className="mt-5 mb-4 max-w-2xl mx-auto px-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 text-center mb-2">
-                            Built for business decisions
-                        </p>
-                        <p className="text-sm font-semibold text-slate-200 text-center mb-3">
-                            More than a general AI conversation
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {([
-                                { Icon: ClipboardList, label: 'Structured viability analysis', desc: 'Market demand, competition, startup considerations, demographics, and risks organized in one report.' },
-                                { Icon: MapPin,        label: 'Local market context',          desc: 'Research tailored to the city or region you are evaluating, not a generic national overview.' },
-                                { Icon: Scale,         label: 'Consistent evaluation',         desc: 'Assess different businesses and locations using the same decision framework every time.' },
-                                { Icon: Layers,        label: 'Save and compare opportunities', desc: 'Keep reports together and review multiple ideas without managing separate chat threads.' },
-                                { Icon: Zap,           label: 'No prompt engineering required', desc: 'BizScope guides the research process so you do not need to know every question to ask.' },
-                            ] as const).map(({ Icon, label, desc }) => (
-                                <div key={label} className={`flex items-start gap-2.5 px-3.5 py-3 bg-white/[0.05] border border-white/[0.08] rounded-xl${label === 'No prompt engineering required' ? ' sm:col-span-2' : ''}`}>
-                                    <Icon className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="text-xs font-semibold text-slate-200 leading-tight">{label}</p>
-                                        <p className="text-[11px] text-slate-400 leading-relaxed mt-0.5">{desc}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {renderHeroCTA()}
             </div>
         </div>
     </div>
+
+    {/* ── Below-hero sections — hidden once a report is in progress ── */}
+    {!hasResults && (
+      <>
+        {/* Section 2: What BizScope gives you — white bg, tinted cards */}
+        <section className="bg-white py-14 sm:py-16">
+          <div className="max-w-5xl mx-auto px-4">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-3">
+              What BizScope gives you
+            </h2>
+            <p className="text-slate-500 text-center mb-8 max-w-xl mx-auto text-sm leading-relaxed">
+              No prompt engineering required — BizScope structures the research so you get consistent, comparable results without knowing every question to ask.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {([
+                { Icon: ClipboardList, title: 'Structured analysis', desc: 'Demand, competition, startup costs, and risks organized in one report.' },
+                { Icon: MapPin,        title: 'Local market context', desc: 'Research tailored to a city, ZIP code, or region — not a generic national overview.' },
+                { Icon: Layers,        title: 'Save and compare opportunities', desc: 'Review multiple ideas using the same evaluation framework.' },
+              ] as const).map(({ Icon, title, desc }) => (
+                <div key={title} className="flex flex-col gap-3 p-6 rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+                  <div className="w-10 h-10 bg-indigo-200 rounded-xl flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5 text-indigo-700" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">{title}</p>
+                  <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 3: Built for different decisions — tinted bg, white cards */}
+        <section className="bg-slate-200 py-14 sm:py-16">
+          <div className="max-w-5xl mx-auto px-4">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-3">
+              Built for different decisions
+            </h2>
+            <p className="text-slate-500 text-center mb-8 text-sm">
+              From early-stage ideas to expansion planning — one consistent framework.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { icon: '🚀', title: 'Startup validation', desc: 'Assess whether a new idea has viable market demand before spending money.' },
+                { icon: '🏪', title: 'Franchise evaluation', desc: 'Compare franchise options by location, cost, and competitive landscape.' },
+                { icon: '📍', title: 'Expansion planning', desc: 'Evaluate new markets before extending an existing business.' },
+                { icon: '🔍', title: 'Opportunity discovery', desc: 'Identify underserved markets with room for growth.' },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} className="flex flex-col gap-2 p-5 rounded-2xl bg-white border border-slate-300 shadow-md">
+                  <span className="text-2xl">{icon}</span>
+                  <p className="text-sm font-bold text-slate-900">{title}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4: More than a general AI conversation — wider content */}
+        <section className="bg-white py-14 sm:py-16">
+          <div className="max-w-4xl mx-auto px-4">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-3">
+              More than a general AI conversation
+            </h2>
+            <p className="text-slate-500 text-center mb-8 text-sm">
+              BizScope isn't a chatbot. It's a structured research tool built around business decisions.
+            </p>
+            <div className="flex flex-col divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
+              {[
+                { label: 'Structured reports', desc: 'Every analysis follows the same framework — demand, competition, costs, and risk — so results are comparable across ideas.' },
+                { label: 'Location-aware research', desc: 'Outputs are tailored to the city or region you specify, not a generic national summary.' },
+                { label: 'Consistent evaluation', desc: 'Run multiple analyses and compare them side by side without managing separate chat threads.' },
+              ].map(({ label, desc }) => (
+                <div key={label} className="flex items-start gap-4 px-6 py-5">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-2" />
+                  <div>
+                    <p className="text-sm font-bold text-slate-900 mb-0.5">{label}</p>
+                    <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] py-14 sm:py-16 border-t border-white/10">
+          <div className="max-w-2xl mx-auto px-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
+              Ready to evaluate your idea?
+            </h2>
+            <p className="text-slate-400 mb-6 text-sm">
+              Enter a business type and location above to get started.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-slate-900 hover:bg-indigo-50 font-bold rounded-xl transition-all shadow-lg cursor-pointer"
+              >
+                Analyze My Business Idea
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+              {onNavigate && (
+                <button
+                  onClick={() => onNavigate('opportunities')}
+                  className="text-indigo-300 hover:text-white font-semibold underline underline-offset-4 decoration-indigo-400/50 hover:decoration-white/60 transition-all cursor-pointer text-sm"
+                >
+                  Explore Market Gaps →
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      </>
+    )}
+  </>
   );
 };

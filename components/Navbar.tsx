@@ -77,7 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
   };
 
   return (
-    <nav className="bg-white/95 backdrop-blur-sm border-b border-slate-200/80 shadow-sm sticky top-0 z-40 overflow-x-hidden" ref={mobileMenuRef}>
+    <nav className="bg-slate-200 backdrop-blur-sm border-b border-slate-400 shadow-[0_1px_6px_rgba(0,0,0,0.12)] sticky top-0 z-40 overflow-x-hidden" ref={mobileMenuRef}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
 
