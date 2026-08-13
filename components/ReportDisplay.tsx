@@ -62,7 +62,6 @@ import {
   canSaveReports, 
   canCompareReports 
 } from '../src/utils/planUtils';
-import { PDFService, PDFExportOptions } from '../services/pdfService';
 import { formatLocationDisplay } from '../src/utils/locationUtils';
 
 interface ReportDisplayProps {
@@ -427,9 +426,8 @@ const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
         <span className={`text-[10px] font-black uppercase tracking-widest ${a.colorClass} text-center px-3 leading-tight`}>{a.label}</span>
         <span className="text-[9px] text-gray-400 font-semibold mt-1.5 uppercase tracking-wider">Overall Assessment</span>
       </div>
-      {/* Compact, outcome-specific explanation attached to the badge — what THIS
-          result means + where it sits in the framework. The full framework legend
-          lives separately below Confidence Level. print:hidden (PDF via jsPDF). */}
+      {/* Compact outcome-specific explanation attached to the badge. Hidden in print
+          because it is an interactive helper, not substantive report content. */}
       <details className="mt-3 group w-64 max-w-[88vw] md:w-60 print:hidden">
         <summary className="flex items-center justify-center gap-1.5 cursor-pointer select-none text-[11px] font-bold text-gray-500 hover:text-gray-700 transition-colors list-none">
           <HelpCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -448,7 +446,7 @@ const AssessmentBadge: React.FC<{ score: number }> = ({ score }) => {
 // Framework legend (Part 2/3) — explains the full BizScope assessment scale and
 // marks where the current report landed ("You are here"). Sits directly under the
 // Overall Assessment card + "What does this rating mean?" so it's visually tied to
-// the verdict. Collapsed by default. print:hidden — PDF is generated via jsPDF.
+// the verdict. Collapsed by default. Hidden in print (interactive helper only).
 const AssessmentFramework: React.FC<{ score: number }> = ({ score }) => {
   const currentIdx = viabilityScoreToFrameworkIndex(score);
   return (
@@ -639,27 +637,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [report.businessType, report.location]);
 
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [isExportLoading, setIsExportLoading] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
-
-  const [options, setOptions] = useState<PDFExportOptions>({
-    isWhiteLabelMode: currentPlan === 'Enterprise',
-    advisoryFirmName: 'BizScope Premium Advisory',
-    clientName: 'Advisory Client',
-    accentColor: 'Classic Blue',
-    removeWatermark: currentPlan === 'Enterprise'
-  });
-
-  useEffect(() => {
-    setOptions(prev => ({
-      ...prev,
-      isWhiteLabelMode: currentPlan === 'Enterprise',
-      removeWatermark: currentPlan === 'Enterprise'
-    }));
-  }, [currentPlan]);
-  
   const [regionalData, setRegionalData] = useState<any>(null);
   const [isRegionalLoading, setIsRegionalLoading] = useState(false);
   const [regionalError, setRegionalError] = useState<string | null>(null);
@@ -857,11 +834,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
       setShowUpgradeGateModal('pdf');
       return;
     }
-    // Reset stale state so every modal open starts clean
-    setIsExportLoading(false);
-    setExportSuccess(null);
-    setExportError(null);
-    setShowExportModal(true);
+    window.print();
   };
 
   const getSeverityColor = (severity: string) => {
@@ -1093,12 +1066,12 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     <span>{canSaveReports(currentPlan) ? '💾' : '🔒'}</span> 
                     <span>{isSaved ? 'Saved to Dashboard' : canSaveReports(currentPlan) ? 'Save to Dashboard' : 'Save Report (Pro)'}</span>
                 </button>
-                <button 
+                <button
                   onClick={handleExportPDF}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-xl transition-colors font-extrabold text-xs cursor-pointer"
                 >
-                    <span>{canExportPdf(currentPlan) ? '📄' : '🔒'}</span>
-                    <span>Export PDF</span>
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>{canExportPdf(currentPlan) ? 'Print / Save PDF' : 'Print Report (Pro)'}</span>
                 </button>
                 {saveSuccess && (
                   <span className="inline-flex items-center text-xs text-green-600 font-bold bg-green-50 border border-green-200 px-3 py-1 rounded-md animate-pulse">
@@ -2059,12 +2032,12 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     <Lock className="h-5 w-5 animate-pulse" />
                                 </div>
                                 <h3 className="text-base font-black text-gray-900 uppercase" id="gate-modal-title">
-                                    {showUpgradeGateModal === 'save' ? 'Save Reports — Pro Required' : 'PDF Export Locked'}
+                                    {showUpgradeGateModal === 'save' ? 'Save Reports — Pro Required' : 'Print & Export — Pro Required'}
                                 </h3>
                                 <p className="text-xs text-gray-500 mt-2 leading-relaxed">
                                     {showUpgradeGateModal === 'save'
                                         ? 'Saving reports requires a Pro plan or above.'
-                                        : 'PDF export is available on Pro and above. Upgrade your plan to download polished advisory reports.'}
+                                        : 'Printing and PDF export are available on Pro and above. Upgrade your plan to print or save this report.'}
                                 </p>
                             </div>
                         </div>
@@ -2087,240 +2060,6 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             </div>
         )}
 
-        {/* PDF Compilation Console Dialogue Modal */}
-        {showExportModal && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-xs overflow-y-auto animate-fade-in text-left">
-            <div className="bg-white rounded-3xl max-w-lg w-full border border-gray-150 shadow-2xl relative overflow-hidden animate-scale-up my-8">
-              
-              {/* Top Banner accent */}
-              <div className="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 animate-pulse"></div>
-
-              {/* Header */}
-              <div className="p-6 border-b border-gray-100 flex justify-between items-start">
-                <div className="text-left font-sans">
-                  <h3 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-1.5 uppercase">
-                    <span>📄</span> Export PDF
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">Customize and download your report as a PDF.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setShowExportModal(false); setExportError(null); setExportSuccess(null); }}
-                  className="p-1 px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-bold cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-
-              {/* Main Content Form */}
-              <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
-                
-                {/* Plan status alert badge */}
-                <div className="p-3 bg-gray-50 rounded-xl border border-gray-150 text-xs flex justify-between items-center">
-                  <div className="text-left font-sans">
-                    <p className="text-[10px] uppercase font-extrabold text-gray-400">Your Plan</p>
-                    <p className="font-bold text-gray-800">{currentPlan}</p>
-                  </div>
-                  <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-tight ${
-                    currentPlan === 'Enterprise' ? 'bg-emerald-50 text-emerald-800 border-emerald-250 border' :
-                    currentPlan === 'Pro+' ? 'bg-purple-50 text-purple-800 border-purple-200 border' :
-                    'bg-blue-50 text-blue-800 border-blue-200 border'
-                  }`}>
-                    {currentPlan} Active
-                  </span>
-                </div>
-
-                {/* Scope Coverage highlights based on Plan */}
-                <div className="space-y-2 text-left">
-                  <h4 className="text-[10px] uppercase font-black tracking-wider text-gray-400">What's included:</h4>
-                  
-                  <div className="grid grid-cols-2 gap-2 text-[10px]">
-                    <div className="p-2.5 bg-green-50 border border-green-100 rounded-lg flex items-center gap-1.5 text-green-800 font-bold">
-                      <span>✓</span> Executive Summary
-                    </div>
-                    <div className="p-2.5 bg-green-50 border border-green-100 rounded-lg flex items-center gap-1.5 text-green-800 font-bold">
-                      <span>✓</span> Demographics Grid
-                    </div>
-                    
-                    {/* Financial block depending on Pro / Pro+ / Enterprise */}
-                    <div className="p-2.5 bg-green-50 border border-green-100 rounded-lg flex items-center gap-1.5 text-green-800 font-bold">
-                      <span>✓</span> Financial Projections
-                    </div>
-
-                    {/* Regional Block - Only Pro+ and Enterprise */}
-                    {canViewRegionalIntelligence(currentPlan) ? (
-                      <div className="p-2.5 bg-green-50 border border-green-100 rounded-lg flex items-center gap-1.5 text-green-800 font-bold">
-                        <span>✓</span> Regional Insights
-                      </div>
-                    ) : (
-                      <div className="p-2.5 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-1.5 text-amber-800 font-bold" title="Requires Pro+ subscription">
-                        <span>🔒</span> Regional Insights (Pro+ only)
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* White-Label Settings Module - Locked for < Enterprise */}
-                <div className="border-t border-gray-100 pt-4 space-y-4 text-left">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-[10px] uppercase font-black tracking-wider text-gray-400">White-Labeling & Branding Options</h4>
-                    {currentPlan !== 'Enterprise' && (
-                      <span className="text-[9px] font-bold text-blue-700 bg-blue-50 rounded-md px-1.5 py-0.5 uppercase border border-blue-100">
-                        Enterprise Only
-                      </span>
-                    )}
-                  </div>
-
-                  {currentPlan === 'Enterprise' ? (
-                    <div className="space-y-3 bg-emerald-50/5 p-4 rounded-xl border border-emerald-100">
-                      
-                      <div className="flex items-center gap-2 mb-1">
-                        <input
-                          type="checkbox"
-                          id="btn-wl-mode"
-                          checked={options.isWhiteLabelMode}
-                          onChange={(e) => setOptions(prev => ({ ...prev, isWhiteLabelMode: e.target.checked }))}
-                          className="w-4 h-4 text-emerald-600 rounded border-gray-350 focus:ring-emerald-500 cursor-pointer"
-                        />
-                        <label htmlFor="btn-wl-mode" className="text-xs font-bold text-gray-700 cursor-pointer">
-                          Enable White-Label Mode
-                        </label>
-                      </div>
-
-                      {options.isWhiteLabelMode && (
-                        <div className="space-y-3 pt-1 animate-fade-in text-xs text-left">
-                          <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Advisory Firm Name</label>
-                            <input
-                              type="text"
-                              value={options.advisoryFirmName}
-                              onChange={(e) => setOptions(prev => ({ ...prev, advisoryFirmName: e.target.value }))}
-                              className="w-full p-2 bg-white border border-gray-250 rounded-lg focus:outline-none focus:border-emerald-500 text-xs"
-                              placeholder="e.g. Bain Partners Advisory"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Prepared For (Client Name)</label>
-                            <input
-                              type="text"
-                              value={options.clientName}
-                              onChange={(e) => setOptions(prev => ({ ...prev, clientName: e.target.value }))}
-                              className="w-full p-2 bg-white border border-gray-250 rounded-lg focus:outline-none focus:border-emerald-500 text-xs"
-                              placeholder="e.g. Venture Capital Fund I"
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-1">
-                            <input
-                              type="checkbox"
-                              id="btn-rm-wm"
-                              checked={options.removeWatermark}
-                              onChange={(e) => setOptions(prev => ({ ...prev, removeWatermark: e.target.checked }))}
-                              className="w-3.5 h-3.5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
-                            />
-                            <label htmlFor="btn-rm-wm" className="text-[11px] font-semibold text-gray-600 cursor-pointer">
-                              Remove "BizScope" Brand Marks
-                            </label>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-150 flex items-start gap-3 text-left font-sans">
-                      <span className="text-xl">🔒</span>
-                      <div className="text-left text-xs text-gray-500">
-                        <p className="font-bold text-gray-800 mb-0.5">Custom Corporate White-Labeling Is Locked</p>
-                        <p className="leading-relaxed">
-                          Enterprise plans can apply custom firm names, client branding, and accent styles, and remove BizScope watermarks entirely. Upgrade to <strong className="text-blue-700 font-bold">Enterprise</strong> to unlock white-label PDF exports.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Accent Color Chooser */}
-                  <div className="space-y-1.5 text-xs text-left">
-                    <label className="block text-[10px] font-black text-gray-400 uppercase">Consulting Report Accent Motif</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {(['Classic Blue', 'Charcoal Slate', 'Emerald Forest', 'Executive Navy'] as const).map((color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => setOptions(prev => ({ ...prev, accentColor: color }))}
-                          className={`p-2 border text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
-                            options.accentColor === color 
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-500/10 font-black' 
-                              : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                          }`}
-                        >
-                          {color}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Progress / Loading Spinner / Errors */}
-                {isExportLoading && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 flex items-center justify-center gap-3 animate-pulse">
-                    <span className="text-lg animate-spin text-blue-600 font-sans">⚙️</span>
-                    <span className="text-xs font-bold text-blue-800 text-left">Compiling PDF documents, rendering vector grids...</span>
-                  </div>
-                )}
-
-                {exportSuccess && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-3.5 text-center text-xs font-bold text-green-800 animate-bounce">
-                    ✨ {exportSuccess}
-                  </div>
-                )}
-
-                {exportError && (
-                  <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-center text-xs font-bold text-red-800">
-                    ❌ FAILED: {exportError}
-                  </div>
-                )}
-
-              </div>
-
-              {/* Footer Buttons */}
-              <div className="p-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center font-sans">
-                <button
-                  type="button"
-                  onClick={() => { setShowExportModal(false); setExportError(null); setExportSuccess(null); }}
-                  className="text-xs text-gray-500 hover:text-gray-800 font-bold hover:underline cursor-pointer"
-                >
-                  Close
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isExportLoading}
-                  onClick={async () => {
-                    setIsExportLoading(true);
-                    setExportError(null);
-                    setExportSuccess(null);
-                    try {
-                      // Pass actual regional intelligence data if unlocked, else pass undefined
-                      const rd = canViewRegionalIntelligence(currentPlan) ? regionalData : undefined;
-                      await PDFService.generateReportPDF(report, currentPlan, options, rd);
-                      setExportSuccess("PDF Report Exported Successfully!");
-                    } catch (e: any) {
-                      console.error(e);
-                      setExportError(e?.message || "PDF generation engine experienced exceptions. Retry analysis.");
-                    } finally {
-                      setIsExportLoading(false);
-                    }
-                  }}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  Export PDF
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
     </div>
   );
 };

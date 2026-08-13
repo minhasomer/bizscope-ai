@@ -239,10 +239,6 @@ check('all known AI-prose render sites are wrapped in stripScoreReferences', () 
       file: 'components/SavedReports.tsx',
       fields: ['rep.riskAssessment.summary', 'rep.competitionAnalysis.summary'],
     },
-    {
-      file: 'services/pdfService.ts',
-      fields: ['report.demographicInsights.summary', 'report.riskAssessment.summary', 'report.competitionAnalysis.summary'],
-    },
   ];
 
   for (const { file, fields } of targets) {
