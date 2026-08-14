@@ -1284,7 +1284,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                   )}
                                   
                                   {/* Timeline & Stats */}
-                                  <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
+                                  <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-100 print:break-inside-avoid">
                                       <div className="flex flex-col border-r border-gray-150 pr-2">
                                           <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wider">Est. Break-Even</span>
                                           <span className="font-black text-blue-600 text-xs mt-1">{normalizeRangeSeparator(report.financialProjections.breakEvenTime)}</span>
@@ -1314,7 +1314,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                       </div>
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                           {report.financialProjections.keyStats.map((stat, i) => (
-                                              <div key={i} className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                              <div key={i} className="p-3 bg-gray-50 rounded-2xl border border-gray-100 print:break-inside-avoid">
                                                   <p className="text-[10px] text-gray-500 mb-0.5 font-medium">{stat.label}</p>
                                                   <p className="font-semibold text-gray-950 text-xs">{normalizeRangeSeparator(stat.value)}</p>
                                               </div>
@@ -1345,7 +1345,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                               <div className="space-y-4">
                                   {/* First Risk item - Always visible to provide high-quality initial value */}
                                   {report.riskAssessment.risks.length > 0 && (
-                                      <div className="bg-amber-50/20 p-4 rounded-2xl border border-amber-100/80">
+                                      <div className="bg-amber-50/20 p-4 rounded-2xl border border-amber-100/80 print:break-inside-avoid">
                                           <div className="flex justify-between items-start mb-2 gap-2">
                                               <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{stripScoreReferences(report.riskAssessment.risks[0].risk)}</span>
                                               <span className={`text-[9px] px-2 py-0.5 rounded-full border shrink-0 ${getSeverityColor(report.riskAssessment.risks[0].severity)}`}>
@@ -1371,7 +1371,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     >
                                       <div className="space-y-4">
                                         {report.riskAssessment.risks.slice(1).map((risk, i) => (
-                                            <div key={i} className="bg-amber-50/20 p-4 rounded-2xl border border-amber-100/80">
+                                            <div key={i} className="bg-amber-50/20 p-4 rounded-2xl border border-amber-100/80 print:break-inside-avoid">
                                                 <div className="flex justify-between items-start mb-2 gap-2">
                                                     <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{stripScoreReferences(risk.risk)}</span>
                                                     <span className={`text-[9px] px-2 py-0.5 rounded-full border shrink-0 ${getSeverityColor(risk.severity)}`}>
@@ -1400,7 +1400,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                               </h4>
                               <div className="space-y-4">
                                   {report.successFactors.factors.map((factor, i) => (
-                                      <div key={i} className="bg-blue-50/20 p-4 rounded-2xl border border-blue-100">
+                                      <div key={i} className="bg-blue-50/20 p-4 rounded-2xl border border-blue-100 print:break-inside-avoid">
                                           <div className="flex justify-between items-start mb-2 gap-2">
                                               <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{factor.factor}</span>
                                               <span className={`text-[9px] px-2 py-0.5 rounded-full border shrink-0 ${getImportanceColor(factor.importance)}`}>
@@ -1460,7 +1460,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                       <p className="mb-4 text-sm text-gray-700 leading-relaxed">{stripScoreReferences(report.competitionAnalysis.summary)}</p>
                       <ul className="space-y-4">
                         {report.competitionAnalysis.competitors.map((comp, index) => (
-                          <li key={index} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-150 transition-colors hover:bg-white">
+                          <li key={index} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-150 transition-colors hover:bg-white print:break-inside-avoid">
                             <div className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{comp.name}</div>
                             <div className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wide">{comp.address || 'Address documented'}</div>
                             <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(comp.details)}</p>
@@ -1485,7 +1485,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   <p className="mb-4 text-sm text-gray-750 leading-relaxed">{stripScoreReferences(report.marketTrends.summary)}</p>
                   <ul className="space-y-4">
                     {report.marketTrends.trends.map((item, index) => (
-                      <li key={index} className="flex items-start gap-3">
+                      <li key={index} className="flex items-start gap-3 print:break-inside-avoid">
                         <span className="flex-shrink-0 w-2 h-2 mt-2 bg-emerald-500 rounded-full"></span>
                         <div>
                           <span className="font-extrabold text-gray-900 text-xs uppercase tracking-wide block">{item.trend}</span>
@@ -1507,7 +1507,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
               <p className="mb-6 text-sm text-gray-750 leading-relaxed">{stripScoreReferences(report.demographicInsights.summary)}</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {report.demographicInsights.demographics.map((demo, index) => (
-                  <div key={index} className="border-l-3 border-purple-500 pl-4 py-3 bg-gray-50/50 rounded-r-2xl pr-4 border border-gray-200/40 relative overflow-hidden transition-all duration-300 hover:bg-white hover:border-purple-250">
+                  <div key={index} className="border-l-3 border-purple-500 pl-4 py-3 bg-gray-50/50 rounded-r-2xl pr-4 border border-gray-200/40 relative overflow-hidden transition-all duration-300 hover:bg-white hover:border-purple-250 print:break-inside-avoid">
                     <div className="text-[10px] uppercase text-gray-400 font-extrabold tracking-widest">{demo.metric}</div>
                     <div className="text-lg font-black text-gray-950 mt-1 leading-none">{demo.value}</div>
                     <p className="text-xs text-gray-600 mt-2.5 leading-relaxed">{demo.insight}</p>
@@ -1688,7 +1688,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
                             {/* 2 & 3. County-Level Context and 15-25 Mile Economic Radius / Specific Observations */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-blue-50/30 border border-blue-100 p-5 rounded-2xl">
+                                <div className="bg-blue-50/30 border border-blue-100 p-5 rounded-2xl print:break-inside-avoid">
                                     <h4 className="font-extrabold text-blue-900 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <Building className="w-4 h-4 text-blue-500" />
                                         <span>County-Level Market Context</span>
@@ -1696,7 +1696,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(regionalData.countyContext)}</p>
                                 </div>
 
-                                <div className="bg-purple-50/30 border border-purple-100 p-5 rounded-2xl">
+                                <div className="bg-purple-50/30 border border-purple-100 p-5 rounded-2xl print:break-inside-avoid">
                                     <h4 className="font-extrabold text-purple-900 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <Compass className="w-4 h-4 text-purple-500" />
                                         <span>{regionalData.specificObservationTitle || "Radius Observations"}</span>
@@ -1707,7 +1707,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
                             {/* 15-25 Mile Economic Radius Callout & Competitive Spillover */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-gray-50/80 border border-gray-200 p-5 rounded-2xl">
+                                <div className="bg-gray-50/80 border border-gray-200 p-5 rounded-2xl print:break-inside-avoid">
                                     <h4 className="font-extrabold text-gray-800 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <Globe className="w-4 h-4 text-indigo-500" />
                                         <span>Wider Economic Region (15–25 miles)</span>
@@ -1715,7 +1715,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                                     <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(regionalData.economicRadius)}</p>
                                 </div>
 
-                                <div className="bg-gray-50/80 border border-gray-200 p-5 rounded-2xl">
+                                <div className="bg-gray-50/80 border border-gray-200 p-5 rounded-2xl print:break-inside-avoid">
                                     <h4 className="font-extrabold text-gray-800 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <AlertTriangle className="w-4 h-4 text-amber-500" />
                                         <span>Nearby Market Competition</span>
@@ -1725,7 +1725,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             </div>
 
                             {/* 4 & 5. Expansion potential strategy */}
-                            <div className="bg-indigo-50/25 p-6 rounded-2xl border border-indigo-100">
+                            <div className="bg-indigo-50/25 p-6 rounded-2xl border border-indigo-100 print:break-inside-avoid">
                                 <p className="text-xs font-black text-indigo-750 uppercase tracking-widest mb-4 flex items-center gap-1.5">
                                     <Layers className="w-4 h-4 text-indigo-500" />
                                     <span>Expansion Plan (Next 12 Months)</span>
@@ -1734,7 +1734,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                             </div>
 
                             {/* 6. Regional Recommendation Highlight */}
-                            <div className="bg-emerald-50/50 border border-emerald-200/60 p-5 rounded-2xl flex flex-col sm:flex-row items-start gap-4">
+                            <div className="bg-emerald-50/50 border border-emerald-200/60 p-5 rounded-2xl flex flex-col sm:flex-row items-start gap-4 print:break-inside-avoid">
                                 <div className="bg-emerald-100 text-emerald-800 p-2.5 rounded-xl shrink-0">
                                     <ShieldCheck className="w-5 h-5" />
                                 </div>

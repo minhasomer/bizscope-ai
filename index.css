@@ -71,7 +71,7 @@
 
   /* ── Page breaks ─────────────────────────────────────────────────────────── */
   /* Keep section headings with the first line of their section */
-  h2, h3 { break-after: avoid; }
+  h2, h3, h4 { break-after: avoid; }
 
   /* Cards explicitly marked to stay together (compact risk/rec/competitor items) */
   .avoid-break { break-inside: avoid; }
