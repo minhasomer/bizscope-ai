@@ -261,6 +261,46 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           </div>
         ) : null}
 
+        {/* Decision Pass balance — shown independently of subscription status so Explorer
+            users (status='inactive') can see their credits without an active subscription. */}
+        {!simulationActive && !isDemo && subStatus?.decisionPassBalance && (
+          <div className="text-xs bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <span className="font-semibold text-gray-600">Decision Pass</span>
+              </div>
+              <span className="text-gray-400 text-[10px]">One-time access · No automatic renewal</span>
+            </div>
+            <div className="pl-5 text-gray-600">
+              Business Viability:{' '}
+              <strong>
+                {subStatus.decisionPassBalance.viability === 1
+                  ? '1 report remaining'
+                  : `${subStatus.decisionPassBalance.viability} reports remaining`}
+              </strong>
+            </div>
+            <div className="pl-5 text-gray-600">
+              Market Gap Discovery:{' '}
+              <strong>
+                {subStatus.decisionPassBalance.marketGap === 1
+                  ? '1 report remaining'
+                  : `${subStatus.decisionPassBalance.marketGap} reports remaining`}
+              </strong>
+            </div>
+            {subStatus.decisionPassBalance.viability === 0 && subStatus.decisionPassBalance.marketGap === 0 && (
+              <div className="pl-5 pt-0.5">
+                <button
+                  onClick={() => onNavigate('pricing')}
+                  className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                >
+                  Get Another Decision Pass →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           {simulationActive ? (

@@ -126,6 +126,124 @@ export async function incrementUsageTracking(
   }
 }
 
+// ─── Decision Pass entitlements ──────────────────────────────────────────────
+// Separate from usage_tracking: one-time Decision Pass purchases via Stripe.
+// Each pass grants viability_remaining=3 and market_gap_remaining=1.
+// The two counters are independent — viability balance cannot be used for
+// Market Gap reports and vice versa.
+// RPCs use SELECT FOR UPDATE SKIP LOCKED for race-safe atomic decrements.
+
+export interface DecisionPassBalance {
+  viability: number;
+  marketGap: number;
+}
+
+/**
+ * Returns remaining Decision Pass credits for a user.
+ * Returns { viability: 0, marketGap: 0 } on any DB error.
+ */
+export async function getDecisionPassBalance(
+  supabaseAdmin: any,
+  userId: string,
+): Promise<DecisionPassBalance> {
+  if (!supabaseAdmin) return { viability: 0, marketGap: 0 };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('decision_pass_entitlements')
+      .select('viability_remaining, market_gap_remaining')
+      .eq('user_id', userId);
+    if (error) throw error;
+    const rows: any[] = data ?? [];
+    return {
+      viability: rows.reduce((s: number, r: any) => s + (r.viability_remaining  ?? 0), 0),
+      marketGap: rows.reduce((s: number, r: any) => s + (r.market_gap_remaining ?? 0), 0),
+    };
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass balance check failed:', err.message ?? err);
+    return { viability: 0, marketGap: 0 };
+  }
+}
+
+/**
+ * Atomically decrements viability_remaining on the oldest pass with balance.
+ * Returns the UUID of the decremented row, or null if no balance.
+ */
+export async function decrementDecisionPassViability(
+  supabaseAdmin: any,
+  userId: string,
+): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin.rpc('decrement_decision_pass_viability', {
+      p_user_id: userId,
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass viability decrement failed:', err.message ?? err);
+    return null;
+  }
+}
+
+/**
+ * Restores one viability credit on a specific pass row.
+ * Called when viability report generation fails after a pre-decrement.
+ */
+export async function restoreDecisionPassViability(
+  supabaseAdmin: any,
+  passId: string,
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin.rpc('restore_decision_pass_viability', {
+      p_pass_id: passId,
+    });
+    if (error) throw error;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass viability restore failed:', err.message ?? err);
+  }
+}
+
+/**
+ * Atomically decrements market_gap_remaining on the oldest pass with balance.
+ * Returns the UUID of the decremented row, or null if no balance.
+ */
+export async function decrementDecisionPassMarketGap(
+  supabaseAdmin: any,
+  userId: string,
+): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin.rpc('decrement_decision_pass_market_gap', {
+      p_user_id: userId,
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass market_gap decrement failed:', err.message ?? err);
+    return null;
+  }
+}
+
+/**
+ * Restores one market_gap credit on a specific pass row.
+ * Called when Market Gap generation fails after a pre-decrement.
+ */
+export async function restoreDecisionPassMarketGap(
+  supabaseAdmin: any,
+  passId: string,
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin.rpc('restore_decision_pass_market_gap', {
+      p_pass_id: passId,
+    });
+    if (error) throw error;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass market_gap restore failed:', err.message ?? err);
+  }
+}
+
 // ─── Trial quota (5 reports total, never resets) ─────────────────────────────
 // Trial usage is stored in usage_tracking with month_key = 'trial' so it
 // reuses the existing table + RPC without any calendar-month reset logic.

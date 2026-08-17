@@ -28,6 +28,8 @@ export interface SubscriptionStatus {
   trialEndsAt?: string | null;
   /** Number of trial reports used (only present when status === 'trialing'). */
   trialReportCount?: number;
+  /** Remaining Decision Pass credits (separate viability and market_gap counters). */
+  decisionPassBalance?: { viability: number; marketGap: number };
 }
 
 async function getAccessToken(): Promise<string | null> {
@@ -79,6 +81,31 @@ export class StripeService {
     if (!resp.ok) throw new Error(data.error || 'Failed to create Stripe checkout session.');
     if (!data.url) throw new Error('No checkout URL returned from server.');
     return { url: data.url as string, trialEligible: !!(data.trialEligible) };
+  }
+
+  /**
+   * Create a Stripe Checkout Session for a Decision Pass purchase ($19 one-time).
+   * Returns null in demo mode (caller should skip redirect).
+   */
+  static async startDecisionPassCheckout(): Promise<{ url: string } | null> {
+    if (this.isDemo()) {
+      console.info('[Stripe] Demo mode active — skipping Decision Pass checkout.');
+      return null;
+    }
+    assertLiveService('Stripe /api/stripe/create-decision-pass-checkout');
+
+    const token = await getAccessToken();
+    if (!token) throw new Error('Not authenticated.');
+
+    const resp = await fetch('/api/stripe/create-decision-pass-checkout', {
+      method: 'POST',
+      headers: authHeaders(token),
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to create checkout session.');
+    if (!data.url) throw new Error('No checkout URL returned from server.');
+    return { url: data.url as string };
   }
 
   static async openPortal(): Promise<void> {

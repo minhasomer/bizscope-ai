@@ -422,76 +422,79 @@ export const PRICING_CARDS: PricingCardConfig[] = [
 export interface ComparisonTableRow {
   label: string;
   /**
-   * One value per plan in column order: Explorer, Pro, Pro+, Enterprise.
+   * One value per column: Explorer, Decision Pass, Pro, Pro+, Enterprise.
    * boolean → rendered as ✓ / ✗ icon.
-   * string  → rendered as-is (e.g. '3/mo', '20/mo').
+   * string  → rendered as-is (e.g. '3/mo', '3 total').
    */
-  values: [string | boolean, string | boolean, string | boolean, string | boolean];
+  values: [string | boolean, string | boolean, string | boolean, string | boolean, string | boolean];
 }
 
 /**
  * Full capability comparison table shown at the bottom of the pricing page.
- * Column order must match PRICING_CARDS: Explorer, Pro, Pro+, Enterprise.
+ * Column order: Explorer, Decision Pass ($19 one-time), Pro, Pro+, Enterprise.
  *
- * Standard and Regional Intelligence rows are deliberately separated so users
- * can see exactly which Gemini tier backs each report type.
+ * Decision Pass is not a subscription plan — it grants one-time credits:
+ *   3 Business Viability reports + 1 Market Gap Discovery report.
+ * Plan-level features (PDF, saved reports, etc.) follow the user's base plan.
  */
 export const COMPARISON_TABLE_ROWS: ComparisonTableRow[] = [
-  // ── Standard reports (Gemini Flash) ──────────────────────────────────────────
+  // ── Business Viability (Gemini Flash) ────────────────────────────────────────
   {
-    label:  'Standard Reports / Month',
-    values: ['3/mo', '20/mo', '50/mo', 'Unlimited'],
+    label:  'Business Viability Reports',
+    values: ['3/mo', '3 total', '20/mo', '50/mo', 'Unlimited'],
   },
   {
     label:  'Viability Assessment & Executive Summary',
-    values: [true, true, true, true],
+    values: [true, true, true, true, true],
   },
   {
+    // Decision Pass grants FULL report access — same data as a Pro report,
+    // not an artificially reduced Explorer-tier view.
     label:  'Full Financial Projections & Analysis',
-    values: [false, true, true, true],
+    values: [false, true, true, true, true],
   },
   {
     label:  'Competitor Location Map',
-    values: [false, true, true, true],
+    values: [false, true, true, true, true],
   },
   {
-    label:  'Save Reports & PDF Export',
-    values: [false, true, true, true],
+    // PDF export is a per-report feature, granted by Decision Pass.
+    // Saving to the Venture Hub workspace dashboard is a subscription feature.
+    label:  'PDF Export',
+    values: [false, true, true, true, true],
   },
   {
-    label:  'Compare Reports Side-by-Side',
-    values: [false, true, true, true],
+    label:  'Save to Dashboard & Compare Reports',
+    values: [false, false, true, true, true],
   },
+  // ── Market Gap Discovery (separate report type via /opportunities) ─────────────
   {
-    label:  'Market Gap Opportunities',
-    values: ['Top 2', 'All 5', 'All 5 + regional', 'All 5 + regional'],
+    // Market Gap Discovery is a separate report type (api/opportunities.ts).
+    // It discovers underserved business niches in a selected U.S. market.
+    // This is distinct from the Regional Intelligence module within a viability report.
+    label:  'Market Gap Discovery Reports',
+    values: [false, '1 total', false, '10/mo', 'Unlimited'],
   },
-  // ── Regional Intelligence (Gemini Pro) ───────────────────────────────────────
+  // ── Regional Intelligence (Pro+ only section within viability reports) ─────────
   {
-    label:  'Regional Intelligence Reports / Month',
-    // String values expose the actual quota instead of a bare ✓
-    values: [false, false, '10/mo', 'Unlimited'],
-  },
-  {
-    label:  'Nearby ZIP & County Analysis',
-    values: [false, false, true, true],
+    // Regional Intelligence is a Pro+-only module within a Business Viability report:
+    // ZIP comparisons, county context, and expansion planning around the target location.
+    // Decision Pass does NOT include this — it is a subscription-tier feature.
+    label:  'Regional Intelligence (ZIP & County Analysis)',
+    values: [false, false, false, true, true],
   },
   {
     label:  'Regional Expansion Strategy',
-    values: [false, false, true, true],
-  },
-  {
-    label:  'Demographic & Regional Intelligence',
-    values: [false, false, true, true],
+    values: [false, false, false, true, true],
   },
   // ── Enterprise-only ───────────────────────────────────────────────────────────
   {
     label:  'Enterprise Integrations & White-Label',
-    values: [false, false, false, true],
+    values: [false, false, false, false, true],
   },
   {
     label:  'Priority Support & Success',
-    values: [false, false, false, true],
+    values: [false, false, false, false, true],
   },
 ];
 

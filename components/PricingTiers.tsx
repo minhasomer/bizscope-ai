@@ -35,6 +35,18 @@ interface PricingTiersProps {
    * Drives trial-specific CTA copy on the Pro card.
    */
   trialEligible?: boolean;
+  /** Called when the user clicks "Buy Decision Pass". Not called in demo mode. */
+  onDecisionPassCheckout?: () => void;
+  /**
+   * When false, the Decision Pass section is hidden.
+   * App.tsx sets this to false for active subscribers and trialing users.
+   * Defaults to true.
+   */
+  showDecisionPass?: boolean;
+  /** Navigate to the Business Viability analysis page. */
+  onNavigateToAnalyze?: () => void;
+  /** Navigate to the Market Gap Discovery page. */
+  onNavigateToMarketGap?: () => void;
 }
 
 const PLAN_ORDER: Record<string, number> = { Explorer: 0, Pro: 1, 'Pro+': 2, Enterprise: 3 };
@@ -66,6 +78,10 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
   pricingActionLoading = false,
   pricingActionError = null,
   trialEligible = false,
+  onDecisionPassCheckout,
+  showDecisionPass = true,
+  onNavigateToAnalyze,
+  onNavigateToMarketGap,
 }) => {
   const isDemo = isDemoMode;
 
@@ -165,6 +181,12 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
           </div>
         </div>
       )}
+
+      {/* Ongoing Plans section header */}
+      <div className="flex items-center gap-3">
+        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider shrink-0">Ongoing Plans</h4>
+        <div className="h-px flex-1 bg-gray-100" />
+      </div>
 
       {/* Tier cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-4 items-start">
@@ -319,7 +341,7 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
                       </button>
                       {isProTrialNote && (
                         <p className="text-center text-[10px] text-gray-400 mt-2">
-                          No charge today. Then $29/month — cancel anytime.
+                          No charge today — includes 5 Business Viability reports. Payment method required. Renews at $29/month after 7 days unless canceled.
                         </p>
                       )}
                     </div>
@@ -339,6 +361,106 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
         </div>
       )}
 
+      {/* Decision Pass — one-time purchase, hidden in demo mode and for active subscribers */}
+      {!isDemo && showDecisionPass && onDecisionPassCheckout && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider shrink-0">One-Time Research</h4>
+            <div className="h-px flex-1 bg-gray-100" />
+          </div>
+          <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-3xl p-6">
+            <div className="flex flex-col sm:flex-row gap-6">
+              {/* Left: price + CTA */}
+              <div className="flex flex-col justify-between gap-4 sm:w-56 shrink-0">
+                <div>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="text-3xl font-black text-gray-900">$19</span>
+                    <span className="text-xs text-gray-400 font-semibold">one time</span>
+                  </div>
+                  <h4 className="text-base font-black text-gray-900 tracking-tight">Decision Pass</h4>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    No subscription. No renewal. Research your business angles, then decide.
+                  </p>
+                </div>
+                <button
+                  onClick={() => !pricingActionLoading && onDecisionPassCheckout?.()}
+                  disabled={pricingActionLoading}
+                  className="w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wide bg-gray-900 text-white hover:bg-gray-800 transition-all duration-150 disabled:opacity-50 cursor-pointer"
+                >
+                  {pricingActionLoading ? 'Loading…' : 'Buy Decision Pass →'}
+                </button>
+              </div>
+              {/* Right: what's included */}
+              <div className="flex-1 border-t sm:border-t-0 sm:border-l border-gray-200 pt-4 sm:pt-0 sm:pl-6">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3">What's included</p>
+                <ul className="space-y-2.5">
+                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
+                    <span><strong>3 Business Viability reports</strong> — full AI analysis for each idea</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
+                    <span><strong>1 Market Gap Discovery report</strong> — find underserved regional demand</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
+                    <span>Credits never expire — use at your own pace</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
+                    <span>No automatic renewal — one-time charge only</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-center text-xs text-gray-400 mt-5 pt-4 border-t border-gray-100">
+              Need regular research?{' '}
+              <span className="font-semibold text-gray-600">Pro includes 20 viability reports/month for $29.</span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Report type education */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-blue-500 shrink-0" />
+            <p className="text-sm font-black text-gray-900">Business Viability</p>
+          </div>
+          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">Already have an idea?</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Evaluate a specific business and market across demand, competition, demographics, risks, and recommended next steps.
+          </p>
+          {onNavigateToAnalyze && (
+            <button
+              onClick={onNavigateToAnalyze}
+              className="text-xs text-blue-600 font-semibold hover:text-blue-700 transition-colors cursor-pointer bg-transparent border-0 p-0"
+            >
+              Explore Business Viability →
+            </button>
+          )}
+        </div>
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-purple-500 shrink-0" />
+            <p className="text-sm font-black text-gray-900">Market Gap Discovery</p>
+          </div>
+          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">Still looking for the right opportunity?</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Discover underserved business niches in a selected U.S. market.
+          </p>
+          {onNavigateToMarketGap && (
+            <button
+              onClick={onNavigateToMarketGap}
+              className="text-xs text-purple-600 font-semibold hover:text-purple-700 transition-colors cursor-pointer bg-transparent border-0 p-0"
+            >
+              Explore Market Gap Discovery →
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Feature comparison table */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hidden md:block">
         <div className="px-6 pt-6 pb-4 border-b border-gray-100">
@@ -349,17 +471,11 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="py-3 px-6 font-black text-gray-400 uppercase tracking-wider text-[10px] w-2/5">Feature</th>
-                {PRICING_CARDS.map(card => (
-                  <th key={card.id} className={`py-3 px-4 text-center font-black uppercase tracking-wider text-[10px] ${
-                    card.accent === 'blue'
-                      ? 'text-blue-600'
-                      : card.accent === 'purple'
-                        ? 'text-purple-600'
-                        : card.id === 'Enterprise'
-                          ? 'text-indigo-500'
-                          : 'text-gray-400'
-                  }`}>{card.name}</th>
-                ))}
+                <th className="py-3 px-4 text-center font-black uppercase tracking-wider text-[10px] text-gray-400">Explorer</th>
+                <th className="py-3 px-4 text-center font-black uppercase tracking-wider text-[10px] text-gray-600">Decision Pass</th>
+                <th className="py-3 px-4 text-center font-black uppercase tracking-wider text-[10px] text-blue-600">Pro</th>
+                <th className="py-3 px-4 text-center font-black uppercase tracking-wider text-[10px] text-purple-600">Pro+</th>
+                <th className="py-3 px-4 text-center font-black uppercase tracking-wider text-[10px] text-indigo-500">Enterprise</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -371,10 +487,10 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
                       {typeof val === 'boolean' ? (
                         val ? (
                           <Check className={`w-4 h-4 mx-auto ${
-                            vIdx === 1 ? 'text-blue-500'
-                            : vIdx === 2 ? 'text-purple-500'
-                            : vIdx === 3 ? 'text-indigo-500'
-                            : 'text-blue-500'
+                            vIdx === 2 ? 'text-blue-500'
+                            : vIdx === 3 ? 'text-purple-500'
+                            : vIdx === 4 ? 'text-indigo-500'
+                            : 'text-gray-500'
                           }`} />
                         ) : (
                           <X className="w-4 h-4 mx-auto text-gray-200" strokeWidth={2.5} />

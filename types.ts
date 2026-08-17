@@ -383,6 +383,9 @@ export interface ViabilityReport {
   _freshnessDays?: number;
   _isStale?: boolean;
   _refreshedFromStale?: boolean;
+  // Set when this report consumed a Decision Pass viability credit.
+  // ReportDisplay grants full financials + PDF access regardless of base plan.
+  _usedDecisionPass?: boolean;
 }
 
 export interface NearbyRegionData {

@@ -812,6 +812,9 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
   const launchText       = getLaunchAnalysisText();
   const proInsights      = deriveProInsightMetrics(report);
+  // Decision Pass reports receive full analytical output (financials + PDF) regardless of base plan.
+  // Subscription workspace features (save to dashboard, compare reports) remain plan-gated.
+  const dpFullAccess = !!report._usedDecisionPass;
 
   const handleSaveReport = async () => {
     if (!canSaveReports(currentPlan)) {
@@ -830,7 +833,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
   };
 
   const handleExportPDF = () => {
-    if (!canExportPdf(currentPlan)) {
+    if (!(dpFullAccess || canExportPdf(currentPlan))) {
       setShowUpgradeGateModal('pdf');
       return;
     }
@@ -1071,7 +1074,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-xl transition-colors font-extrabold text-xs cursor-pointer"
                 >
                     <Printer className="w-3.5 h-3.5" />
-                    <span>{canExportPdf(currentPlan) ? 'Print / Save PDF' : 'Print Report (Pro)'}</span>
+                    <span>{(dpFullAccess || canExportPdf(currentPlan)) ? 'Print / Save PDF' : 'Print Report (Pro)'}</span>
                 </button>
                 {saveSuccess && (
                   <span className="inline-flex items-center text-xs text-green-600 font-bold bg-green-50 border border-green-200 px-3 py-1 rounded-md animate-pulse">
@@ -1427,7 +1430,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 <div className="space-y-4">
                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Competitor Distribution</p>
                   <p className="text-sm text-gray-600 leading-relaxed mb-2">
-                    Map points are based on available location data from the analysis pipeline.{!canViewFullFinancials(currentPlan) && ' Upgrade to Pro to unlock.'}
+                    Map points are based on available location data from the analysis pipeline.{!(dpFullAccess || canViewFullFinancials(currentPlan)) && ' Upgrade to Pro to unlock.'}
                   </p>
                   <LockedSection
                     currentPlan={currentPlan}
@@ -1523,7 +1526,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 className="border-l-4 border-l-purple-500"
                 icon={<Sparkles className="w-5 h-5 text-purple-600" />}
                 badge={
-                  !canViewFullFinancials(currentPlan) && (
+                  !(dpFullAccess || canViewFullFinancials(currentPlan)) && (
                     <span className="bg-purple-100 text-purple-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
                         Pro Feature
                     </span>
@@ -1968,7 +1971,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                         </div>
                       )}
 
-                      {report.generationMeta?.isLiveGenerated && canViewFullFinancials(currentPlan) ? (
+                      {report.generationMeta?.isLiveGenerated && (dpFullAccess || canViewFullFinancials(currentPlan)) ? (
                           <div className="rounded-2xl overflow-hidden border border-gray-150 h-[450px]">
                               <CompetitorMap
                                   competitors={report.competitionAnalysis.competitors}

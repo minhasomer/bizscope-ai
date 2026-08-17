@@ -6,6 +6,9 @@ import {
   getSupabaseAdmin,
   PRICE_TO_PLAN,
   PLAN_TO_DB_TIER,
+  DECISION_PASS_PRICE_ID,
+  DECISION_PASS_VIABILITY_QUANTITY,
+  DECISION_PASS_MARKET_GAP_QUANTITY,
   beginStripeEvent,
   completeStripeEvent,
   failStripeEvent,
@@ -132,7 +135,70 @@ async function setSubscriptionStatus(userId: string, status: string): Promise<vo
 
 // ─── Event handlers ───────────────────────────────────────────────────────────
 
+async function handleDecisionPassCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  const userId = session.client_reference_id;
+  if (!userId) throw new Error('Decision Pass checkout missing client_reference_id');
+
+  // Validate purchase_type from metadata — never trust client-supplied quantities.
+  const purchaseType = session.metadata?.purchase_type;
+  if (purchaseType !== 'decision_pass') {
+    throw new Error(
+      `Decision Pass checkout: unexpected purchase_type="${purchaseType}" in metadata`,
+    );
+  }
+
+  // Validate the Price ID from the line items matches our configured product.
+  const lineItemPriceId = (session as any).line_items?.data?.[0]?.price?.id as string | undefined;
+  if (lineItemPriceId && DECISION_PASS_PRICE_ID && lineItemPriceId !== DECISION_PASS_PRICE_ID) {
+    throw new Error(
+      `Decision Pass checkout: price_id mismatch — got ${lineItemPriceId}, ` +
+      `expected ${DECISION_PASS_PRICE_ID}`,
+    );
+  }
+
+  // Entitlement quantities come from server-side constants, not metadata.
+  const viabilityQty  = DECISION_PASS_VIABILITY_QUANTITY;
+  const marketGapQty  = DECISION_PASS_MARKET_GAP_QUANTITY;
+
+  // Use checkout session ID as the idempotency key — it is always present on
+  // checkout.session.completed and more stable than payment_intent (which can
+  // be null for some payment methods).
+  const sessionId = session.id;
+
+  const { error } = await getSupabaseAdmin()
+    .from('decision_pass_entitlements')
+    .insert({
+      user_id:                        userId,
+      stripe_checkout_session_id:     sessionId,
+      viability_total:                viabilityQty,
+      viability_remaining:            viabilityQty,
+      market_gap_total:               marketGapQty,
+      market_gap_remaining:           marketGapQty,
+    });
+
+  if (error) {
+    // UNIQUE violation on stripe_checkout_session_id → already granted; idempotent.
+    if ((error as any).code === '23505') {
+      console.log(
+        `[Stripe] Decision Pass already granted — sessionId=${sessionId} userId=${userId}`,
+      );
+      return;
+    }
+    throw new Error(`decision_pass_entitlements insert failed: ${error.message}`);
+  }
+
+  console.log(
+    `[Stripe] Decision Pass granted — userId=${userId} ` +
+    `viability=${viabilityQty} market_gap=${marketGapQty} sessionId=${sessionId}`,
+  );
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  // One-time payment checkout — grant Decision Pass entitlements and return early.
+  if (session.mode === 'payment') {
+    return handleDecisionPassCheckoutCompleted(session);
+  }
+
   const userId = session.client_reference_id;
   if (!userId) throw new Error('checkout.session.completed missing client_reference_id');
 
