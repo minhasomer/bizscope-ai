@@ -70,6 +70,18 @@ export const PRICE_TO_PLAN: Record<string, 'Pro' | 'Pro+'> = (() => {
   return map;
 })();
 
+// ─── Decision Pass (one-time) ─────────────────────────────────────────────────
+// $19 one-time purchase that grants 3 Business Viability + 1 Market Gap report.
+// STRIPE_PRICE_ID_DECISION_PASS must be a one-time price in Stripe Dashboard.
+
+export const DECISION_PASS_PRICE_ID: string | undefined =
+  process.env.STRIPE_PRICE_ID_DECISION_PASS;
+
+/** Business Viability reports included in one Decision Pass purchase. */
+export const DECISION_PASS_VIABILITY_QUANTITY = 3;
+/** Market Gap Discovery reports included in one Decision Pass purchase. */
+export const DECISION_PASS_MARKET_GAP_QUANTITY = 1;
+
 // ─── Plan → DB tier mapping ───────────────────────────────────────────────────
 // profiles.subscription_tier has a check constraint that does not accept 'Pro+'.
 // Every write to profiles.subscription_tier must go through this map.

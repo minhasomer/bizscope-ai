@@ -7,7 +7,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
-import { checkStandardQuota, checkTrialQuota, incrementUsageTracking, incrementTrialUsage } from '../src/config/usageTracking.js';
+import { checkStandardQuota, checkTrialQuota, incrementUsageTracking, incrementTrialUsage, decrementDecisionPassViability, restoreDecisionPassViability } from '../src/config/usageTracking.js';
 import { resolveSimulatedRequest, getSimStandardQuota } from './_simAuth.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection.js';
@@ -818,6 +818,22 @@ export default async function handler(
           ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
           : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
       if (!cacheQuota.allowed) {
+        // Non-trial users: check purchased report passes before returning 429.
+        if (!_simAuth.simulationActive && !_isTrialing) {
+          const passId = await decrementDecisionPassViability(supabaseAdmin, verifiedUserId);
+          if (passId) {
+            console.log(`[Analyze] Cache hit — Decision Pass viability consumed passId=${passId} userId=${verifiedUserId}`);
+            return json(res, 200, {
+              ...normalizeViabilityReport(cacheHit.report),
+              _cached:           true,
+              _generatedAt:      cacheHit.generatedAt,
+              _cacheAgeDays:     cacheHit.cacheAgeDays,
+              _freshnessDays:    VIABILITY_CACHE_MAX_AGE_DAYS,
+              _isStale:          false,
+              _usedDecisionPass: true,
+            });
+          }
+        }
         console.warn(`[Analyze] Quota exceeded (cache hit) — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${cacheQuota.used} limit=${cacheQuota.limit}`);
         return json(res, 429, {
           error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
@@ -853,14 +869,37 @@ export default async function handler(
     : _isTrialing
       ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
       : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+
+  // Hoisted so the catch block can restore the pass if Gemini fails.
+  let usedDecisionPassId: string | null = null;
+
   if (!quota.allowed) {
-    console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${quota.used} limit=${quota.limit}`);
-    return json(res, 429, {
-      error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
-      code:  _isTrialing ? 'TRIAL_REPORT_LIMIT_REACHED' : 'QUOTA_EXCEEDED',
-      used:  quota.used,
-      limit: quota.limit,
-    });
+    // Non-trial users: try a purchased pass before returning 429. The pass is
+    // pre-decremented here so it cannot be double-spent by a concurrent request.
+    // On Gemini failure the catch block calls restorePurchasedPass to refund it.
+    if (!_simAuth.simulationActive && !_isTrialing) {
+      const passId = await decrementDecisionPassViability(supabaseAdmin, verifiedUserId);
+      if (passId) {
+        usedDecisionPassId = passId;
+        console.log(`[Analyze] Quota exceeded — using Decision Pass viability passId=${passId} userId=${verifiedUserId}`);
+      } else {
+        console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
+        return json(res, 429, {
+          error: 'Monthly report limit reached for your plan.',
+          code:  'QUOTA_EXCEEDED',
+          used:  quota.used,
+          limit: quota.limit,
+        });
+      }
+    } else {
+      console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${quota.used} limit=${quota.limit}`);
+      return json(res, 429, {
+        error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
+        code:  _isTrialing ? 'TRIAL_REPORT_LIMIT_REACHED' : 'QUOTA_EXCEEDED',
+        used:  quota.used,
+        limit: quota.limit,
+      });
+    }
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -1413,7 +1452,10 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     // Quota counter — only fresh, successful, non-cached generations count.
     if (!_simAuth.simulationActive) {
-      if (_isTrialing) {
+      if (usedDecisionPassId) {
+        // Pass was already decremented before the Gemini call; nothing more to do.
+        console.log(`[Analyze] Decision Pass viability consumed on success — passId=${usedDecisionPassId}`);
+      } else if (_isTrialing) {
         await incrementTrialUsage(supabaseAdmin, verifiedUserId);
       } else {
         await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
@@ -1422,6 +1464,8 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
     if (cacheWasStale) parsed._refreshedFromStale = true;
+    // Tag Decision Pass usage so the frontend can grant full report access regardless of base plan.
+    if (usedDecisionPassId) parsed._usedDecisionPass = true;
 
     normalizeViabilityReport(parsed);
 
@@ -1430,6 +1474,13 @@ Include ALL competitors found in the Competition Analysis above in the competiti
 
     return json(res, 200, parsed);
   } catch (err: any) {
+    // If a purchased pass was pre-decremented but generation failed, restore it
+    // so the user does not permanently lose a pass on a server or AI error.
+    if (usedDecisionPassId) {
+      await restoreDecisionPassViability(supabaseAdmin, usedDecisionPassId);
+      console.log(`[Analyze] Decision Pass viability restored after failure — passId=${usedDecisionPassId}`);
+    }
+
     // Log the full structured Gemini error so we can distinguish:
     //   RESOURCE_EXHAUSTED / 429 → free-tier quota (RPM / TPM / RPD)
     //   NOT_FOUND            → wrong model ID

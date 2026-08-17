@@ -7,7 +7,12 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
-import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
+import {
+  checkRegionalQuota,
+  incrementUsageTracking,
+  decrementDecisionPassMarketGap,
+  restoreDecisionPassMarketGap,
+} from '../src/config/usageTracking.js';
 import { resolveSimulatedRequest, getSimRegionalQuota } from './_simAuth.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
@@ -500,16 +505,47 @@ export default async function handler(
   const verifiedUserId = _simAuth.simulationActive && _simAuth.effectivePersona === 'Anonymous'
     ? null : realUserId;
 
-  // Gate: must be authenticated and on Pro+ or Enterprise.
-  // When BETA_FULL_ACCESS=true, getServerSidePlan() already promotes any
-  // authenticated non-Admin user to Pro+, so this check passes transparently.
-  // Unauthenticated users always fall back to verifiedUserId=null / plan=Explorer.
-  if (!verifiedUserId || (verifiedPlan !== 'Pro+' && verifiedPlan !== 'Enterprise')) {
-    console.warn(`[Opportunities] Rejected — userId=${verifiedUserId ?? 'null'} plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
+  // Gate: must be authenticated. Pro+ and Enterprise have included regional quota.
+  // Explorer and Pro may access Market Gap only via a purchased Decision Pass.
+  // Unauthenticated users always fall back to verifiedUserId=null.
+  if (!verifiedUserId) {
     return json(res, 403, {
-      error: 'Market Gap analysis requires a Pro+ or Enterprise plan.',
-      code: 'INSUFFICIENT_PLAN',
+      error: 'Market Gap analysis requires an account.',
+      code: 'UNAUTHENTICATED',
     });
+  }
+
+  // Explorer/Pro users with no included Market Gap quota: check Decision Pass balance.
+  // If they have a Decision Pass market_gap credit, allow through (quota section below
+  // Hoisted so catch block can restore if Gemini fails.
+  // Set by the Explorer/Pro Decision Pass branch OR the Pro+ exhausted fallback branch.
+  let explorerProDecisionPassId: string | null = null;
+  let proPlussDecisionPassId:    string | null = null;
+
+  // will set explorerProDecisionPassId and skip incrementUsageTracking on success).
+  let explorerProUsesDecisionPass = false;
+  if (verifiedPlan !== 'Pro+' && verifiedPlan !== 'Enterprise') {
+    if (!_simAuth.simulationActive) {
+      const passId = await decrementDecisionPassMarketGap(supabaseAdmin, verifiedUserId);
+      if (!passId) {
+        console.warn(`[Opportunities] Rejected — userId=${verifiedUserId} plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
+        return json(res, 403, {
+          error: 'Market Gap analysis requires a Pro+ plan or a Decision Pass with Market Gap credit.',
+          code: 'INSUFFICIENT_PLAN',
+        });
+      }
+      // Balance confirmed — passId is the pre-decremented row; restore on failure.
+      explorerProDecisionPassId = passId;
+      explorerProUsesDecisionPass = true;
+      console.log(`[Opportunities] Explorer/Pro — Decision Pass market_gap passId=${passId} userId=${verifiedUserId}`);
+    } else {
+      // Simulation: Explorer/Pro sim users are still blocked (they should use Pro+ persona)
+      console.warn(`[Opportunities] Rejected — userId=${verifiedUserId} plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
+      return json(res, 403, {
+        error: 'Market Gap analysis requires a Pro+ or Enterprise plan.',
+        code: 'INSUFFICIENT_PLAN',
+      });
+    }
   }
 
   const requestStartMs = Date.now();
@@ -583,17 +619,39 @@ export default async function handler(
   }
 
   // ── Server-side quota check — regional (after cache, before Gemini) ─────────
-  const quota = _simAuth.simulationActive
-    ? getSimRegionalQuota(_simAuth)
-    : await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  // Explorer/Pro users who reached here already consumed their Decision Pass credit above.
+  // Skip the regional quota check for them — they have no included quota.
+  const quota = explorerProUsesDecisionPass
+    ? { allowed: true, used: 0, limit: 0 }
+    : _simAuth.simulationActive
+      ? getSimRegionalQuota(_simAuth)
+      : await checkRegionalQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+
   if (!quota.allowed) {
-    console.warn(`[Opportunities] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
-    return json(res, 429, {
-      error: 'Monthly report limit reached for your plan.',
-      code: 'QUOTA_EXCEEDED',
-      used: quota.used,
-      limit: quota.limit,
-    });
+    // Pro+ quota exhausted: try Decision Pass market_gap balance as fallback.
+    if (!_simAuth.simulationActive) {
+      const passId = await decrementDecisionPassMarketGap(supabaseAdmin, verifiedUserId);
+      if (passId) {
+        proPlussDecisionPassId = passId;
+        console.log(`[Opportunities] Pro+ quota exhausted — Decision Pass market_gap passId=${passId} userId=${verifiedUserId}`);
+      } else {
+        console.warn(`[Opportunities] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
+        return json(res, 429, {
+          error: 'Monthly report limit reached for your plan.',
+          code: 'QUOTA_EXCEEDED',
+          used: quota.used,
+          limit: quota.limit,
+        });
+      }
+    } else {
+      console.warn(`[Opportunities] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
+      return json(res, 429, {
+        error: 'Monthly report limit reached for your plan.',
+        code: 'QUOTA_EXCEEDED',
+        used: quota.used,
+        limit: quota.limit,
+      });
+    }
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -840,8 +898,14 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
     }
 
     // Quota counter — only fresh, successful, non-cached generations count.
+    // Skip incrementUsageTracking when a Decision Pass credit was consumed instead.
     if (!_simAuth.simulationActive) {
-      await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+      if (explorerProDecisionPassId || proPlussDecisionPassId) {
+        const passId = explorerProDecisionPassId ?? proPlussDecisionPassId;
+        console.log(`[Opportunities] Decision Pass market_gap consumed on success — passId=${passId}`);
+      } else {
+        await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'regional');
+      }
     }
 
     // Tag stale-refresh so the client knows a fresh report replaced an expired cache entry.
@@ -910,6 +974,16 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       }
     } catch (logErr: any) {
       console.error('[ActivityLog] failed opportunities failure-path:', logErr.message ?? logErr);
+    }
+
+    // Restore any pre-decremented Decision Pass credit so the user does not lose it on error.
+    if (explorerProDecisionPassId) {
+      await restoreDecisionPassMarketGap(supabaseAdmin, explorerProDecisionPassId);
+      console.log(`[Opportunities] Explorer/Pro Decision Pass restored after failure — passId=${explorerProDecisionPassId}`);
+    }
+    if (proPlussDecisionPassId) {
+      await restoreDecisionPassMarketGap(supabaseAdmin, proPlussDecisionPassId);
+      console.log(`[Opportunities] Pro+ Decision Pass restored after failure — passId=${proPlussDecisionPassId}`);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });

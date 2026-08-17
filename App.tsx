@@ -175,9 +175,10 @@ const App: React.FC = () => {
     };
     const title = VIEW_TITLES[currentView] ?? 'BizScope';
     trackPageView(currentView, title);
-    // pricing_viewed fires here as well (once per navigation to pricing).
+    // pricing_viewed and decision_pass_viewed fire once per navigation to pricing.
     if (currentView === 'pricing') {
       trackEvent('pricing_viewed');
+      trackEvent('decision_pass_viewed');
     }
     // Update the canonical <link> tag to reflect the current view so search
     // engines index each view at its own URL rather than consolidating all to /.
@@ -1053,6 +1054,28 @@ const App: React.FC = () => {
     navigate('contact');
   };
 
+  const handleDecisionPassCheckout = async () => {
+    if (!currentUser) {
+      navigate('settings', 'signup');
+      return;
+    }
+    setPricingActionError(null);
+    setPricingActionLoading(true);
+    trackEvent('decision_pass_checkout_started', {
+      source_page: currentView,
+      authenticated: true,
+    });
+    try {
+      const result = await StripeService.startDecisionPassCheckout();
+      if (!result) return; // demo mode
+      window.location.href = result.url;
+    } catch (err: any) {
+      setPricingActionError(err?.message || 'Could not start checkout. Please try again.');
+    } finally {
+      setPricingActionLoading(false);
+    }
+  };
+
   const renderSEOTemplate = () => {
     if (!seoRoute) return null;
     switch (seoRoute.type) {
@@ -1148,6 +1171,10 @@ const App: React.FC = () => {
               pricingActionLoading={pricingActionLoading}
               pricingActionError={pricingActionError}
               trialEligible={trialEligible}
+              onDecisionPassCheckout={handleDecisionPassCheckout}
+              showDecisionPass={!hasPaidSubscription}
+              onNavigateToAnalyze={() => navigate('home')}
+              onNavigateToMarketGap={() => navigate('opportunities')}
             />
           </div>
         );

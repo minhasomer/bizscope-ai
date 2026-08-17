@@ -253,11 +253,41 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                 </span>
               </div>
             )}
+            {((subStatus.decisionPassBalance?.viability ?? 0) > 0 || (subStatus.decisionPassBalance?.marketGap ?? 0) > 0) && (
+              <div className="text-xs text-gray-700 bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span className="font-semibold text-gray-600">Decision Pass</span>
+                </div>
+                {(subStatus.decisionPassBalance?.viability ?? 0) > 0 && (
+                  <div className="pl-5 text-gray-600">Business Viability: <strong>{subStatus.decisionPassBalance!.viability} remaining</strong></div>
+                )}
+                {(subStatus.decisionPassBalance?.marketGap ?? 0) > 0 && (
+                  <div className="pl-5 text-gray-600">Market Gap Discovery: <strong>{subStatus.decisionPassBalance!.marketGap} remaining</strong></div>
+                )}
+              </div>
+            )}
           </div>
         ) : subStatus && ['cancelled', 'no_subscription', 'no_customer'].includes(subStatus.status) ? (
-          <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-3 border border-gray-100">
-            <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <span>No active subscription</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-3 border border-gray-100">
+              <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span>No active subscription</span>
+            </div>
+            {((subStatus.decisionPassBalance?.viability ?? 0) > 0 || (subStatus.decisionPassBalance?.marketGap ?? 0) > 0) && (
+              <div className="text-xs text-gray-700 bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span className="font-semibold text-gray-600">Decision Pass</span>
+                </div>
+                {(subStatus.decisionPassBalance?.viability ?? 0) > 0 && (
+                  <div className="pl-5 text-gray-600">Business Viability: <strong>{subStatus.decisionPassBalance!.viability} remaining</strong></div>
+                )}
+                {(subStatus.decisionPassBalance?.marketGap ?? 0) > 0 && (
+                  <div className="pl-5 text-gray-600">Market Gap Discovery: <strong>{subStatus.decisionPassBalance!.marketGap} remaining</strong></div>
+                )}
+              </div>
+            )}
           </div>
         ) : null}
 
