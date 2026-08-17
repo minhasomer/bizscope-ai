@@ -1187,6 +1187,7 @@ const App: React.FC = () => {
               userRole={currentUser?.role ?? ''}
               isAuthenticated={!!currentUser}
               initialReport={marketGapInitialReport}
+              subscriptionStatus={subscriptionStatus}
             />
           </div>
         );
@@ -1922,37 +1923,69 @@ const App: React.FC = () => {
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-amber-50 text-amber-600 border border-amber-100 mb-4 animate-bounce">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-gray-900" id="modal-title">
-                   Monthly Report Limit Reached
-                </h3>
-                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                   Explorer accounts are limited to <strong>3 standard reports/month</strong>.
-                </p>
-                {isDemoMode && (
-                  <div className="bg-blue-50/50 p-3.5 rounded-xl border border-blue-150 text-xs text-blue-800 mt-4 text-left leading-normal">
-                    ⚡ <strong>Demo Mode:</strong> Switch plans instantly below to try Pro or Pro+ features.
-                  </div>
+                {subscriptionStatus?.decisionPassBalance != null && subscriptionStatus.decisionPassBalance.viability === 0 ? (
+                  <>
+                    <h3 className="text-base font-bold text-gray-900" id="modal-title">
+                      All Viability Reports Used
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                      You've used all of your included and Decision Pass Business Viability reports.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-base font-bold text-gray-900" id="modal-title">
+                       Monthly Report Limit Reached
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                       Explorer accounts are limited to <strong>3 standard reports/month</strong>.
+                    </p>
+                    {isDemoMode && (
+                      <div className="bg-blue-50/50 p-3.5 rounded-xl border border-blue-150 text-xs text-blue-800 mt-4 text-left leading-normal">
+                        ⚡ <strong>Demo Mode:</strong> Switch plans instantly below to try Pro or Pro+ features.
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               <div className="bg-gray-50 px-4 py-3.5 sm:px-6 flex flex-col sm:flex-row-reverse gap-2 border-t border-gray-100">
-                <button
-                  onClick={() => {
-                    handleSelectPlan('Pro');
-                    setShowLimitModal(false);
-                  }}
-                  className="w-full inline-flex justify-center rounded-xl shadow-xs px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition-colors cursor-pointer"
-                >
-                   ⚡ Upgrade to Pro
-                </button>
-                <button
-                  onClick={() => {
-                    setShowLimitModal(false);
-                    navigate('pricing');
-                  }}
-                  className="w-full inline-flex justify-center rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                   Configure Plans
-                </button>
+                {subscriptionStatus?.decisionPassBalance != null && subscriptionStatus.decisionPassBalance.viability === 0 ? (
+                  <>
+                    <button
+                      onClick={() => { setShowLimitModal(false); navigate('pricing'); }}
+                      className="w-full inline-flex justify-center rounded-xl shadow-xs px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition-colors cursor-pointer"
+                    >
+                      Get Another Decision Pass
+                    </button>
+                    <button
+                      onClick={() => { handleSelectPlan('Pro'); setShowLimitModal(false); }}
+                      className="w-full inline-flex justify-center rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      ⚡ Upgrade to Pro
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleSelectPlan('Pro');
+                        setShowLimitModal(false);
+                      }}
+                      className="w-full inline-flex justify-center rounded-xl shadow-xs px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition-colors cursor-pointer"
+                    >
+                       ⚡ Upgrade to Pro
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLimitModal(false);
+                        navigate('pricing');
+                      }}
+                      className="w-full inline-flex justify-center rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                       Configure Plans
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -783,35 +783,8 @@ export default async function handler(
     const cacheHit = await getFromServerCache(businessType, location, 'standard', VIABILITY_CACHE_MAX_AGE_DAYS);
     if (cacheHit && !cacheHit.isStale) {
       console.log(`[Analyze] Cache hit — returning cached report, no Gemini call for ${businessType} / ${location}`);
-      console.log('[ActivityLog] attempt analyze cache-hit');
-      try {
-        if (supabaseAdmin) {
-          const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
-            user_id: verifiedUserId,
-            user_email: verifiedEmail,
-            report_type: 'viability',
-            business_type: businessType,
-            location,
-            normalized_location: normalizeCacheKey(location),
-            plan_tier: verifiedPlan,
-            cache_status: 'hit',
-            force_regenerate: false,
-            success: true,
-            source: 'dashboard',
-            duration_ms: Date.now() - requestStartMs,
-            ai_model: null,
-            input_tokens: 0,
-            output_tokens: 0,
-            total_tokens: 0,
-            estimated_ai_cost: 0,
-          });
-          if (activityLogErr) throw activityLogErr;
-          console.log('[ActivityLog] success analyze cache-hit');
-        }
-      } catch (logErr: any) {
-        console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
-      }
-      // Enforce quota on cache hits — a served report consumes a slot regardless of AI cost
+      // Enforce quota on cache hits — a served report consumes a slot regardless of AI cost.
+      // Activity log is written AFTER the quota/pass decision so entitlement_source is known.
       const cacheQuota = _simAuth.simulationActive
         ? getSimStandardQuota(_simAuth)
         : _isTrialing
@@ -823,6 +796,36 @@ export default async function handler(
           const passId = await decrementDecisionPassViability(supabaseAdmin, verifiedUserId);
           if (passId) {
             console.log(`[Analyze] Cache hit — Decision Pass viability consumed passId=${passId} userId=${verifiedUserId}`);
+            // Log after pass confirmed consumed — entitlement_source is now known to be decision_pass.
+            console.log('[ActivityLog] attempt analyze cache-hit decision_pass');
+            try {
+              if (supabaseAdmin) {
+                const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
+                  user_id: verifiedUserId,
+                  user_email: verifiedEmail,
+                  report_type: 'viability',
+                  business_type: businessType,
+                  location,
+                  normalized_location: normalizeCacheKey(location),
+                  plan_tier: verifiedPlan,
+                  cache_status: 'hit',
+                  force_regenerate: false,
+                  success: true,
+                  source: 'dashboard',
+                  duration_ms: Date.now() - requestStartMs,
+                  ai_model: null,
+                  input_tokens: 0,
+                  output_tokens: 0,
+                  total_tokens: 0,
+                  estimated_ai_cost: 0,
+                  entitlement_source: 'decision_pass',
+                });
+                if (activityLogErr) throw activityLogErr;
+                console.log('[ActivityLog] success analyze cache-hit decision_pass');
+              }
+            } catch (logErr: any) {
+              console.error('[ActivityLog] failed analyze cache-hit decision_pass:', logErr.message ?? logErr);
+            }
             return json(res, 200, {
               ...normalizeViabilityReport(cacheHit.report),
               _cached:           true,
@@ -848,6 +851,36 @@ export default async function handler(
         } else {
           await incrementUsageTracking(supabaseAdmin, verifiedUserId, 'standard');
         }
+      }
+      // Log after usage increment confirmed — entitlement_source is now known.
+      console.log('[ActivityLog] attempt analyze cache-hit');
+      try {
+        if (supabaseAdmin) {
+          const { error: activityLogErr } = await supabaseAdmin.from('report_activity_log').insert({
+            user_id: verifiedUserId,
+            user_email: verifiedEmail,
+            report_type: 'viability',
+            business_type: businessType,
+            location,
+            normalized_location: normalizeCacheKey(location),
+            plan_tier: verifiedPlan,
+            cache_status: 'hit',
+            force_regenerate: false,
+            success: true,
+            source: 'dashboard',
+            duration_ms: Date.now() - requestStartMs,
+            ai_model: null,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            estimated_ai_cost: 0,
+            entitlement_source: _isTrialing ? 'trial' : 'plan',
+          });
+          if (activityLogErr) throw activityLogErr;
+          console.log('[ActivityLog] success analyze cache-hit');
+        }
+      } catch (logErr: any) {
+        console.error('[ActivityLog] failed analyze cache-hit:', logErr.message ?? logErr);
       }
       return json(res, 200, {
         ...normalizeViabilityReport(cacheHit.report),
@@ -1442,6 +1475,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           output_tokens: aggregatedUsage.outputTokens,
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+          entitlement_source: usedDecisionPassId ? 'decision_pass' : (_isTrialing ? 'trial' : 'plan'),
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success analyze success');
@@ -1545,6 +1579,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           output_tokens: aggregatedUsage.outputTokens,
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+          entitlement_source: usedDecisionPassId ? 'decision_pass' : (_isTrialing ? 'trial' : 'plan'),
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success analyze failure-path');

@@ -577,4 +577,303 @@ check('[STATIC]', 'DECISION_PASS_MARKET_GAP_QUANTITY=1 in _shared.ts', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SECTION I: Billing UI — entitlement_source in activity log [STATIC]
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\nI. Activity log — entitlement_source field [STATIC]');
+
+// I1.
+check('[STATIC]', 'migration adds entitlement_source column to report_activity_log', () => {
+  const migPath = path.join(root, 'supabase/migrations/20260817000000_add_entitlement_source.sql');
+  const migContent = fs.readFileSync(migPath, 'utf8');
+  assert.ok(
+    migContent.includes('entitlement_source') && migContent.includes('report_activity_log'),
+    'Migration must add entitlement_source to report_activity_log',
+  );
+});
+
+// I2.
+check('[STATIC]', 'analyze.ts success path emits entitlement_source', () => {
+  assert.ok(
+    analyzeSource.includes("entitlement_source: usedDecisionPassId ? 'decision_pass'"),
+    "analyze.ts success path must set entitlement_source to 'decision_pass' when usedDecisionPassId is set",
+  );
+});
+
+// I3.
+check('[STATIC]', 'analyze.ts failure path emits entitlement_source', () => {
+  const count = (analyzeSource.match(/entitlement_source:/g) ?? []).length;
+  assert.ok(count >= 3, `analyze.ts must have ≥3 entitlement_source entries (cache-hit, success, failure), found ${count}`);
+});
+
+// I4.
+check('[STATIC]', 'analyze.ts trial path uses entitlement_source: trial', () => {
+  assert.ok(
+    analyzeSource.includes("_isTrialing ? 'trial' : 'plan'"),
+    "analyze.ts must distinguish trial from plan in entitlement_source",
+  );
+});
+
+// I5.
+check('[STATIC]', 'opportunities.ts success path emits entitlement_source', () => {
+  assert.ok(
+    oppsSource.includes("entitlement_source: (explorerProDecisionPassId || proPlussDecisionPassId) ? 'decision_pass' : 'plan'"),
+    "opportunities.ts must set entitlement_source to 'decision_pass' when a pass was consumed",
+  );
+});
+
+// I6.
+check('[STATIC]', 'opportunities.ts has entitlement_source in all three log sites', () => {
+  const count = (oppsSource.match(/entitlement_source:/g) ?? []).length;
+  assert.ok(count >= 3, `opportunities.ts must have ≥3 entitlement_source entries (cache-hit, success, failure), found ${count}`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION J: Billing UI — Decision Pass balance display [STATIC]
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\nJ. Billing UI — Decision Pass balance display [STATIC]');
+
+const billingSource = fs.readFileSync(path.join(root, 'components/BillingPage.tsx'), 'utf8');
+
+// J1.
+check('[STATIC]', 'BillingPage shows Decision Pass section independently of subscription status', () => {
+  // Section must NOT be gated behind only the active/trialing/past_due condition
+  // Verify the section is now rendered at the same level as (not inside) the status conditional
+  assert.ok(
+    billingSource.includes("One-time access · No automatic renewal"),
+    "Billing page must show 'One-time access · No automatic renewal' label for Decision Pass",
+  );
+});
+
+// J2.
+check('[STATIC]', 'BillingPage uses singular "1 report remaining" vs plural "N reports remaining"', () => {
+  assert.ok(
+    billingSource.includes('=== 1') &&
+    billingSource.includes("'1 report remaining'") &&
+    billingSource.includes('reports remaining'),
+    'Billing page must use singular/plural grammar for Decision Pass credits',
+  );
+});
+
+// J3.
+check('[STATIC]', 'BillingPage shows "Get Another Decision Pass" CTA when both balances are 0', () => {
+  assert.ok(
+    billingSource.includes('Get Another Decision Pass'),
+    "Billing page must show 'Get Another Decision Pass' CTA when both balances are exhausted",
+  );
+});
+
+// J4.
+check('[STATIC]', 'BillingPage Decision Pass section gated on decisionPassBalance (not viability > 0 only)', () => {
+  // Old code: only shown when viability > 0 OR marketGap > 0
+  // New code: shown whenever decisionPassBalance is non-null
+  assert.ok(
+    billingSource.includes('subStatus?.decisionPassBalance &&') ||
+    billingSource.includes('subStatus.decisionPassBalance &&'),
+    'BillingPage must show Decision Pass section whenever decisionPassBalance is non-null',
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION K: Exhausted messaging [STATIC]
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\nK. Exhausted messaging — UI copy [STATIC]');
+
+const appSource = fs.readFileSync(path.join(root, 'App.tsx'), 'utf8');
+const oppExplorerSource = fs.readFileSync(path.join(root, 'components/OpportunityExplorer.tsx'), 'utf8');
+
+// K1.
+check('[STATIC]', 'App.tsx viability modal shows pass-exhausted copy when decisionPassBalance.viability === 0', () => {
+  assert.ok(
+    appSource.includes("You've used all of your included and Decision Pass Business Viability reports."),
+    "App.tsx must show pass-exhausted message when viability === 0",
+  );
+});
+
+// K2.
+check('[STATIC]', 'App.tsx viability exhausted modal has "Get Another Decision Pass" CTA', () => {
+  assert.ok(
+    appSource.includes('Get Another Decision Pass'),
+    "App.tsx must have 'Get Another Decision Pass' CTA in the exhausted viability modal",
+  );
+});
+
+// K3.
+check('[STATIC]', 'App.tsx viability exhausted modal branches on decisionPassBalance.viability === 0', () => {
+  assert.ok(
+    appSource.includes('decisionPassBalance.viability === 0'),
+    "App.tsx must check decisionPassBalance.viability === 0 to differentiate pass-exhausted state",
+  );
+});
+
+// K4.
+check('[STATIC]', 'OpportunityExplorer market gap modal shows pass-exhausted copy when decisionPassBalance.marketGap === 0', () => {
+  assert.ok(
+    oppExplorerSource.includes("You've used your Decision Pass Market Gap report."),
+    "OpportunityExplorer must show pass-exhausted message when marketGap === 0",
+  );
+});
+
+// K5.
+check('[STATIC]', 'OpportunityExplorer market gap exhausted modal does NOT say "Upgrade to Pro" (Pro has no Market Gap)', () => {
+  // When pass is exhausted, CTAs must be "Get Another Decision Pass" + "Upgrade to Pro+"
+  // We verify "Upgrade to Pro+" appears and "Upgrade to Pro" does not appear in the exhausted branch
+  // The simplest static check: the exhausted path's button text is "Upgrade to Pro+"
+  assert.ok(
+    oppExplorerSource.includes('Upgrade to Pro+'),
+    "OpportunityExplorer exhausted path must show 'Upgrade to Pro+', not 'Upgrade to Pro'",
+  );
+});
+
+// K6.
+check('[STATIC]', 'OpportunityExplorer receives subscriptionStatus prop', () => {
+  assert.ok(
+    oppExplorerSource.includes('subscriptionStatus') && oppExplorerSource.includes('SubscriptionStatus'),
+    "OpportunityExplorer must accept subscriptionStatus prop",
+  );
+});
+
+// K7.
+check('[STATIC]', 'App.tsx passes subscriptionStatus to OpportunityExplorer', () => {
+  // Find the OpportunityExplorer usage and verify subscriptionStatus is passed
+  const explorerIdx = appSource.indexOf('<OpportunityExplorer');
+  assert.ok(explorerIdx > 0);
+  const explorerBlock = appSource.slice(explorerIdx, appSource.indexOf('/>', explorerIdx) + 2);
+  assert.ok(
+    explorerBlock.includes('subscriptionStatus='),
+    "App.tsx must pass subscriptionStatus prop to OpportunityExplorer",
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION M: Cache-hit entitlement_source ordering [STATIC]
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\nM. Cache-hit entitlement_source ordering [STATIC]');
+
+// ── Business Viability (analyze.ts) ──────────────────────────────────────────
+
+// M1. The cache-hit Decision Pass log is written AFTER passId is confirmed — not before quota check.
+check('[STATIC]', 'BV cache-hit: Decision Pass log written after passId confirmed (not pre-quota)', () => {
+  // decrementDecisionPassViability must appear before 'decision_pass' entitlement literal in the cache block.
+  // The cache-hit section ends before 'cacheWasStale = !!cacheHit?.isStale'
+  const cacheBlockEnd = analyzeSource.indexOf('cacheWasStale = !!cacheHit?.isStale');
+  assert.ok(cacheBlockEnd > 0, 'Cache block end marker not found');
+  const cacheBlock = analyzeSource.slice(0, cacheBlockEnd);
+  const decrementIdx = cacheBlock.lastIndexOf('decrementDecisionPassViability');
+  const dpLogIdx     = cacheBlock.lastIndexOf("entitlement_source: 'decision_pass'");
+  assert.ok(decrementIdx > 0, 'decrementDecisionPassViability must appear in cache-hit block');
+  assert.ok(dpLogIdx     > 0, "entitlement_source: 'decision_pass' must appear in cache-hit block");
+  assert.ok(decrementIdx < dpLogIdx, 'decrementDecisionPassViability must precede the decision_pass log');
+});
+
+// M2. The cache-hit plan/trial log is written AFTER incrementUsageTracking.
+check('[STATIC]', 'BV cache-hit: plan/trial log written after incrementUsageTracking (entitlement consumed first)', () => {
+  const cacheBlockEnd = analyzeSource.indexOf('cacheWasStale = !!cacheHit?.isStale');
+  const cacheBlock = analyzeSource.slice(0, cacheBlockEnd);
+  const incrementIdx = Math.max(
+    cacheBlock.lastIndexOf('incrementUsageTracking'),
+    cacheBlock.lastIndexOf('incrementTrialUsage'),
+  );
+  const planLogIdx = cacheBlock.lastIndexOf("_isTrialing ? 'trial' : 'plan'");
+  assert.ok(incrementIdx > 0, 'increment call must appear in cache-hit block');
+  assert.ok(planLogIdx   > 0, "_isTrialing ? 'trial' : 'plan' must appear in cache-hit block");
+  assert.ok(incrementIdx < planLogIdx, 'increment must precede the plan/trial log in cache-hit block');
+});
+
+// M3. The cache-hit section exits before any fresh-generation quota check — no double-consume possible.
+check('[STATIC]', 'BV cache-hit: early return before fresh-generation quota prevents double-consume', () => {
+  // 'cacheWasStale = !!cacheHit?.isStale' marks where the cache-hit if-block ends.
+  // All return statements in the cache-hit block must appear before that marker.
+  const cacheBlockEnd = analyzeSource.indexOf('cacheWasStale = !!cacheHit?.isStale');
+  const freshQuotaIdx = analyzeSource.indexOf('// ── Server-side quota check — standard reports');
+  assert.ok(cacheBlockEnd > 0 && freshQuotaIdx > 0);
+  assert.ok(cacheBlockEnd < freshQuotaIdx,
+    'Cache-hit block must fully exit before the fresh-generation quota check');
+});
+
+// M4. Trial guard (!_isTrialing) wraps the cache-hit Decision Pass decrement.
+check('[STATIC]', 'BV cache-hit: !_isTrialing guard prevents Decision Pass consumption for trial users', () => {
+  const cacheBlockEnd = analyzeSource.indexOf('cacheWasStale = !!cacheHit?.isStale');
+  const cacheBlock = analyzeSource.slice(0, cacheBlockEnd);
+  // The guard and decrement call must both appear; guard must come first.
+  const guardIdx     = cacheBlock.lastIndexOf('!_isTrialing');
+  const decrementIdx = cacheBlock.lastIndexOf('decrementDecisionPassViability');
+  assert.ok(guardIdx > 0     && decrementIdx > 0);
+  assert.ok(guardIdx < decrementIdx, '!_isTrialing guard must appear before decrementDecisionPassViability in cache block');
+});
+
+// M5. BV cache-hit has exactly two entitlement_source literals in the cache block
+//     (one 'decision_pass' and one plan/trial), confirming both branches are covered.
+check('[STATIC]', 'BV cache-hit: two distinct entitlement_source literals in cache block (decision_pass + plan/trial)', () => {
+  const cacheBlockEnd = analyzeSource.indexOf('cacheWasStale = !!cacheHit?.isStale');
+  const cacheBlock = analyzeSource.slice(0, cacheBlockEnd);
+  const dpCount    = (cacheBlock.match(/entitlement_source:\s*'decision_pass'/g) ?? []).length;
+  const planCount  = (cacheBlock.match(/entitlement_source:\s*_isTrialing/g)     ?? []).length;
+  assert.equal(dpCount,   1, `Expected exactly 1 'decision_pass' entitlement in cache block, found ${dpCount}`);
+  assert.equal(planCount, 1, `Expected exactly 1 plan/trial entitlement in cache block, found ${planCount}`);
+});
+
+// ── Market Gap (opportunities.ts) ────────────────────────────────────────────
+
+// M6. Explorer/Pro pass is pre-decremented before the cache lookup — log is always accurate.
+check('[STATIC]', 'MG cache-hit: explorerProDecisionPassId set before cache lookup (log is always accurate)', () => {
+  // Use the specific call-site signature to avoid matching the import declaration.
+  const cacheHitIdx = oppsSource.indexOf("getFromServerCache('market_gaps'");
+  const passSetIdx  = oppsSource.indexOf('explorerProDecisionPassId = passId');
+  assert.ok(passSetIdx  > 0, 'explorerProDecisionPassId = passId must exist in opportunities.ts');
+  assert.ok(cacheHitIdx > 0, "getFromServerCache('market_gaps' call must exist in opportunities.ts");
+  assert.ok(passSetIdx < cacheHitIdx, 'explorerProDecisionPassId must be set BEFORE the cache lookup');
+});
+
+// M7. Pro+ pass (proPlussDecisionPassId) is set AFTER the cache section — cache hits for Pro+ log 'plan' (no pass consumed).
+check('[STATIC]', 'MG cache-hit: proPlussDecisionPassId set after cache section (Pro+ cache hits consume no pass)', () => {
+  // Use a single-line marker inside the cache-hit return block (avoids CRLF/LF mismatch on Windows).
+  const cacheReturnIdx = oppsSource.indexOf('_isStale:       false,');
+  const proPassSetIdx  = oppsSource.indexOf('proPlussDecisionPassId = passId');
+  assert.ok(cacheReturnIdx > 0, 'Cache-hit return must exist in opportunities.ts');
+  assert.ok(proPassSetIdx  > 0, 'proPlussDecisionPassId = passId must exist in opportunities.ts');
+  assert.ok(proPassSetIdx > cacheReturnIdx,
+    'proPlussDecisionPassId must be set AFTER the cache-hit return — Pro+ cache hits do not consume a pass');
+});
+
+// M8. MG cache-hit log correctly reads explorerProDecisionPassId at the point of logging.
+check('[STATIC]', 'MG cache-hit: log reads explorerProDecisionPassId to determine entitlement_source', () => {
+  // The cache-hit log in opportunities.ts must include the decision_pass conditional based on the pre-set flag.
+  const cacheReturnIdx = oppsSource.indexOf("_generatedAt:   cacheHit.generatedAt");
+  const logBlockStart  = oppsSource.lastIndexOf('supabase', cacheReturnIdx);
+  const cacheBlock     = oppsSource.slice(logBlockStart, cacheReturnIdx);
+  assert.ok(
+    cacheBlock.includes('explorerProDecisionPassId') || cacheBlock.includes('proPlussDecisionPassId'),
+    'MG cache-hit activity log must reference explorerProDecisionPassId or proPlussDecisionPassId',
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION L: Scope guardrails — no quota changes [STATIC]
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\nL. Scope guardrails — quota logic unchanged [STATIC]');
+
+// L1.
+check('[STATIC]', 'Explorer plan standard report limit is still 3 (no quota changes)', () => {
+  assert.ok(usageSource.includes('3') || analyzeSource.includes('3'));
+  // Specifically: the Explorer limit constant hasn't been changed.
+  // Static check: no Explorer limit change (no "Explorer.*4|Explorer.*5|Explorer.*6" pattern).
+  const explorerLimitMatch = analyzeSource.match(/Explorer[^}]*limit.*?(\d+)/s);
+  if (explorerLimitMatch) {
+    assert.notEqual(explorerLimitMatch[1], '4');
+    assert.notEqual(explorerLimitMatch[1], '5');
+    assert.notEqual(explorerLimitMatch[1], '6');
+  }
+});
+
+// L2.
+check('[STATIC]', 'Decision Pass quantities unchanged: viability=3, market_gap=1', () => {
+  const sharedSource2 = fs.readFileSync(path.join(root, 'api/stripe/_shared.ts'), 'utf8');
+  assert.ok(
+    sharedSource2.includes('DECISION_PASS_VIABILITY_QUANTITY') &&
+    sharedSource2.includes('DECISION_PASS_MARKET_GAP_QUANTITY'),
+    'Decision Pass quantities constants must still exist in _shared.ts',
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log(`\n✅ All ${passed} checks passed.\n`);

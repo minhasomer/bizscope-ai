@@ -596,6 +596,7 @@ export default async function handler(
             output_tokens: 0,
             total_tokens: 0,
             estimated_ai_cost: 0,
+            entitlement_source: (explorerProDecisionPassId || proPlussDecisionPassId) ? 'decision_pass' : 'plan',
           });
           if (activityLogErr) throw activityLogErr;
           console.log('[ActivityLog] success opportunities cache-hit');
@@ -889,6 +890,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           output_tokens: aggregatedUsage.outputTokens,
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+          entitlement_source: (explorerProDecisionPassId || proPlussDecisionPassId) ? 'decision_pass' : 'plan',
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunities success');
@@ -968,6 +970,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           output_tokens: aggregatedUsage.outputTokens,
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+          entitlement_source: (explorerProDecisionPassId || proPlussDecisionPassId) ? 'decision_pass' : 'plan',
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunities failure-path');
