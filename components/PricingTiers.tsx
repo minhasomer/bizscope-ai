@@ -365,58 +365,91 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
       {!isDemo && showDecisionPass && onDecisionPassCheckout && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider shrink-0">One-Time Research</h4>
+            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider shrink-0">One-Time Access</h4>
             <div className="h-px flex-1 bg-gray-100" />
           </div>
-          <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-3xl p-6">
-            <div className="flex flex-col sm:flex-row gap-6">
-              {/* Left: price + CTA */}
-              <div className="flex flex-col justify-between gap-4 sm:w-56 shrink-0">
+
+          <div className="bg-gradient-to-br from-slate-900 to-gray-900 rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+            {/* Subtle background accent */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.12)_0%,_transparent_65%)] pointer-events-none" />
+
+            {/* Section header */}
+            <div className="mb-6 relative">
+              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400 mb-1.5">
+                Not ready for a subscription?
+              </p>
+              <h3 className="text-lg sm:text-xl font-black text-white tracking-tight leading-snug">
+                You don't need a monthly plan to use BizScope.
+              </h3>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-6 relative">
+              {/* Left: price, badges, CTA */}
+              <div className="lg:w-60 shrink-0 flex flex-col gap-5">
                 <div>
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-3xl font-black text-gray-900">$19</span>
-                    <span className="text-xs text-gray-400 font-semibold">one time</span>
+                  <div className="flex items-baseline gap-1.5 mb-1">
+                    <span className="text-4xl font-black text-white tracking-tight">$19</span>
+                    <span className="text-sm text-gray-400 font-semibold">one time</span>
                   </div>
-                  <h4 className="text-base font-black text-gray-900 tracking-tight">Decision Pass</h4>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    No subscription. No renewal. Research your business angles, then decide.
+                  <p className="text-base font-black text-white tracking-tight">Decision Pass</p>
+                  <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                    Explore multiple opportunities without an ongoing commitment.
                   </p>
                 </div>
+
+                {/* Trust badges */}
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-white/10 text-gray-300 px-2.5 py-1 rounded-full border border-white/10">
+                    No subscription
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-white/10 text-gray-300 px-2.5 py-1 rounded-full border border-white/10">
+                    No recurring charge
+                  </span>
+                </div>
+
                 <button
                   onClick={() => !pricingActionLoading && onDecisionPassCheckout?.()}
                   disabled={pricingActionLoading}
-                  className="w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wide bg-gray-900 text-white hover:bg-gray-800 transition-all duration-150 disabled:opacity-50 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide bg-white text-gray-900 hover:bg-gray-100 transition-all duration-150 disabled:opacity-50 cursor-pointer"
                 >
-                  {pricingActionLoading ? 'Loading…' : 'Buy Decision Pass →'}
+                  {pricingActionLoading ? 'Loading…' : 'Get Decision Pass — $19'}
                 </button>
               </div>
-              {/* Right: what's included */}
-              <div className="flex-1 border-t sm:border-t-0 sm:border-l border-gray-200 pt-4 sm:pt-0 sm:pl-6">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3">What's included</p>
-                <ul className="space-y-2.5">
-                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
-                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
-                    <span><strong>3 Business Viability reports</strong> — full AI analysis for each idea</span>
+
+              {/* Divider */}
+              <div className="h-px lg:h-auto lg:w-px bg-white/10 shrink-0" />
+
+              {/* Right: feature list + pitch */}
+              <div className="flex-1 flex flex-col gap-5">
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span><strong className="text-white">3 Business Viability Reports</strong> — demand, competition, demographics, and risks</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
-                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
-                    <span><strong>1 Market Gap Discovery report</strong> — find underserved regional demand</span>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span><strong className="text-white">1 Market Gap Discovery Report</strong> — find underserved niches in your target market</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
-                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
-                    <span>Credits never expire — use at your own pace</span>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span>Full financial projections and analysis</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-xs text-gray-700">
-                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
-                    <span>No automatic renewal — one-time charge only</span>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span>Competitor location mapping</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span>PDF export</span>
                   </li>
                 </ul>
+
+                <p className="text-xs text-gray-400 leading-relaxed border-t border-white/10 pt-4">
+                  <strong className="text-gray-200">One payment. No subscription. No recurring charge.</strong>{' '}
+                  Perfect for evaluating a few business ideas, comparing franchise opportunities, or researching a market before deciding what to pursue.
+                </p>
               </div>
             </div>
-            <p className="text-center text-xs text-gray-400 mt-5 pt-4 border-t border-gray-100">
-              Need regular research?{' '}
-              <span className="font-semibold text-gray-600">Pro includes 20 viability reports/month for $29.</span>
-            </p>
           </div>
         </div>
       )}
