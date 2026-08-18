@@ -102,6 +102,10 @@ export class StripeService {
       headers: authHeaders(token),
     });
 
+    const contentType = resp.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      throw new Error('Server error. Please try again.');
+    }
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Failed to create checkout session.');
     if (!data.url) throw new Error('No checkout URL returned from server.');

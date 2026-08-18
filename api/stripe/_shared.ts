@@ -75,7 +75,7 @@ export const PRICE_TO_PLAN: Record<string, 'Pro' | 'Pro+'> = (() => {
 // STRIPE_PRICE_ID_DECISION_PASS must be a one-time price in Stripe Dashboard.
 
 export const DECISION_PASS_PRICE_ID: string | undefined =
-  process.env.STRIPE_PRICE_ID_DECISION_PASS;
+  process.env.STRIPE_PRICE_ID_DECISION_PASS?.replace(/^﻿/, '').trim() || undefined;
 
 /** Business Viability reports included in one Decision Pass purchase. */
 export const DECISION_PASS_VIABILITY_QUANTITY = 3;

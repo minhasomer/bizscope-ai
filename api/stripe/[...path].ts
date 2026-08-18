@@ -246,20 +246,25 @@ async function handleCreateDecisionPassCheckout(
   const appUrl = process.env.APP_URL ?? process.env.VITE_APP_URL ?? '';
   const stripe = getStripe();
 
-  const session = await stripe.checkout.sessions.create({
-    mode:                'payment',
-    line_items:          [{ price: DECISION_PASS_PRICE_ID, quantity: 1 }],
-    client_reference_id: user.userId,
-    metadata: {
-      purchase_type: 'decision_pass',
-      // Quantities are NOT stored in metadata; webhook reads from server-side
-      // constants (DECISION_PASS_VIABILITY_QUANTITY, DECISION_PASS_MARKET_GAP_QUANTITY).
-    },
-    success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url:  `${appUrl}/pricing`,
-  });
-
-  return json(res, 200, { url: session.url });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode:                'payment',
+      line_items:          [{ price: DECISION_PASS_PRICE_ID, quantity: 1 }],
+      client_reference_id: user.userId,
+      metadata: {
+        purchase_type: 'decision_pass',
+        // Quantities are NOT stored in metadata; webhook reads from server-side
+        // constants (DECISION_PASS_VIABILITY_QUANTITY, DECISION_PASS_MARKET_GAP_QUANTITY).
+      },
+      success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${appUrl}/pricing`,
+    });
+    return json(res, 200, { url: session.url });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[DecisionPass] stripe.checkout.sessions.create failed:', msg);
+    return json(res, 502, { error: 'Could not start checkout. Please try again.' });
+  }
 }
 
 // ─── Route: POST create-portal-session ──────────────────────────────────────
@@ -298,21 +303,27 @@ export default async function handler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const url = req.url ?? '';
-  const method = req.method ?? 'GET';
+  try {
+    const url = req.url ?? '';
+    const method = req.method ?? 'GET';
 
-  if (url.includes('subscription-status') && method === 'GET') {
-    return handleSubscriptionStatus(req, res);
-  }
-  if (url.includes('create-checkout-session') && method === 'POST') {
-    return handleCreateCheckout(req, res);
-  }
-  if (url.includes('create-decision-pass-checkout') && method === 'POST') {
-    return handleCreateDecisionPassCheckout(req, res);
-  }
-  if (url.includes('create-portal-session') && method === 'POST') {
-    return handleCreatePortal(req, res);
-  }
+    if (url.includes('subscription-status') && method === 'GET') {
+      return handleSubscriptionStatus(req, res);
+    }
+    if (url.includes('create-checkout-session') && method === 'POST') {
+      return handleCreateCheckout(req, res);
+    }
+    if (url.includes('create-decision-pass-checkout') && method === 'POST') {
+      return handleCreateDecisionPassCheckout(req, res);
+    }
+    if (url.includes('create-portal-session') && method === 'POST') {
+      return handleCreatePortal(req, res);
+    }
 
-  return json(res, 404, { error: 'Not found.' });
+    return json(res, 404, { error: 'Not found.' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[stripe-handler] Unhandled error:', msg);
+    return json(res, 500, { error: 'Internal server error.' });
+  }
 }
