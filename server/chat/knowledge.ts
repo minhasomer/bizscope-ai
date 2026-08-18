@@ -123,6 +123,11 @@ Visitors who haven't signed in may generate one free preview report to see a lim
 version of the report (executive summary and basic market info). Full sections are locked.
 The preview count never resets — once used, the visitor must register.
 
+### One-Time Access
+Decision Pass is a $19 one-time purchase — not a subscription plan. It is separate from the
+monthly plans above and does not include subscription workspace features. See the Decision Pass
+section for full details.
+
 For exact current pricing, users should visit the Pricing page.
 `.trim();
 
@@ -175,6 +180,48 @@ Pro and higher see all 5 plus the expanded dossier option.
 
 ### Saved Market Gap reports
 Pro and higher users can save Market Gap results for later review and comparison.
+`.trim();
+
+// ─── Decision Pass ────────────────────────────────────────────────────────────
+
+export const DECISION_PASS = `
+## Decision Pass — One-Time Access
+
+Decision Pass is a $19 one-time purchase that provides focused research access without a subscription.
+
+### What it includes
+- 3 Business Viability reports (full report experience: financial projections, competitor map, PDF export)
+- 1 Market Gap Discovery report
+- No subscription
+- No automatic renewal
+- Credits do not expire
+
+### What it does NOT include
+- Ongoing subscription workspace benefits such as save-to-Venture-Hub or compare reports
+  (those remain subscription-only features)
+- Pro+ Regional Intelligence (multi-ZIP, county-level, expansion strategy analysis)
+- Credits are NOT interchangeable: 3 Business Viability credits and 1 Market Gap credit
+  are tracked separately; a Business Viability credit cannot be used for Market Gap and vice versa
+
+### Who can purchase it
+Decision Pass is available to anonymous visitors, Explorer (free) users, and former subscribers.
+It is not offered to users with an active trial or active Pro/Pro+ subscription.
+
+### Billing
+Decision Pass is a one-time charge of $19. There is no subscription, no automatic renewal,
+and no monthly billing. It is a separate purchase from any subscription plan.
+
+### Decision Pass vs Pro
+- Decision Pass: $19 once. 3 Business Viability + 1 Market Gap total. No subscription, no renewal.
+- Pro: $29/month. 20 Business Viability reports/month. Ongoing access. No Market Gap included.
+- Choose Decision Pass for focused short-term research without a recurring commitment.
+  Choose Pro for ongoing monthly Business Viability research needs.
+
+### Decision Pass vs Pro+
+- Decision Pass: $19 once. 1 Market Gap included. No Regional Intelligence. No subscription.
+- Pro+: $59/month. 50 Business Viability + 10 Market Gap/Regional per month. Regional Intelligence included.
+- Choose Decision Pass for one-off research without recurring billing.
+  Choose Pro+ for heavy ongoing research including regional and ZIP-level analysis.
 `.trim();
 
 // ─── Billing and subscriptions ────────────────────────────────────────────────
@@ -299,6 +346,7 @@ export function getBizScopeKnowledge(): string {
     PRODUCT_OVERVIEW,
     ASSESSMENT_TIERS,
     PLANS_AND_LIMITS,
+    DECISION_PASS,
     SAVED_REPORTS,
     MARKET_GAP,
     BILLING,

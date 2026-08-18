@@ -201,6 +201,7 @@ check('knowledge base contains all required sections', () => {
     'Authentication',
     'BizScope can',
     'BizScope cannot',
+    'Decision Pass',
   ];
   for (const term of required) {
     assert.ok(kb.includes(term), `Knowledge base missing section: "${term}"`);

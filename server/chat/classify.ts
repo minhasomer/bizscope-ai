@@ -86,6 +86,14 @@ const SAFELIST: RegExp[] = [
   /\bwhy\s+does\s+(the\s+)?app\b/i,
   /\bwhy\s+(is|does)\s+bizscope\b/i,
   /\bwhat\s+is\s+the\s+(purpose|goal|point|benefit)\s+of\b/i,
+
+  // Decision Pass product questions — must precede MARKET_GAP_PATTERNS so that
+  // "Does Decision Pass include Market Gap?" is caught here (PRODUCT_HELP) instead of
+  // being blocked as a MARKET_GAP_ANALYSIS request.
+  /\bdecision\s+pa(?:ss?|ck)\b/i,
+  /\bone.?time\s+(pass|access|reports?|purchase|research)\b/i,
+  /\bpay\s+once\b/i,
+  /\bnon.?subscription\s+option\b/i,
 ];
 
 // ── 2. Abuse / prompt injection ───────────────────────────────────────────────
