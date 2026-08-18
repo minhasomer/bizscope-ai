@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http';
+import { extractClientGeo } from '../server/activityGeo.js';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -206,6 +207,8 @@ export default async function handler(
   req: IncomingMessage & { body?: any },
   res: ServerResponse,
 ): Promise<void> {
+  const geo = extractClientGeo(req);
+
   // Kill switch
   if (process.env.REAL_REPORTS_ENABLED !== 'true') {
     return json(res, 503, { error: 'This endpoint is not available.', code: 'NOT_AVAILABLE' });
@@ -339,6 +342,7 @@ ${isZip
           output_tokens:      costResult.outputTokens,
           total_tokens:       costResult.inputTokens + costResult.outputTokens,
           estimated_ai_cost:  costResult.estimatedCostUsd,
+          ...geo,
         });
       }
     } catch (logErr: any) {
@@ -377,6 +381,7 @@ ${isZip
           total_tokens:     0,
           estimated_ai_cost: 0,
           metadata:         { error: msg.slice(0, 500) },
+          ...geo,
         });
       }
     } catch (logErr: any) {

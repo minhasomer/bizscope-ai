@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http';
+import { extractClientGeo } from '../server/activityGeo.js';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -473,6 +474,7 @@ export default async function handler(
   res: ServerResponse,
 ): Promise<void> {
   console.log('[opportunities diag] request received:', { method: req.method, hasAuthHeader: !!req.headers['authorization'] });
+  const geo = extractClientGeo(req);
 
   // Server-side kill switch — flip REAL_REPORTS_ENABLED=false to disable instantly.
   if (process.env.REAL_REPORTS_ENABLED !== 'true') {
@@ -597,6 +599,7 @@ export default async function handler(
             total_tokens: 0,
             estimated_ai_cost: 0,
             entitlement_source: (explorerProDecisionPassId || proPlussDecisionPassId) ? 'decision_pass' : 'plan',
+            ...geo,
           });
           if (activityLogErr) throw activityLogErr;
           console.log('[ActivityLog] success opportunities cache-hit');
@@ -891,6 +894,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
           entitlement_source: (explorerProDecisionPassId || proPlussDecisionPassId) ? 'decision_pass' : 'plan',
+          ...geo,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunities success');
@@ -971,6 +975,7 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
           entitlement_source: (explorerProDecisionPassId || proPlussDecisionPassId) ? 'decision_pass' : 'plan',
+          ...geo,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunities failure-path');

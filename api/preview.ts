@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http';
+import { extractClientGeo } from '../server/activityGeo.js';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -280,6 +281,7 @@ export default async function handler(
   res: ServerResponse,
 ): Promise<void> {
   console.log('[preview] request received:', { method: req.method });
+  const geo = extractClientGeo(req);
 
   // ── Kill switches ──────────────────────────────────────────────────────────
   // REAL_REPORTS_ENABLED must be true for any live Gemini calls.
@@ -595,6 +597,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           output_tokens: cost.outputTokens,
           total_tokens: cost.totalTokens,
           estimated_ai_cost: cost.estimatedCostUsd,  // same figure as usage_logs above — reconciles
+          ...geo,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success preview success');
@@ -646,6 +649,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           error_message: resMessage?.slice(0, 500),
           source: 'homepage',
           duration_ms: Date.now() - requestStartMs,
+          ...geo,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success preview failure-path');

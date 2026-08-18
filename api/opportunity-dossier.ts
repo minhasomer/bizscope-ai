@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http';
+import { extractClientGeo } from '../server/activityGeo.js';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -375,6 +376,7 @@ export default async function handler(
 ): Promise<void> {
   const startTime = Date.now();
   console.log('[dossier diag] request received:', { method: req.method, hasAuthHeader: !!req.headers['authorization'] });
+  const geo = extractClientGeo(req);
 
   // Server-side kill switch
   if (process.env.REAL_REPORTS_ENABLED !== 'true') {
@@ -607,6 +609,7 @@ Output valid JSON only. No markdown wrappers.
           output_tokens: aggregatedUsage.outputTokens,
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+          ...geo,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunity-dossier success');
@@ -666,6 +669,7 @@ Output valid JSON only. No markdown wrappers.
           output_tokens: aggregatedUsage.outputTokens,
           total_tokens: aggregatedUsage.totalTokens,
           estimated_ai_cost: aggregatedUsage.estimatedCostUsd,
+          ...geo,
         });
         if (activityLogErr) throw activityLogErr;
         console.log('[ActivityLog] success opportunity-dossier failure-path');
