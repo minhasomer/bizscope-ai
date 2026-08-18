@@ -5,6 +5,7 @@ import { searchBusinessTypes, DEFAULT_SUGGESTIONS, BusinessSuggestion } from '..
 import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSuggestions, fetchLocationAutocomplete } from '../src/data/locationSuggestionsData';
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
+import { trackEvent } from '../src/utils/analytics';
 
 interface HeroProps {
   onSubmit: (businessType: string, location: string) => void;
@@ -647,6 +648,23 @@ export const Hero: React.FC<HeroProps> = ({
                 )}
 
                 {renderHeroCTA()}
+
+                {/* Subtle Watch Demo link — smooth-scrolls to the demo section */}
+                {!hasResults && (
+                  <div className="mt-5 text-center">
+                    <a
+                      href="#demo"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        trackEvent('homepage_watch_demo_click');
+                        document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="text-slate-500 hover:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      Watch demo ↓
+                    </a>
+                  </div>
+                )}
             </div>
         </div>
     </div>
@@ -654,6 +672,30 @@ export const Hero: React.FC<HeroProps> = ({
     {/* ── Below-hero sections — hidden once a report is in progress ── */}
     {!hasResults && (
       <>
+        {/* Demo video section */}
+        <section id="demo" className="bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] py-14 sm:py-16 border-t border-white/10">
+          <div className="max-w-4xl mx-auto px-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
+              See BizScope in action
+            </h2>
+            <p className="text-slate-400 mb-8 text-sm max-w-xl mx-auto leading-relaxed">
+              See how BizScope turns a business idea into structured research across market demand, competition, demographics, financial considerations, and risk.
+            </p>
+            <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+              <video
+                controls
+                preload="metadata"
+                aria-label="BizScope product demo — see how a business idea becomes a structured research report"
+                className="w-full aspect-video block"
+                onPlay={() => trackEvent('homepage_demo_play')}
+                onEnded={() => trackEvent('homepage_demo_complete')}
+              >
+                <source src="/bizscope-demo.mp4" type="video/mp4" />
+              </video>
+            </div>
+          </div>
+        </section>
+
         {/* Section 2: What BizScope gives you — white bg, tinted cards */}
         <section className="bg-white py-14 sm:py-16">
           <div className="max-w-5xl mx-auto px-4">
