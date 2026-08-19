@@ -780,15 +780,20 @@ check('H-10: Hero.tsx implements trialing-active state with trial notice', () =>
   );
 });
 
-check('H-11: Signed-out trial CTA is gated by proTrialEnabled', () => {
+check('H-11: Anonymous visitors fall through to default state — trial-signup removed to prevent payment CTA', () => {
+  // trial-signup was removed from getHeroCTAState to fix the P0 conversion issue where
+  // anonymous visitors were shown "Payment method required" UI. proTrialEnabled is still
+  // a prop (App passes it) but CTA routing uses server-derived trialEligible instead.
+  const start = heroSrc.indexOf('const getHeroCTAState');
+  const end = heroSrc.indexOf('};', start) + 2;
+  const fnBody = heroSrc.slice(start, end);
+  assert.ok(
+    !fnBody.includes("'trial-signup'"),
+    "getHeroCTAState must NOT return 'trial-signup' — anonymous visitors must reach 'default' state",
+  );
   assert.ok(
     heroSrc.includes('proTrialEnabled'),
-    'Hero.tsx must reference the proTrialEnabled prop',
-  );
-  const hasSignupGate = /!isAuthenticated.*proTrialEnabled|proTrialEnabled.*!isAuthenticated/.test(heroSrc);
-  assert.ok(
-    hasSignupGate,
-    'Hero.tsx getHeroCTAState must require both !isAuthenticated AND proTrialEnabled for trial-signup state',
+    'Hero.tsx must still accept the proTrialEnabled prop (passed from App)',
   );
 });
 

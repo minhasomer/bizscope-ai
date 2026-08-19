@@ -663,13 +663,24 @@ check('[STATIC]', 'BillingPage shows "Get Another Decision Pass" CTA when both b
 });
 
 // J4.
-check('[STATIC]', 'BillingPage Decision Pass section gated on decisionPassBalance (not viability > 0 only)', () => {
-  // Old code: only shown when viability > 0 OR marketGap > 0
-  // New code: shown whenever decisionPassBalance is non-null
+check('[STATIC]', 'BillingPage Decision Pass section hidden when both credits are zero', () => {
+  // Panel must only render when viability > 0 OR marketGap > 0 — a zero-balance
+  // object (returned by default when no entitlement exists) must not show the panel.
   assert.ok(
-    billingSource.includes('subStatus?.decisionPassBalance &&') ||
-    billingSource.includes('subStatus.decisionPassBalance &&'),
-    'BillingPage must show Decision Pass section whenever decisionPassBalance is non-null',
+    billingSource.includes('decisionPassBalance.viability > 0') &&
+    billingSource.includes('decisionPassBalance.marketGap > 0'),
+    'BillingPage must gate Decision Pass panel on viability > 0 || marketGap > 0',
+  );
+});
+
+// J5.
+check('[STATIC]', '"Get Another Decision Pass" CTA gated on user not having an active subscription', () => {
+  const ctaIdx = billingSource.lastIndexOf('Get Another Decision Pass');
+  assert.ok(ctaIdx > 0, '"Get Another Decision Pass" not found in BillingPage');
+  const ctaContext = billingSource.slice(Math.max(0, ctaIdx - 500), ctaIdx);
+  assert.ok(
+    ctaContext.includes("'active', 'trialing', 'past_due'"),
+    '"Get Another Decision Pass" CTA must be gated on subscription status (active/trialing/past_due)',
   );
 });
 

@@ -261,9 +261,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           </div>
         ) : null}
 
-        {/* Decision Pass balance — shown independently of subscription status so Explorer
-            users (status='inactive') can see their credits without an active subscription. */}
-        {!simulationActive && !isDemo && subStatus?.decisionPassBalance && (
+        {/* Decision Pass balance — only shown when the user has remaining credits.
+            Explorer users without an active subscription can see their balance here. */}
+        {!simulationActive && !isDemo && subStatus?.decisionPassBalance &&
+          (subStatus.decisionPassBalance.viability > 0 || subStatus.decisionPassBalance.marketGap > 0) && (
           <div className="text-xs bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1.5">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
@@ -288,7 +289,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                   : `${subStatus.decisionPassBalance.marketGap} reports remaining`}
               </strong>
             </div>
-            {subStatus.decisionPassBalance.viability === 0 && subStatus.decisionPassBalance.marketGap === 0 && (
+            {subStatus.decisionPassBalance.viability === 0 && subStatus.decisionPassBalance.marketGap === 0 &&
+              !['active', 'trialing', 'past_due'].includes(subStatus.status) && (
               <div className="pl-5 pt-0.5">
                 <button
                   onClick={() => onNavigate('pricing')}
