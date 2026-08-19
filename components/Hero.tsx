@@ -282,7 +282,6 @@ export const Hero: React.FC<HeroProps> = ({
     if (hasPaidSubscription) return 'dashboard';
     if (isAuthenticated && currentPlan !== 'Explorer') return 'dashboard';
     if (trialEligible) return 'trial';
-    if (!isAuthenticated && proTrialEnabled) return 'trial-signup';
     if (isAuthenticated) return 'get-pro';
     return 'default';
   };
@@ -632,7 +631,7 @@ export const Hero: React.FC<HeroProps> = ({
                                   </>
                                 )}
                             </button>
-                            <span className="text-slate-400 text-xs font-medium text-center">
+                            <span className="text-sm text-slate-200 font-medium text-center">
                                 {getPlanAccessLabel(currentPlan)}
                             </span>
                         </div>
