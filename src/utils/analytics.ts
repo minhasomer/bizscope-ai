@@ -33,6 +33,8 @@ const CLARITY_ID: string = process.env.VITE_CLARITY_PROJECT_ID ?? '';
 let gaInitialized = false;
 let clarityInitialized = false;
 
+const UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const;
+
 function isClient(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
@@ -109,11 +111,25 @@ export function initAnalytics(): void {
 export function trackPageView(viewName: string, title: string): void {
   if (!isClient() || !GA_ID) return;
   try {
-    // Construct a stable canonical URL for this view.
     const base = 'https://www.bizscope.app';
-    const path = viewName === 'home' ? '/' : `/?view=${encodeURIComponent(viewName)}`;
-    const pageLocation = `${base}${path}`;
+    let path: string;
 
+    if (viewName === 'home') {
+      // For the initial landing, forward marketing UTMs so GA4 can attribute the
+      // session. Only the five standard params are allowed — no auth tokens,
+      // Stripe IDs, OAuth codes, or click-ID placeholders pass through.
+      const search = new URLSearchParams(window.location.search);
+      const utmParts: string[] = [];
+      for (const key of UTM_PARAMS) {
+        const val = search.get(key);
+        if (val) utmParts.push(`${key}=${encodeURIComponent(val)}`);
+      }
+      path = utmParts.length > 0 ? `/?${utmParts.join('&')}` : '/';
+    } else {
+      path = `/?view=${encodeURIComponent(viewName)}`;
+    }
+
+    const pageLocation = `${base}${path}`;
     window.gtag('event', 'page_view', {
       page_location: pageLocation,
       page_path: path,

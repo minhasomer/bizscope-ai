@@ -237,6 +237,77 @@ check('trackEvent() does not throw when window.gtag throws internally', () => {
   assert.doesNotThrow(() => trackEvent('test_event', { foo: 'bar' }));
 });
 
+// 21.
+check("trackPageView('home') with UTM params → page_location includes utm_source", () => {
+  setupMocks('?utm_source=meta&utm_medium=paid_social&utm_campaign=bizscope_aug2026&utm_content=video01');
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  const dl: any[] = (global as any).window.dataLayer;
+  const before = dl.length;
+  trackPageView('home', 'BizScope');
+  const pv = dl.slice(before).find((e: any) => e[0] === 'event' && e[1] === 'page_view');
+  assert.ok(pv, 'No page_view found');
+  const loc: string = pv[2]?.page_location ?? '';
+  assert.ok(loc.includes('utm_source=meta'), `Expected utm_source=meta in page_location. Got: ${loc}`);
+  assert.ok(loc.includes('utm_medium=paid_social'), `Expected utm_medium in page_location. Got: ${loc}`);
+  assert.ok(loc.includes('utm_campaign=bizscope_aug2026'), `Expected utm_campaign in page_location. Got: ${loc}`);
+  assert.ok(loc.includes('utm_content=video01'), `Expected utm_content in page_location. Got: ${loc}`);
+});
+
+// 22.
+check("trackPageView('home') with UTM params → page_path contains the UTM query string", () => {
+  setupMocks('?utm_source=meta&utm_medium=paid_social');
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  const dl: any[] = (global as any).window.dataLayer;
+  const before = dl.length;
+  trackPageView('home', 'BizScope');
+  const pv = dl.slice(before).find((e: any) => e[0] === 'event' && e[1] === 'page_view');
+  const path: string = pv?.[2]?.page_path ?? '';
+  assert.ok(path.startsWith('/?utm_source=meta'), `Expected path to start with /?utm_source=meta. Got: ${path}`);
+});
+
+// 23.
+check("trackPageView('home') with sensitive auth params → sensitive params excluded from page_location", () => {
+  setupMocks('?code=oauth-secret-code&access_token=tok123&utm_source=meta');
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  const dl: any[] = (global as any).window.dataLayer;
+  const before = dl.length;
+  trackPageView('home', 'BizScope');
+  const pv = dl.slice(before).find((e: any) => e[0] === 'event' && e[1] === 'page_view');
+  const loc: string = pv?.[2]?.page_location ?? '';
+  assert.ok(!loc.includes('code='), `OAuth code must not appear in page_location. Got: ${loc}`);
+  assert.ok(!loc.includes('access_token='), `access_token must not appear in page_location. Got: ${loc}`);
+  assert.ok(loc.includes('utm_source=meta'), `UTM source must still be present. Got: ${loc}`);
+});
+
+// 24.
+check("trackPageView('home') with fbclid → fbclid excluded, UTMs included", () => {
+  setupMocks('?utm_source=meta&utm_medium=paid_social&fbclid=fbclid');
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  const dl: any[] = (global as any).window.dataLayer;
+  const before = dl.length;
+  trackPageView('home', 'BizScope');
+  const pv = dl.slice(before).find((e: any) => e[0] === 'event' && e[1] === 'page_view');
+  const loc: string = pv?.[2]?.page_location ?? '';
+  assert.ok(!loc.includes('fbclid'), `fbclid must not appear in page_location. Got: ${loc}`);
+  assert.ok(loc.includes('utm_source=meta'), `utm_source must be present. Got: ${loc}`);
+});
+
+// 25.
+check("trackPageView('home') with no UTMs in URL → page_path is '/'", () => {
+  setupMocks('?view=home');
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  const dl: any[] = (global as any).window.dataLayer;
+  const before = dl.length;
+  trackPageView('home', 'BizScope');
+  const pv = dl.slice(before).find((e: any) => e[0] === 'event' && e[1] === 'page_view');
+  assert.equal(pv?.[2]?.page_path, '/', `Expected '/' when no UTMs present`);
+});
+
 // ─── attribution.ts ───────────────────────────────────────────────────────────
 
 console.log('\nattribution.ts');
