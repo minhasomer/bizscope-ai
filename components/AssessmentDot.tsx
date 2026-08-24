@@ -22,7 +22,7 @@ interface AssessmentDotProps {
  * Platform-invariant SVG circle indicator for assessment tiers.
  * Replaces emoji-based indicators which render inconsistently across OSes.
  *
- * filled  → Strong Opportunity, Proceed Carefully, Caution Advised, Not Recommended
+ * filled  → Strong Opportunity, Proceed Carefully, Significant Concerns, Not Recommended
  * outlined → Worth Further Investigation (favorable-but-conditional)
  *
  * aria-hidden="true" because the surrounding label text already communicates

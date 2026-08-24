@@ -23,7 +23,7 @@ export interface Assessment {
 
 export function viabilityScoreToAssessment(score: number): Assessment {
   if (score >= 80) return { label: 'Strong Opportunity',          emoji: '🟢', colorClass: 'text-emerald-700', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-300', dotColor: 'emerald', indicatorVariant: 'filled'   };
-  if (score >= 70) return { label: 'Attractive Market',           emoji: '🟢', colorClass: 'text-emerald-600', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-200', dotColor: 'emerald', indicatorVariant: 'filled'   };
+  if (score >= 70) return { label: 'Strong Opportunity',          emoji: '🟢', colorClass: 'text-emerald-600', bgClass: 'bg-emerald-50',  borderClass: 'border-emerald-200', dotColor: 'emerald', indicatorVariant: 'filled'   };
   if (score >= 60) return { label: 'Worth Further Investigation', emoji: '🟢', colorClass: 'text-green-700',   bgClass: 'bg-green-50',    borderClass: 'border-green-300',   dotColor: 'green',   indicatorVariant: 'outlined' };
   if (score >= 50) return { label: 'Proceed Carefully',           emoji: '🟡', colorClass: 'text-amber-700',   bgClass: 'bg-amber-50',    borderClass: 'border-amber-300',   dotColor: 'amber',   indicatorVariant: 'filled'   };
   if (score >= 35) return { label: 'Significant Concerns',        emoji: '🟠', colorClass: 'text-orange-700',  bgClass: 'bg-orange-50',   borderClass: 'border-orange-300',  dotColor: 'orange',  indicatorVariant: 'filled'   };
@@ -51,7 +51,7 @@ export function viabilityScoreToPlainExplanation(score: number): string {
 export function viabilityScoreToFrameworkContext(score: number): string {
   if (score >= 70) return "This is BizScope's most favorable assessment.";
   if (score >= 60) return 'This is a positive outcome, more favorable than Proceed Carefully but still requiring validation.';
-  if (score >= 50) return 'This is a middle-range assessment, more favorable than Caution Advised but less favorable than Worth Further Investigation.';
+  if (score >= 50) return 'This is a middle-range assessment, more favorable than Significant Concerns but less favorable than Worth Further Investigation.';
   if (score >= 35) return 'This indicates more concern than Proceed Carefully and requires deeper validation.';
   return "This is BizScope's least favorable assessment.";
 }
@@ -79,21 +79,20 @@ export const ASSESSMENT_FRAMEWORK: FrameworkTier[] = [
   { key: 'strong',  emoji: '🟢', label: 'Strong Opportunity',          blurb: 'Favorable overall signal.',                      labelClass: 'text-emerald-700', barClass: 'bg-emerald-400', dotColor: 'emerald', indicatorVariant: 'filled'   },
   { key: 'worth',   emoji: '🟢', label: 'Worth Further Investigation', blurb: 'Promising signals that justify deeper research.', labelClass: 'text-green-700',   barClass: 'bg-green-400',   dotColor: 'green',   indicatorVariant: 'outlined' },
   { key: 'proceed', emoji: '🟡', label: 'Proceed Carefully',           blurb: 'Viable but risk-sensitive.',                     labelClass: 'text-amber-700',   barClass: 'bg-amber-400',   dotColor: 'amber',   indicatorVariant: 'filled'   },
-  { key: 'caution', emoji: '🟠', label: 'Caution Advised',             blurb: 'Meaningful concerns identified.',                labelClass: 'text-orange-700',  barClass: 'bg-orange-400',  dotColor: 'orange',  indicatorVariant: 'filled'   },
+  { key: 'caution', emoji: '🟠', label: 'Significant Concerns',        blurb: 'Meaningful concerns identified.',                labelClass: 'text-orange-700',  barClass: 'bg-orange-400',  dotColor: 'orange',  indicatorVariant: 'filled'   },
   { key: 'notrec',  emoji: '🔴', label: 'Not Recommended',             blurb: 'Current conditions appear unfavorable.',         labelClass: 'text-rose-700',    barClass: 'bg-rose-400',    dotColor: 'rose',    indicatorVariant: 'filled'   },
 ];
 
 /**
  * Index into ASSESSMENT_FRAMEWORK for a given viability score — drives the
- * "You are here" highlight. Collapses the six assessment bands onto the five
- * public framework tiers (the two favorable bands map to Strong Opportunity;
- * the Significant Concerns band maps to Caution Advised).
+ * "You are here" highlight. Collapses the two favorable score bands (≥70 and
+ * ≥80) onto tier 0 (Strong Opportunity) in the five-tier public framework.
  */
 export function viabilityScoreToFrameworkIndex(score: number): number {
-  if (score >= 70) return 0; // Strong Opportunity (incl. Attractive Market band)
+  if (score >= 70) return 0; // Strong Opportunity (covers both ≥80 and ≥70 bands)
   if (score >= 60) return 1; // Worth Further Investigation
   if (score >= 50) return 2; // Proceed Carefully
-  if (score >= 35) return 3; // Caution Advised (incl. Significant Concerns band)
+  if (score >= 35) return 3; // Significant Concerns
   return 4;                  // Not Recommended
 }
 
@@ -252,8 +251,7 @@ export function getConfidenceLevel(report: ViabilityReport): ConfidenceLevel {
 
 /** Returns the short PDF-safe assessment label for a viability score. */
 export function viabilityScoreToPdfLabel(score: number): string {
-  if (score >= 80) return 'Strong Opportunity';
-  if (score >= 70) return 'Attractive Market';
+  if (score >= 70) return 'Strong Opportunity';
   if (score >= 60) return 'Worth Further Investigation';
   if (score >= 50) return 'Proceed Carefully';
   if (score >= 35) return 'Significant Concerns';

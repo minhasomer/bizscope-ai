@@ -18,7 +18,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkBlockedCategory } from '../src/utils/blockedCategories';
 import { normalizeRangeSeparator } from '../src/utils/rangeFormat';
-import { stripScoreReferences, viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
+import {
+  stripScoreReferences,
+  viabilityScoreToAssessment,
+  ASSESSMENT_FRAMEWORK,
+  viabilityScoreToFrameworkIndex,
+  viabilityScoreToPdfLabel,
+} from '../src/utils/assessmentUtils';
 import {
   estimateCost,
   aggregateGeminiUsage,
@@ -134,8 +140,10 @@ check('stripScoreReferences does NOT touch currency or percentages', () => {
 
 check('qualitative assessment labels still render correctly', () => {
   assert.equal(viabilityScoreToAssessment(85).label, 'Strong Opportunity');
-  assert.equal(viabilityScoreToAssessment(77).label, 'Attractive Market');
+  assert.equal(viabilityScoreToAssessment(77).label, 'Strong Opportunity'); // 70-79 merged into Strong Opportunity
   assert.equal(viabilityScoreToAssessment(62).label, 'Worth Further Investigation');
+  assert.equal(viabilityScoreToAssessment(55).label, 'Proceed Carefully');
+  assert.equal(viabilityScoreToAssessment(40).label, 'Significant Concerns'); // was 'Caution Advised' in legend — now unified
   assert.equal(viabilityScoreToAssessment(30).label, 'Not Recommended');
   // labels carry no digits
   for (const s of [85, 77, 62, 55, 40, 20]) {
@@ -842,7 +850,99 @@ check('H-15: PricingTiers.tsx original trialEligible CTA logic is intact', () =>
   );
 });
 
-// ── 12. Assessment-logic bias audit — structural guards ───────────────────────
+// ── 12. Assessment label consistency — badge vs. legend must always agree ─────
+//
+// Guards the fix for the production bug where the main assessment badge showed
+// "Significant Concerns" while the "How BizScope Ratings Work" legend highlighted
+// "Caution Advised" for the same report score.
+//
+// Root cause: ASSESSMENT_FRAMEWORK[3].label was "Caution Advised" while
+// viabilityScoreToAssessment() returned "Significant Concerns" for the same
+// score band (35–49). The legend highlighted tier index 3, the badge rendered
+// the label directly — they diverged.
+//
+// Fix: ASSESSMENT_FRAMEWORK[3].label updated to "Significant Concerns".
+//      "Attractive Market" (score 70–79) merged into "Strong Opportunity".
+//      viabilityScoreToPdfLabel() updated to match.
+//
+// These tests guard all five canonical tiers across badge + legend + PDF label.
+
+// Representative scores for each of the five canonical tiers.
+const TIER_CASES: Array<{ score: number; expectedLabel: string }> = [
+  { score: 85, expectedLabel: 'Strong Opportunity'          }, // tier 0: score ≥ 80
+  { score: 74, expectedLabel: 'Strong Opportunity'          }, // tier 0: score 70–79 (was "Attractive Market")
+  { score: 63, expectedLabel: 'Worth Further Investigation' }, // tier 1
+  { score: 52, expectedLabel: 'Proceed Carefully'           }, // tier 2
+  { score: 40, expectedLabel: 'Significant Concerns'        }, // tier 3 (was "Caution Advised" in legend)
+  { score: 20, expectedLabel: 'Not Recommended'             }, // tier 4
+];
+
+// Case A — the exact production mismatch: score 40
+check('Case A: score 40 → badge and legend both say "Significant Concerns" (not "Caution Advised")', () => {
+  const badgeLabel = viabilityScoreToAssessment(40).label;
+  const legendIdx  = viabilityScoreToFrameworkIndex(40);
+  const legendLabel = ASSESSMENT_FRAMEWORK[legendIdx].label;
+  assert.equal(badgeLabel,  'Significant Concerns', `badge at 40 should be "Significant Concerns", got "${badgeLabel}"`);
+  assert.equal(legendLabel, 'Significant Concerns', `legend at 40 should be "Significant Concerns", got "${legendLabel}"`);
+  assert.equal(badgeLabel, legendLabel, 'badge and legend must match');
+});
+
+// Cases B–E and the 70-79 subcase: all five canonical tiers must be self-consistent
+for (const { score, expectedLabel } of TIER_CASES) {
+  check(`label consistency: score ${score} → badge="${expectedLabel}", legend agrees, PDF agrees`, () => {
+    const badgeLabel  = viabilityScoreToAssessment(score).label;
+    const legendIdx   = viabilityScoreToFrameworkIndex(score);
+    const legendLabel = ASSESSMENT_FRAMEWORK[legendIdx].label;
+    const pdfLabel    = viabilityScoreToPdfLabel(score);
+
+    assert.equal(badgeLabel, expectedLabel,  `badge at ${score}: expected "${expectedLabel}", got "${badgeLabel}"`);
+    assert.equal(legendLabel, expectedLabel, `legend at ${score}: expected "${expectedLabel}", got "${legendLabel}"`);
+    assert.equal(pdfLabel, expectedLabel,    `PDF label at ${score}: expected "${expectedLabel}", got "${pdfLabel}"`);
+    assert.equal(badgeLabel, legendLabel,    `badge and legend must match at ${score}`);
+  });
+}
+
+// Guard: "Caution Advised" must not appear as any user-facing framework tier label
+check('ASSESSMENT_FRAMEWORK contains no "Caution Advised" tier label (legacy term retired)', () => {
+  for (const tier of ASSESSMENT_FRAMEWORK) {
+    assert.notEqual(tier.label, 'Caution Advised', `tier "${tier.key}" still has retired label "Caution Advised"`);
+  }
+});
+
+// Guard: "Attractive Market" must not appear as any user-facing framework tier label
+check('ASSESSMENT_FRAMEWORK contains no "Attractive Market" tier label (normalized into Strong Opportunity)', () => {
+  for (const tier of ASSESSMENT_FRAMEWORK) {
+    assert.notEqual(tier.label, 'Attractive Market', `tier "${tier.key}" still exposes retired label "Attractive Market"`);
+  }
+});
+
+// Guard: viabilityScoreToAssessment never returns "Attractive Market" for any score
+check('viabilityScoreToAssessment never returns "Attractive Market" (merged into Strong Opportunity)', () => {
+  for (let s = 0; s <= 100; s++) {
+    const { label } = viabilityScoreToAssessment(s);
+    assert.notEqual(label, 'Attractive Market', `score ${s} returned retired label "Attractive Market"`);
+  }
+});
+
+// Guard: framework has exactly the 5 canonical tiers in the expected order
+check('ASSESSMENT_FRAMEWORK has exactly the 5 canonical tiers in order', () => {
+  const expected = [
+    'Strong Opportunity',
+    'Worth Further Investigation',
+    'Proceed Carefully',
+    'Significant Concerns',
+    'Not Recommended',
+  ];
+  assert.equal(ASSESSMENT_FRAMEWORK.length, 5, `expected 5 tiers, got ${ASSESSMENT_FRAMEWORK.length}`);
+  for (let i = 0; i < expected.length; i++) {
+    assert.equal(
+      ASSESSMENT_FRAMEWORK[i].label, expected[i],
+      `ASSESSMENT_FRAMEWORK[${i}].label should be "${expected[i]}", got "${ASSESSMENT_FRAMEWORK[i].label}"`,
+    );
+  }
+});
+
+// ── 13. Assessment-logic bias audit — structural guards (synthesis prompt) ────
 //
 // These tests verify that the synthesis prompt contains the required reasoning
 // principles and sub-score definitions introduced to prevent optimism bias in
