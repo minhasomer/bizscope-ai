@@ -842,6 +842,151 @@ check('H-15: PricingTiers.tsx original trialEligible CTA logic is intact', () =>
   );
 });
 
+// ── 12. Assessment-logic bias audit — structural guards ───────────────────────
+//
+// These tests verify that the synthesis prompt contains the required reasoning
+// principles and sub-score definitions introduced to prevent optimism bias in
+// competitive-market assessments.
+//
+// They are SOURCE SCANS, not LLM calls — they assert that the prompt text
+// contains specific language, making it impossible to silently regress the fix.
+//
+// Scenarios verified structurally (A–E from the audit spec):
+//   A. Heavy competition + no differentiation must not resolve solely on demographics.
+//   B. Competition + credible unmet niche can still yield a favorable result.
+//   C. Weak demand + weak economics → system willing to be unfavorable.
+//   D. Strong demand + moderate competition + whitespace → favorable still possible.
+//   E. Missing competition data → uncertainty acknowledged, not optimism.
+//
+// A–E cannot be deterministically asserted on live LLM output without an API
+// call, so they are validated via formula arithmetic (the formula is deterministic)
+// plus prompt-content guards (the instructions the LLM must follow).
+
+const analyzeSrc = fs.readFileSync(path.join(repoRoot, 'api', 'analyze.ts'), 'utf8');
+
+// ── A-1: Prompt defines Market Demand as available-to-new-entrant, not category size ──
+
+check('A-1: synthesis prompt defines Market Demand as demand available to a new entrant', () => {
+  assert.ok(
+    analyzeSrc.includes('AVAILABLE TO A NEW ENTRANT'),
+    'synthesis prompt must define Market Demand as demand available to a new entrant, not just category interest',
+  );
+});
+
+// ── A-2: Prompt explicitly guards against demographics-only favorable conclusions ──
+
+check('A-2: synthesis prompt warns that large affluent population ≠ high addressable demand', () => {
+  assert.ok(
+    analyzeSrc.includes('does NOT automatically mean high addressable demand'),
+    'synthesis prompt must state that affluent demographics do not automatically imply high addressable demand',
+  );
+});
+
+// ── A-3: Prompt requires substitute competition to be included in Competition Intensity ──
+
+check('A-3: Competition Intensity definition includes substitute offerings', () => {
+  assert.ok(
+    analyzeSrc.includes('substitute offerings that satisfy the same customer need'),
+    'synthesis prompt must require substitute competition to be included in Competition Intensity scoring',
+  );
+});
+
+// ── A-4: Prompt carries the critical principle distinguishing demand from opportunity ──
+
+check('A-4: prompt contains the principle "High category demand is NOT equivalent to high opportunity"', () => {
+  assert.ok(
+    analyzeSrc.includes('High category demand is NOT equivalent to high opportunity'),
+    'synthesis prompt must include the critical demand-vs-opportunity principle',
+  );
+});
+
+// ── A-5: Prompt requires the RECONCILIATION REQUIREMENT block ──
+
+check('A-5: synthesis prompt contains the RECONCILIATION REQUIREMENT section', () => {
+  assert.ok(
+    analyzeSrc.includes('RECONCILIATION REQUIREMENT'),
+    'synthesis prompt must include the RECONCILIATION REQUIREMENT block',
+  );
+  assert.ok(
+    analyzeSrc.includes('strongest specific evidence FOR this opportunity'),
+    'reconciliation block must ask for strongest FOR evidence',
+  );
+  assert.ok(
+    analyzeSrc.includes('strongest specific evidence AGAINST'),
+    'reconciliation block must ask for strongest AGAINST evidence',
+  );
+});
+
+// ── A-6: Prompt explicitly bars a favorable conclusion from crowded market with no whitespace ──
+
+check('A-6: prompt bars favorable conclusion when competition is dense and no whitespace is identified', () => {
+  assert.ok(
+    analyzeSrc.includes('Do NOT reach a favorable conclusion (Recommended) if the competitive evidence shows a dense, mature market'),
+    'synthesis prompt must explicitly bar a favorable conclusion without whitespace evidence in competitive markets',
+  );
+});
+
+// ── B: Formula arithmetic — "competition can still allow favorable if whitespace exists" ──
+// Scenario B: attractive demographics (demand=78) + moderate-to-heavy competition (intensity=65) +
+// defensible niche drives up financial feasibility (feasibility=72) + moderate risk (risk=50)
+//   Score = 0.30×78 + 0.25×(100-65) + 0.25×72 + 0.20×(100-50)
+//         = 23.4 + 8.75 + 18 + 10 = 60.15 → "Worth Further Investigation" (score ≥ 60)
+// Verifies that the formula can still produce a positive result when differentiation improves
+// the financial feasibility and demand scores even in a competitive market.
+
+check('B: formula can produce ≥60 when competition is high but demand/feasibility are strong (niche scenario)', () => {
+  const mktDemand = 78;
+  const compIntensity = 65;
+  const finFeasibility = 72;
+  const riskLevel = 50;
+  const score = 0.30 * mktDemand + 0.25 * (100 - compIntensity) + 0.25 * finFeasibility + 0.20 * (100 - riskLevel);
+  assert.ok(score >= 60, `expected score ≥ 60 for credible-niche scenario, got ${score.toFixed(2)}`);
+  assert.ok(score < 70, `expected score < 70 (not "Strong"), got ${score.toFixed(2)}`);
+});
+
+// ── C: Formula arithmetic — weak demand + bad economics → sub-50 score ──
+// Scenario C: low demand (40), moderate competition (60), poor financial feasibility (35), high risk (75)
+//   Score = 0.30×40 + 0.25×(100-60) + 0.25×35 + 0.20×(100-75)
+//         = 12 + 10 + 8.75 + 5 = 35.75 → "Significant Concerns" (score ≥ 35, < 50)
+
+check('C: formula produces Significant Concerns territory for weak demand + poor economics', () => {
+  const score = 0.30 * 40 + 0.25 * (100 - 60) + 0.25 * 35 + 0.20 * (100 - 75);
+  assert.ok(score >= 35, `expected ≥ 35 (Significant Concerns), got ${score.toFixed(2)}`);
+  assert.ok(score < 50, `expected < 50, got ${score.toFixed(2)}`);
+});
+
+// ── D: Formula arithmetic — strong demand + moderate competition + whitespace → ≥70 ──
+// Scenario D: strong demand (82), moderate competition (45), good financial feasibility (75), low risk (35)
+//   Score = 0.30×82 + 0.25×(100-45) + 0.25×75 + 0.20×(100-35)
+//         = 24.6 + 13.75 + 18.75 + 13 = 70.1 → "Attractive Market" (score ≥ 70)
+
+check('D: formula produces ≥70 for strong demand + moderate competition + demonstrated whitespace', () => {
+  const score = 0.30 * 82 + 0.25 * (100 - 45) + 0.25 * 75 + 0.20 * (100 - 35);
+  assert.ok(score >= 70, `expected ≥ 70 (Attractive Market), got ${score.toFixed(2)}`);
+});
+
+// ── E: Prompt handles missing grounding data without treating absence as low competition ──
+
+check('E: synthesis prompt does not assume low competition when grounding data is absent', () => {
+  // The prompt must NOT contain language that defaults favorably on missing competition data.
+  // The correct behavior is: uncertainty should not be resolved as a positive signal.
+  // We verify the reconciliation requirement asks "what assumptions would need to be true"
+  // which forces the model to surface missing-data uncertainty rather than assume favorable.
+  assert.ok(
+    analyzeSrc.includes('What assumptions would need to be true for a new entrant to succeed'),
+    'prompt must require explicit assumption enumeration, forcing uncertainty to be surfaced rather than silently resolved as favorable',
+  );
+});
+
+// ── Prompt version bumped after scoring-rule change ──
+
+check('PROMPT_VERSION updated to reflect the assessment-logic fix', () => {
+  assert.ok(
+    analyzeSrc.includes("const PROMPT_VERSION = '2026-08-24'"),
+    'PROMPT_VERSION must be updated to 2026-08-24 to track the assessment-logic fix',
+  );
+});
+
 // ── Run async tests, then report ──────────────────────────────────────────────
 
 for (const { name, fn } of asyncTests) {

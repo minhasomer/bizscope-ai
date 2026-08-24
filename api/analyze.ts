@@ -418,7 +418,7 @@ const VIABILITY_CACHE_MAX_AGE_DAYS = 90;
 // Bump PROMPT_VERSION when the synthesis prompt text changes; bump
 // MODEL_CONFIG_VERSION when the model, token budgets, temperature, or thinking
 // config change.
-const PROMPT_VERSION = '2026-06-19';
+const PROMPT_VERSION = '2026-08-24';
 const MODEL_CONFIG_VERSION = 'flash-synth16k-t0.4';
 
 function normalizeCacheKey(s: string): string {
@@ -1069,9 +1069,26 @@ Synthesize the data into a comprehensive JSON report. Do not output any wrapping
 **Strategic Intelligence:** Identify 3-5 risks (Market, Operational, Financial) with severity and mitigation strategies. Identify 3-5 critical success factors.
 
 **Scoring Rules (MANDATORY):**
-1. Assign sub-scores (0-100): Market Demand, Competition Intensity (higher = more competition), Financial Feasibility, Risk Level (higher = more risk).
+1. Assign sub-scores (0–100) using the precise definitions below. Do NOT conflate the factors.
+   - **Market Demand**: Demand AVAILABLE TO A NEW ENTRANT at this specific location — not just category-level consumer interest or demographic fit. Discount significantly if multiple established competitors already serve apparent demand. A large, affluent population in a category (e.g. boutique fitness) does NOT automatically mean high addressable demand if existing studios already capture that population. Score 60+ only when there is affirmative evidence of unmet demand, underserved segments, or capacity constraints at existing operators.
+   - **Competition Intensity** (higher = worse for the new entrant): The full competitive pressure a new entrant faces. Include BOTH direct same-category competitors AND relevant substitute offerings that satisfy the same customer need (e.g. for a Pilates studio: yoga studios, gyms with Pilates classes, personal trainers; for a coffee shop: all nearby cafés plus quick-service chains). Score 65+ when multiple established direct competitors plus meaningful substitutes are present in the trade area. Score 80+ when the area has dense direct competitors, strong substitutes, and/or established chains/franchises that limit differentiation room.
+   - **Financial Feasibility**: Likelihood of achieving profitable unit economics at realistic occupancy or utilization rates given startup costs, pricing pressure from incumbents, and customer acquisition difficulty in this competitive environment.
+   - **Risk Level** (higher = worse): Overall risk including competitive risk, market-entry risk, and execution risk.
 2. Viability Score = (0.30 × Market Demand) + (0.25 × (100 - Competition Intensity)) + (0.25 × Financial Feasibility) + (0.20 × (100 - Risk Level))
 3. Classification: 0-39 Not Recommended, 40-69 Caution Advised, 70-100 Recommended. Final recommendation must match score.
+
+**CRITICAL REASONING PRINCIPLES:**
+- High category demand is NOT equivalent to high opportunity for a new entrant. A category can have strong consumer demand while existing supply already satisfies or exceeds it. Assess whether there is actual whitespace, not just category attractiveness.
+- Many competitors can validate market demand OR indicate saturation. Determine which interpretation is better supported by the location-specific evidence in the research data above.
+- Do NOT reach a favorable conclusion (Recommended) if the competitive evidence shows a dense, mature market with no identifiable differentiation or underserved segment.
+
+**RECONCILIATION REQUIREMENT (MANDATORY — complete this reasoning before assigning scores):**
+Before finalizing scores and the recommendation, explicitly weigh the following:
+1. What is the strongest specific evidence FOR this opportunity? (e.g. documented underserved segment, competitor waitlists, geographic gap, unmet price point)
+2. What is the strongest specific evidence AGAINST? (e.g. number and concentration of direct competitors, substitute offerings, chain/franchise presence, lack of differentiation)
+3. Does the positive evidence demonstrate actual market whitespace, or only that the category is broadly attractive?
+4. What assumptions would need to be true for a new entrant to succeed, and are those assumptions supported by the research data?
+The executiveSummary and recommendation.reasoning MUST be consistent with this reconciliation. They must not describe an opportunity as favorable while the competitive evidence shows a crowded market without identified whitespace.
 ${franchiseCheck.isFranchise ? `
 **FRANCHISE REQUIREMENT (MANDATORY):**
 '${businessType}' is a franchise brand. You MUST include the following in both the executiveSummary and recommendation.reasoning:
