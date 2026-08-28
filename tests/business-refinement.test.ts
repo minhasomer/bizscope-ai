@@ -471,6 +471,129 @@ check('handleHeroSubmit is what Hero.onSubmit receives (not handleAnalysisReques
   );
 });
 
+// ─── Modal dismiss (X button / Escape) ───────────────────────────────────────
+
+check('BusinessRefinementModal declares onDismiss prop', () => {
+  const modalSrc = readFileSync(path.join(__dirname, '../components/BusinessRefinementModal.tsx'), 'utf8');
+  assert.ok(
+    modalSrc.includes('onDismiss: () => void'),
+    'BusinessRefinementModal must declare an onDismiss prop',
+  );
+});
+
+check('X close button is present with aria-label="Close"', () => {
+  const modalSrc = readFileSync(path.join(__dirname, '../components/BusinessRefinementModal.tsx'), 'utf8');
+  assert.ok(
+    modalSrc.includes('aria-label="Close"'),
+    'X button must have aria-label="Close" for accessibility',
+  );
+  assert.ok(
+    modalSrc.includes('onClick={onDismiss}'),
+    'X button onClick must call onDismiss',
+  );
+});
+
+check('Escape key listener calls onDismiss', () => {
+  const modalSrc = readFileSync(path.join(__dirname, '../components/BusinessRefinementModal.tsx'), 'utf8');
+  assert.ok(
+    modalSrc.includes("e.key === 'Escape'") && modalSrc.includes('onDismiss()'),
+    'Modal must call onDismiss when Escape is pressed',
+  );
+  assert.ok(
+    modalSrc.includes('removeEventListener'),
+    'Escape key listener must be cleaned up on unmount',
+  );
+});
+
+check('onDismiss in App.tsx only clears refinementPending — no handleAnalysisRequest', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // Extract the onDismiss handler block
+  const dismissStart = appSrc.indexOf("onDismiss={() => {");
+  const dismissEnd = appSrc.indexOf('\n          }}\n        />', dismissStart);
+  const dismissBlock = appSrc.slice(dismissStart, dismissEnd);
+  assert.ok(
+    dismissBlock.includes('setRefinementPending(null)'),
+    'onDismiss must clear refinementPending',
+  );
+  assert.ok(
+    !dismissBlock.includes('handleAnalysisRequest'),
+    'onDismiss must NOT call handleAnalysisRequest — no analysis should run',
+  );
+});
+
+check('onDismiss does not duplicate "Keep it general" behavior', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  const dismissStart = appSrc.indexOf("onDismiss={() => {");
+  const dismissEnd = appSrc.indexOf('\n          }}\n        />', dismissStart);
+  const dismissBlock = appSrc.slice(dismissStart, dismissEnd);
+  // "Keep it general" always calls handleAnalysisRequest; dismiss must not.
+  assert.ok(
+    !dismissBlock.includes('handleAnalysisRequest'),
+    'Dismiss must not trigger analysis (unlike "Keep it general")',
+  );
+  // Dismiss may fire analytics with a different reason
+  assert.ok(
+    dismissBlock.includes("'dismissed'"),
+    "Dismiss analytics reason must be 'dismissed', not 'keep_general'",
+  );
+});
+
+check('original concept and location preserved after dismiss (refinementPending clears, Hero state unchanged)', () => {
+  // Structural test: refinementPending holds the concept/location for the modal.
+  // When cleared, the Hero component's own input state (which is separate) is unchanged.
+  // We verify that the onDismiss handler body only contains trackEvent + setRefinementPending(null)
+  // and does not contain any navigation, field-reset, or analysis calls.
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+
+  // Extract the onDismiss handler by finding its unique 'dismissed' reason string.
+  // The handler body is the smallest block containing that string.
+  const dismissedIdx = appSrc.indexOf("'dismissed'");
+  assert.ok(dismissedIdx !== -1, "onDismiss handler must use reason: 'dismissed'");
+
+  // Look backward from 'dismissed' to find the opening onDismiss={() => { line
+  const handlerOpen = appSrc.lastIndexOf('onDismiss={() => {', dismissedIdx);
+  // Look forward from 'dismissed' to find the closing }}
+  const handlerClose = appSrc.indexOf('\n          }}', dismissedIdx);
+  const dismissBlock = appSrc.slice(handlerOpen, handlerClose);
+
+  assert.ok(
+    !dismissBlock.includes('navigate('),
+    'onDismiss must not navigate away — user must return to the same input state',
+  );
+  assert.ok(
+    !dismissBlock.includes('setCurrentView'),
+    'onDismiss must not call setCurrentView',
+  );
+  assert.ok(
+    !dismissBlock.includes('setBusinessType') && !dismissBlock.includes('setLocation'),
+    'onDismiss must not reset the Hero input fields',
+  );
+  assert.ok(
+    !dismissBlock.includes('handleAnalysisRequest'),
+    'onDismiss must not trigger an analysis',
+  );
+});
+
+check('subsequent submission after dismiss can trigger refinement normally', () => {
+  // After dismiss, refinementPending is null, so the next Hero submit
+  // goes through handleHeroSubmit fresh — fetchRefinement is called again.
+  // We verify this structurally: handleHeroSubmit always checks refinementPending
+  // after fetchRefinement, not before it, so clearing it has no side effect on the next call.
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // handleHeroSubmit must not read refinementPending — it always calls fetchRefinement.
+  const heroSubmitStart = appSrc.indexOf('const handleHeroSubmit = useCallback');
+  const heroSubmitEnd = appSrc.indexOf('}, [isLoading, isDemoMode, handleAnalysisRequest]);', heroSubmitStart);
+  const heroSubmitBlock = appSrc.slice(heroSubmitStart, heroSubmitEnd);
+  assert.ok(
+    !heroSubmitBlock.includes('refinementPending'),
+    'handleHeroSubmit must not read refinementPending — it always runs fetchRefinement fresh',
+  );
+  assert.ok(
+    heroSubmitBlock.includes('fetchRefinement(businessType, location)'),
+    'handleHeroSubmit must call fetchRefinement on every submission',
+  );
+});
+
 // ─── Run all tests sequentially (supports async) ──────────────────────────────
 (async () => {
   for (const { name, fn } of testQueue) {

@@ -1872,6 +1872,10 @@ const App: React.FC = () => {
             setRefinementPending(null);
             handleAnalysisRequest(originalConcept, location);
           }}
+          onDismiss={() => {
+            trackEvent('business_refinement_skipped', { reason: 'dismissed' });
+            setRefinementPending(null);
+          }}
         />
       )}
 

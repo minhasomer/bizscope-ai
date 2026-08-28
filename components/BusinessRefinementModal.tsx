@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { RefinementOption } from '../src/utils/refinementUtils';
 
 interface BusinessRefinementModalProps {
@@ -8,6 +8,7 @@ interface BusinessRefinementModalProps {
   options: RefinementOption[];
   onSelect: (concept: string) => void;
   onKeepGeneral: () => void;
+  onDismiss: () => void;
 }
 
 export const BusinessRefinementModal: React.FC<BusinessRefinementModalProps> = ({
@@ -17,9 +18,19 @@ export const BusinessRefinementModal: React.FC<BusinessRefinementModalProps> = (
   options,
   onSelect,
   onKeepGeneral,
+  onDismiss,
 }) => {
   const [customConcept, setCustomConcept] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // Escape key dismisses the modal without running any analysis.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onDismiss();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onDismiss]);
 
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +43,17 @@ export const BusinessRefinementModal: React.FC<BusinessRefinementModalProps> = (
       <div className="relative w-full max-w-lg bg-[#0f1629] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-white/10">
+          {/* X close button */}
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Close"
+            className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
           <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">
             Refine Your Concept
           </p>
