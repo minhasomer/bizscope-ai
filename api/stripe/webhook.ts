@@ -133,6 +133,13 @@ async function setSubscriptionStatus(userId: string, status: string): Promise<vo
 // ─── Event handlers ───────────────────────────────────────────────────────────
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  // Payment-mode checkouts (e.g. one-time purchases) are not handled in this
+  // deployment. Acknowledge without processing so Stripe stops retrying.
+  if (session.mode === 'payment') {
+    console.log(`[Stripe] checkout.session.completed mode=payment — acknowledged without action (sessionId=${session.id})`);
+    return;
+  }
+
   const userId = session.client_reference_id;
   if (!userId) throw new Error('checkout.session.completed missing client_reference_id');
 
