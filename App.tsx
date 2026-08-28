@@ -41,6 +41,9 @@ import { ReportSummaryCard } from './components/ReportSummaryCard';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { BizScopeChatButton } from './src/components/chat/BizScopeChatButton';
 import { chatEnabled } from './src/config/appConfig';
+import { BusinessRefinementModal } from './components/BusinessRefinementModal';
+import { fetchRefinement } from './src/utils/refinementUtils';
+import type { RefinementResult } from './src/utils/refinementUtils';
 
 /** Returns true when an error message is a browser-level network interruption
  *  (e.g. Android Chrome killed the TCP connection when the tab was backgrounded)
@@ -222,6 +225,14 @@ const App: React.FC = () => {
   // True when an anonymous user has already used their one free preview.
   // Drives a signup CTA in the results area instead of an error message.
   const [showPreviewCTA, setShowPreviewCTA] = useState(false);
+
+  // Pending refinement: set when /api/refine says the concept is broad enough
+  // to warrant a clarification step. Cleared once the user picks or dismisses.
+  const [refinementPending, setRefinementPending] = useState<{
+    originalConcept: string;
+    location: string;
+    result: RefinementResult;
+  } | null>(null);
 
   // Mobile interruption recovery.
   // showRecoveryBanner: true when a network-interruption error occurred and we
@@ -914,6 +925,40 @@ const App: React.FC = () => {
   const handleLiveCancel = useCallback(() => {
     setPendingLiveRequest(null);
   }, []);
+
+  /**
+   * Intercepts the Hero form submission to run a lightweight concept-refinement
+   * check before the full analysis pipeline starts.
+   *
+   * - Calls /api/refine (cheap, ~1s, no quota consumption).
+   * - If refinement is suggested, shows BusinessRefinementModal so the user can
+   *   pick a more specific concept or keep the original.
+   * - On any error/timeout, falls through immediately to handleAnalysisRequest.
+   * - Never consumes a report quota — only handleAnalysisRequest does that.
+   */
+  const handleHeroSubmit = useCallback(async (businessType: string, location: string) => {
+    if (isLoading) return;
+
+    // Skip refinement in demo mode to avoid real AI calls.
+    if (isDemoMode) {
+      await handleAnalysisRequest(businessType, location);
+      return;
+    }
+
+    trackEvent('business_refinement_shown', { trigger: 'hero_submit' });
+
+    const result = await fetchRefinement(businessType, location);
+
+    if (!result.needsRefinement || !result.options || result.options.length < 2) {
+      if (!result.needsRefinement) {
+        trackEvent('business_refinement_skipped', { reason: 'not_broad' });
+      }
+      await handleAnalysisRequest(businessType, location);
+      return;
+    }
+
+    setRefinementPending({ originalConcept: businessType, location, result });
+  }, [isLoading, isDemoMode, handleAnalysisRequest]);
 
   // ── Pricing-page action state ─────────────────────────────────────────────
   // Shared loading/error for checkout and portal actions on the pricing page.
@@ -1637,7 +1682,7 @@ const App: React.FC = () => {
         return (
           <>
             <Hero
-              onSubmit={handleAnalysisRequest}
+              onSubmit={handleHeroSubmit}
               onNavigate={navigate}
               isLoading={isLoading}
               hasResults={!!report || isLoading}
@@ -1806,6 +1851,29 @@ const App: React.FC = () => {
         onSetPreview={handleSetPreview}
         isVisible={import.meta.env.DEV || isAdmin(currentUser?.role ?? '')}
       />
+
+      {/* Business concept refinement modal — shown when /api/refine suggests clarification */}
+      {refinementPending && refinementPending.result.options && (
+        <BusinessRefinementModal
+          originalConcept={refinementPending.originalConcept}
+          location={refinementPending.location}
+          question={refinementPending.result.question ?? `What kind of ${refinementPending.originalConcept.toLowerCase()} are you considering?`}
+          options={refinementPending.result.options}
+          onSelect={(refinedConcept) => {
+            const isCustom = !refinementPending.result.options!.some(o => o.value === refinedConcept);
+            trackEvent(isCustom ? 'business_refinement_custom' : 'business_refinement_selected');
+            const loc = refinementPending.location;
+            setRefinementPending(null);
+            handleAnalysisRequest(refinedConcept, loc);
+          }}
+          onKeepGeneral={() => {
+            trackEvent('business_refinement_skipped', { reason: 'keep_general' });
+            const { originalConcept, location } = refinementPending;
+            setRefinementPending(null);
+            handleAnalysisRequest(originalConcept, location);
+          }}
+        />
+      )}
 
       {/* Live-mode cost protection — only shown to Admin users, never in Demo Mode */}
       <LiveModeConfirmModal
