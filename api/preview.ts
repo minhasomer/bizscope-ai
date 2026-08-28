@@ -272,6 +272,120 @@ const supabaseAdmin = (() => {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 })();
 
+// ─── Business Concept Refinement ─────────────────────────────────────────────
+// Lightweight classification call: does this concept need narrowing before
+// running a full viability analysis? Invoked via mode: 'refine' in the body.
+// No quota is consumed — this is not a report generation call.
+
+const REFINEMENT_SYSTEM_PROMPT = `You are a business classification assistant for BizScope, a market analysis tool.
+
+Your ONLY job: determine whether a user's business description is broad enough that asking for a more specific concept would materially improve a location-specific business viability analysis.
+
+A concept needs refinement when it encompasses multiple COMMERCIALLY DISTINCT business models that would have meaningfully different:
+- Target customers
+- Competitors and competitive landscape
+- Pricing and revenue model
+- Physical or operational requirements
+- Market demand and growth trajectories
+
+IMPORTANT RULES:
+1. Return needsRefinement: false for concepts that are already specific (e.g. "Yemeni coffee shop", "artisan sourdough bakery", "Korean BBQ restaurant", "women-only strength gym", "Montessori preschool", "mobile dog grooming").
+2. Return needsRefinement: false for franchise/brand names (e.g. "Chick-fil-A", "McDonald's", "Subway") — these are already specific enough.
+3. Return needsRefinement: true ONLY for genuinely broad categories where the subcategory meaningfully changes the analysis (e.g. "coffee shop", "bakery", "restaurant", "gym", "daycare", "auto repair shop").
+4. When needsRefinement is true, provide 3–6 COMMERCIALLY DISTINCT options. Each option must represent a meaningfully different business model (NOT synonyms like "coffee shop / café / coffee house").
+5. The question field should be conversational and specific, e.g. "What kind of coffee shop are you considering?"
+6. NEVER comment on viability, market conditions, or whether an idea is good or bad.
+7. NEVER include "Keep it general" or "Other" in your options — those are added automatically by the UI.`;
+
+const refinementSchema = {
+  type: Type.OBJECT,
+  properties: {
+    needsRefinement: { type: Type.BOOLEAN },
+    question: { type: Type.STRING },
+    options: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          label: { type: Type.STRING },
+          value: { type: Type.STRING },
+        },
+        required: ['label', 'value'],
+      },
+    },
+  },
+  required: ['needsRefinement'],
+};
+
+const REFINEMENT_PASSTHROUGH = { needsRefinement: false };
+
+async function handleRefinementMode(
+  req: IncomingMessage & { body?: any },
+  res: ServerResponse,
+): Promise<void> {
+  const businessType = typeof req.body?.businessType === 'string' ? req.body.businessType.trim() : '';
+  if (!businessType || businessType.length > 200) {
+    return json(res, 200, REFINEMENT_PASSTHROUGH);
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return json(res, 200, REFINEMENT_PASSTHROUGH);
+
+  try {
+    const client = new GoogleGenAI({ apiKey });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12_000);
+    let rawJson: string;
+    try {
+      const response = await client.models.generateContent({
+        model: GEMINI_MODELS.standard,
+        contents: [{
+          role: 'user',
+          parts: [{ text: `Business concept: "${businessType}"\n\nShould BizScope ask the user to narrow this down before running the viability analysis? Apply your classification rules and respond with valid JSON only.` }],
+        }],
+        config: {
+          systemInstruction: REFINEMENT_SYSTEM_PROMPT,
+          responseMimeType: 'application/json',
+          responseSchema: refinementSchema as any,
+          temperature: 0.1,
+          maxOutputTokens: 512,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      });
+      clearTimeout(timeoutId);
+      rawJson = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    } catch {
+      clearTimeout(timeoutId);
+      return json(res, 200, REFINEMENT_PASSTHROUGH);
+    }
+
+    let parsed: any;
+    try { parsed = JSON.parse(rawJson); } catch { return json(res, 200, REFINEMENT_PASSTHROUGH); }
+
+    if (typeof parsed?.needsRefinement !== 'boolean') return json(res, 200, REFINEMENT_PASSTHROUGH);
+    if (!parsed.needsRefinement) return json(res, 200, { needsRefinement: false });
+
+    const options = Array.isArray(parsed.options) ? parsed.options : [];
+    const validOptions = options
+      .filter((o: any) => typeof o?.label === 'string' && typeof o?.value === 'string')
+      .map((o: any) => ({ label: o.label.trim(), value: o.value.trim() }))
+      .filter((o: any) => o.label.length > 0 && o.value.length > 0)
+      .slice(0, 6);
+
+    if (validOptions.length < 2) return json(res, 200, REFINEMENT_PASSTHROUGH);
+
+    return json(res, 200, {
+      needsRefinement: true,
+      question: typeof parsed.question === 'string' && parsed.question.trim()
+        ? parsed.question.trim()
+        : `What kind of ${businessType.toLowerCase()} are you considering?`,
+      options: validOptions,
+    });
+  } catch {
+    return json(res, 200, REFINEMENT_PASSTHROUGH);
+  }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -279,6 +393,11 @@ export default async function handler(
   res: ServerResponse,
 ): Promise<void> {
   console.log('[preview] request received:', { method: req.method });
+
+  // Refinement mode: lightweight concept classification, no quota consumed.
+  if (req.method === 'POST' && (req.body ?? {}).mode === 'refine') {
+    return handleRefinementMode(req, res);
+  }
 
   // ── Kill switches ──────────────────────────────────────────────────────────
   // REAL_REPORTS_ENABLED must be true for any live Gemini calls.

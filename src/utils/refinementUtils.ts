@@ -53,10 +53,10 @@ export async function fetchRefinement(
 
     let response: Response;
     try {
-      response = await fetch('/api/refine', {
+      response = await fetch('/api/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessType, location }),
+        body: JSON.stringify({ mode: 'refine', businessType, location }),
         signal: controller.signal,
       });
     } finally {

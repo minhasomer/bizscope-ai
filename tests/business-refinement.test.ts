@@ -243,9 +243,14 @@ check('refinement events do not pass businessType string as GA4 param', () => {
   }
 });
 
-// ─── Quota guard: /api/refine source must not import quota functions ───────────
-check('/api/refine.ts does not import quota-tracking functions', () => {
-  const refineSrc = readFileSync(path.join(__dirname, '../api/refine.ts'), 'utf8');
+// ─── Quota guard: refinement code in /api/preview.ts must not call quota functions ──
+// Refinement is a mode: 'refine' early-return in preview.ts that bypasses report
+// generation entirely. We verify the handleRefinementMode function does not reference
+// any quota-tracking calls.
+check('handleRefinementMode in /api/preview.ts does not reference quota-tracking functions', () => {
+  const previewSrc = readFileSync(path.join(__dirname, '../api/preview.ts'), 'utf8');
+  // Extract just the refinement section (before the main handler)
+  const refinementSection = previewSrc.slice(0, previewSrc.indexOf('export default async function handler'));
   const quotaFunctions = [
     'incrementUsageTracking',
     'checkStandardQuota',
@@ -256,8 +261,8 @@ check('/api/refine.ts does not import quota-tracking functions', () => {
   ];
   for (const fn of quotaFunctions) {
     assert.ok(
-      !refineSrc.includes(fn),
-      `/api/refine.ts must not reference quota function: ${fn}`,
+      !refinementSection.includes(fn),
+      `handleRefinementMode must not reference quota function: ${fn}`,
     );
   }
 });
