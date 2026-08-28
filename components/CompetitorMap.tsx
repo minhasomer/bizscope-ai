@@ -8,6 +8,8 @@ interface CompetitorMapProps {
   competitors: Competition[];
   targetCoordinates?: { latitude: number; longitude: number };
   coordinatesAreReal?: boolean;
+  /** When true, there are indirect competitors but no direct ones — shown in an explanatory banner. */
+  hasOnlyIndirect?: boolean;
 }
 
 // ─── Fallback table (no coordinates at all) ────────────────────────────────────
@@ -29,8 +31,14 @@ const CompetitorTable: React.FC<{ competitors: Competition[] }> = ({ competitors
         {competitors.map((comp, i) => (
           <li key={i} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+              <span
+                className="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0"
+                style={{ background: comp.type === 'indirect' ? '#F59E0B' : '#EF4444' }}
+              >{i + 1}</span>
               <span className="font-semibold text-sm text-gray-900">{comp.name}</span>
+              {comp.type === 'indirect' && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">Indirect</span>
+              )}
             </div>
             {comp.address && <div className="text-xs text-gray-500 ml-7">{comp.address}</div>}
             {comp.details
@@ -46,7 +54,7 @@ const CompetitorTable: React.FC<{ competitors: Competition[] }> = ({ competitors
 
 // ─── Leaflet map + side list ───────────────────────────────────────────────────
 
-const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinates, coordinatesAreReal }) => {
+const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinates, coordinatesAreReal, hasOnlyIndirect }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRefs = useRef<L.Marker[]>([]);
@@ -84,12 +92,14 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
         .bindPopup('<strong style="font-size:12px">📍 Your Location</strong>');
     }
 
-    // Competitor markers — numbered red circles
+    // Competitor markers — numbered circles: red for direct, amber for indirect
     markerRefs.current = competitorsWithCoords.map((comp, idx) => {
       const num = idx + 1;
+      const isIndirect = comp.type === 'indirect';
+      const bg = isIndirect ? '#F59E0B' : '#EF4444';
       const icon = L.divIcon({
         className: '',
-        html: `<div style="width:24px;height:24px;border-radius:50%;background:#EF4444;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;line-height:1;">${num}</div>`,
+        html: `<div style="width:24px;height:24px;border-radius:50%;background:${bg};border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;line-height:1;">${num}</div>`,
         iconSize: [24, 24],
         iconAnchor: [12, 12],
       });
@@ -98,11 +108,15 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
         ? `<span style="font-size:11px;color:#374151;display:block;margin-top:4px;max-width:220px;line-height:1.4">${comp.details}</span>`
         : `<span style="font-size:11px;color:#9CA3AF;display:block;margin-top:4px;font-style:italic">Competitor location identified; details unavailable.</span>`;
 
+      const typeBadge = isIndirect
+        ? `<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#92400E;background:#FEF3C7;border:1px solid #FDE68A;border-radius:3px;padding:1px 4px;margin-left:4px">Indirect</span>`
+        : '';
+
       const popupHtml = [
         `<div style="min-width:160px">`,
-        `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">`,
-        `<span style="width:18px;height:18px;border-radius:50%;background:#EF4444;color:white;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${num}</span>`,
-        `<strong style="font-size:12px">${comp.name}</strong>`,
+        `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">`,
+        `<span style="width:18px;height:18px;border-radius:50%;background:${bg};color:white;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${num}</span>`,
+        `<strong style="font-size:12px">${comp.name}</strong>${typeBadge}`,
         `</div>`,
         comp.address ? `<span style="font-size:11px;color:#6B7280;display:block;margin-bottom:2px">📍 ${comp.address}</span>` : '',
         detailsHtml,
@@ -168,26 +182,57 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
     marker.openPopup();
   };
 
+  const directCount   = competitorsWithCoords.filter(c => c.type !== 'indirect').length;
+  const indirectCount = competitorsWithCoords.filter(c => c.type === 'indirect').length;
+  const hasTypes      = directCount > 0 || indirectCount > 0;
+
   return (
     <div className="flex flex-col h-full">
+      {/* Indirect-only explanatory banner */}
+      {hasOnlyIndirect && competitorsWithCoords.length > 0 && (
+        <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 text-[11px] text-amber-800 leading-relaxed">
+          <strong>No direct competitors were identified nearby.</strong> The map shows relevant brick-and-mortar businesses that compete for the same customer demand.
+        </div>
+      )}
+
       {/* Map panel — hidden in print; competitor list below takes over */}
       <div className="relative print:hidden" style={{ flex: '1 1 60%', minHeight: 0 }}>
-        <div ref={containerRef} className="w-full h-full" />
+        {competitorsWithCoords.length === 0 ? (
+          <div className="w-full h-full flex items-center justify-center bg-gray-50 text-center px-6">
+            <div>
+              <p className="text-sm font-semibold text-gray-600 mb-1">No mapped competitor locations</p>
+              <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
+                No reliable nearby competitor locations were identified from the available sources. Competition was assessed from broader market signals.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div ref={containerRef} className="w-full h-full" />
+        )}
+
         {/* Legend */}
-        <div className="absolute bottom-8 left-2 z-[1000] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 text-[10px] text-gray-500 flex items-center gap-3 shadow-sm pointer-events-none">
-          {coordinatesAreReal && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
-              Your Location
-            </span>
-          )}
-          {competitorsWithCoords.length > 0 && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-              Competitor (click for details)
-            </span>
-          )}
-        </div>
+        {competitorsWithCoords.length > 0 && (
+          <div className="absolute bottom-8 left-2 z-[1000] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 text-[10px] text-gray-500 flex items-center gap-3 shadow-sm pointer-events-none">
+            {coordinatesAreReal && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
+                Your Location
+              </span>
+            )}
+            {directCount > 0 && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+                {hasTypes ? 'Direct' : 'Competitor'} (click for details)
+              </span>
+            )}
+            {indirectCount > 0 && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
+                Indirect (click for details)
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Competitor list panel */}
@@ -202,26 +247,37 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
             Showing representative competitors based on available location data.
           </div>
           <ul>
-            {competitorsWithCoords.map((comp, idx) => (
-              <li
-                key={idx}
-                onClick={() => handleListItemClick(idx)}
-                className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors border-b border-gray-50 last:border-0 avoid-break ${activeIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50'}`}
-              >
-                <span className="mt-0.5 w-5 h-5 flex-shrink-0 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                  {idx + 1}
-                </span>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-900 truncate">{comp.name}</div>
-                  {comp.address
-                    ? <div className="text-[11px] text-gray-400 truncate">{comp.address}</div>
-                    : comp.details
-                      ? <div className="text-[11px] text-gray-500 truncate">{comp.details}</div>
-                      : <div className="text-[11px] text-gray-400 italic">Details unavailable</div>
-                  }
-                </div>
-              </li>
-            ))}
+            {competitorsWithCoords.map((comp, idx) => {
+              const isIndirect = comp.type === 'indirect';
+              return (
+                <li
+                  key={idx}
+                  onClick={() => handleListItemClick(idx)}
+                  className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors border-b border-gray-50 last:border-0 avoid-break ${activeIndex === idx ? (isIndirect ? 'bg-amber-50' : 'bg-red-50') : 'hover:bg-gray-50'}`}
+                >
+                  <span
+                    className="mt-0.5 w-5 h-5 flex-shrink-0 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+                    style={{ background: isIndirect ? '#F59E0B' : '#EF4444' }}
+                  >
+                    {idx + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="text-xs font-semibold text-gray-900 truncate">{comp.name}</div>
+                      {isIndirect && (
+                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5">Indirect</span>
+                      )}
+                    </div>
+                    {comp.address
+                      ? <div className="text-[11px] text-gray-400 truncate">{comp.address}</div>
+                      : comp.details
+                        ? <div className="text-[11px] text-gray-500 truncate">{comp.details}</div>
+                        : <div className="text-[11px] text-gray-400 italic">Details unavailable</div>
+                    }
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -231,7 +287,7 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
 
 // ─── Public export ─────────────────────────────────────────────────────────────
 
-export const CompetitorMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinates, coordinatesAreReal }) => {
+export const CompetitorMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinates, coordinatesAreReal, hasOnlyIndirect }) => {
   const hasMapData = competitors.some(c => c.latitude != null && c.longitude != null);
 
   if (!hasMapData && !targetCoordinates) {
@@ -243,6 +299,7 @@ export const CompetitorMap: React.FC<CompetitorMapProps> = ({ competitors, targe
       competitors={competitors}
       targetCoordinates={targetCoordinates}
       coordinatesAreReal={coordinatesAreReal}
+      hasOnlyIndirect={hasOnlyIndirect}
     />
   );
 };

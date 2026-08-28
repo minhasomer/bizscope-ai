@@ -123,6 +123,7 @@ const reportSchema = {
               address: { type: Type.STRING },
               latitude: { type: Type.NUMBER },
               longitude: { type: Type.NUMBER },
+              type: { type: Type.STRING, enum: ['direct', 'indirect'], description: '"direct" = same core format/product as the analyzed business; "indirect" = different format but competes for the same customer occasion or substitutable demand' },
             },
             required: ['name', 'details'],
           },
@@ -987,7 +988,13 @@ export default async function handler(
 1. Any EXISTING '${businessType}' locations already operating in or within 20 miles of '${location}'. List each with its name and full street address. Label these clearly as "Existing ${businessType} location".
 2. The top ${Math.max(competitorTarget - 3, 6)} other direct competitors (different brands) for a new '${businessType}' in '${location}'. For each, provide the business name and full street address.
 Return all results combined, existing same-brand locations listed first. Include as many real, verified businesses as you can find — do not truncate the list.`
-      : `List up to ${competitorTarget} real, currently operating direct competitors for a new '${businessType}' in or very near '${location}'. For each business provide: the real business name and full street address. Use Google Maps data to find actual businesses — do not use generic placeholder names. Include as many as are genuinely present; if fewer than ${competitorTarget} exist in the area, list all you can find.`;
+      : `Find real, currently operating competitors for a new '${businessType}' in or very near '${location}'. List up to ${competitorTarget} businesses total.
+
+For each business provide: the real business name and full street address. Label each one as either:
+[DIRECT] — same core format, product, and customer occasion as '${businessType}'
+[INDIRECT] — different format but clearly competes for the same customer demand or occasion (e.g. brick-and-mortar establishments serving the same core product, or close substitutes a customer would choose instead)
+
+Only label a business [INDIRECT] if it is a commercially meaningful substitute — do NOT label every nearby restaurant or retailer as indirect. Use Google Maps data to find actual businesses — do not use generic placeholder names. Include as many as are genuinely present; if fewer exist, list all you can find.`;
     // Phase 2 prompt (built up-front so phases 1 & 2 can run concurrently below).
     const phase2Prompt = `Find the latest US Census data for '${location}': specifically Total Population and Median Household Income. Also research market trends and financial benchmarks for opening a '${businessType}' in '${location}'.`;
 
@@ -1099,7 +1106,12 @@ ${franchiseCheck.isFranchise ? `
 - The recommendation.decision should be at most "Caution Advised" if existing same-brand locations were found nearby, since territory overlap is a real risk.` : ''}
 
 **COMPETITOR LIST RULE (MANDATORY):**
-Include ALL competitors found in the Competition Analysis above in the competitionAnalysis.competitors array — do not truncate or summarise. For each competitor, populate: name (real business name), details (1-sentence description), address (full street address if available), latitude, longitude. If coordinates are not in the research data, estimate realistic lat/lng near '${location}' — spread pins realistically across the area, not clustered at one point.
+Include ALL competitors found in the Competition Analysis above in the competitionAnalysis.competitors array — do not truncate or summarise. For each competitor, populate:
+- name (real business name)
+- details (1-sentence description)
+- address (full street address if available)
+- latitude, longitude (if coordinates are not in the research data, estimate realistic lat/lng near '${location}' — spread pins realistically across the area, not clustered at one point)
+- type: set to "direct" if the competitor was labeled [DIRECT] in the research, or "indirect" if labeled [INDIRECT]. Default to "direct" if no label is present.
     `.trim();
 
     // Phase 3 uses thinkingBudget=0 to disable the thinking step.

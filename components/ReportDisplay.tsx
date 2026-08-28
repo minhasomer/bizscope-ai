@@ -1439,13 +1439,22 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     teaser="Unlock competitor saturation and location opportunity mapping."
                     onUpgrade={() => onNavigate('pricing')}
                   >
-                      <div className="rounded-3xl overflow-hidden border border-gray-150 h-[380px] w-full relative z-10 shadow-xs animate-fade-in">
-                          <CompetitorMap
-                              competitors={report.competitionAnalysis.competitors}
+                      {(() => {
+                        const allComps = report.competitionAnalysis.competitors;
+                        const directComps   = allComps.filter(c => c.type !== 'indirect');
+                        const indirectComps = allComps.filter(c => c.type === 'indirect');
+                        const hasOnlyIndirect = directComps.length === 0 && indirectComps.length > 0;
+                        return (
+                          <div className="rounded-3xl overflow-hidden border border-gray-150 h-[380px] w-full relative z-10 shadow-xs animate-fade-in">
+                            <CompetitorMap
+                              competitors={allComps}
                               targetCoordinates={report.targetCoordinates}
                               coordinatesAreReal={report.coordinatesAreReal}
-                          />
-                      </div>
+                              hasOnlyIndirect={hasOnlyIndirect}
+                            />
+                          </div>
+                        );
+                      })()}
                   </LockedSection>
                 </div>
             </SectionCard>
@@ -1459,18 +1468,63 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 >
                   <p className="mb-4 text-xs text-gray-400 uppercase font-black tracking-widest">Competitors in this area</p>
                   {report.generationMeta?.isLiveGenerated ? (
-                    <>
-                      <p className="mb-4 text-sm text-gray-700 leading-relaxed">{stripScoreReferences(report.competitionAnalysis.summary)}</p>
-                      <ul className="space-y-4">
-                        {report.competitionAnalysis.competitors.map((comp, index) => (
-                          <li key={index} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-150 transition-colors hover:bg-white print:break-inside-avoid">
+                    (() => {
+                      const allComps      = report.competitionAnalysis.competitors;
+                      const directComps   = allComps.filter(c => c.type !== 'indirect');
+                      const indirectComps = allComps.filter(c => c.type === 'indirect');
+                      const hasTypes      = directComps.length > 0 || indirectComps.length > 0;
+
+                      const CompItem = ({ comp, index }: { comp: typeof allComps[number]; index: number }) => (
+                        <li key={index} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-150 transition-colors hover:bg-white print:break-inside-avoid">
+                          <div className="flex items-center gap-2 mb-1">
                             <div className="font-extrabold text-gray-900 text-xs uppercase tracking-wide">{comp.name}</div>
-                            <div className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wide">{comp.address || 'Address documented'}</div>
-                            <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(comp.details)}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
+                            {comp.type === 'indirect' && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">Indirect</span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wide">{comp.address || 'Address documented'}</div>
+                          <p className="text-xs text-gray-600 leading-relaxed">{stripScoreReferences(comp.details)}</p>
+                        </li>
+                      );
+
+                      return (
+                        <>
+                          <p className="mb-4 text-sm text-gray-700 leading-relaxed">{stripScoreReferences(report.competitionAnalysis.summary)}</p>
+                          {allComps.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-6 px-4 bg-gray-50/60 rounded-2xl border border-dashed border-gray-200 text-center">
+                              <p className="text-sm font-bold text-gray-700">No named competitors identified</p>
+                              <p className="text-xs text-gray-400 mt-1 max-w-xs leading-relaxed">No specific nearby competitors were returned by the research pipeline. Competition was assessed from broader market signals — see the executive summary for details.</p>
+                            </div>
+                          ) : hasTypes ? (
+                            <div className="space-y-5">
+                              {directComps.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Direct Competitors</p>
+                                  <ul className="space-y-4">
+                                    {directComps.map((comp, i) => <CompItem key={i} comp={comp} index={i} />)}
+                                  </ul>
+                                </div>
+                              )}
+                              {directComps.length === 0 && (
+                                <p className="text-xs text-gray-500 italic">No direct competitors identified nearby.</p>
+                              )}
+                              {indirectComps.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Relevant Indirect Competitors</p>
+                                  <ul className="space-y-4">
+                                    {indirectComps.map((comp, i) => <CompItem key={i} comp={comp} index={i} />)}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <ul className="space-y-4">
+                              {allComps.map((comp, index) => <CompItem key={index} comp={comp} index={index} />)}
+                            </ul>
+                          )}
+                        </>
+                      );
+                    })()
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50/60 rounded-2xl border border-dashed border-gray-200 text-center">
                       <p className="text-sm font-bold text-gray-700">Insufficient verified competitor data</p>
@@ -1973,11 +2027,19 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
                       {report.generationMeta?.isLiveGenerated && (dpFullAccess || canViewFullFinancials(currentPlan)) ? (
                           <div className="rounded-2xl overflow-hidden border border-gray-150 h-[450px]">
-                              <CompetitorMap
-                                  competitors={report.competitionAnalysis.competitors}
-                                  targetCoordinates={report.targetCoordinates}
-                                  coordinatesAreReal={report.coordinatesAreReal}
-                              />
+                              {(() => {
+                                const allComps      = report.competitionAnalysis.competitors;
+                                const directComps   = allComps.filter(c => c.type !== 'indirect');
+                                const indirectComps = allComps.filter(c => c.type === 'indirect');
+                                return (
+                                  <CompetitorMap
+                                    competitors={allComps}
+                                    targetCoordinates={report.targetCoordinates}
+                                    coordinatesAreReal={report.coordinatesAreReal}
+                                    hasOnlyIndirect={directComps.length === 0 && indirectComps.length > 0}
+                                  />
+                                );
+                              })()}
                           </div>
                       ) : report.generationMeta?.isLiveGenerated ? (
                           <div className="relative rounded-2xl overflow-hidden border border-gray-200">

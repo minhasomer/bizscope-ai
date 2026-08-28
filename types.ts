@@ -15,6 +15,8 @@ export interface Competition {
   address?: string;
   latitude?: number;
   longitude?: number;
+  /** Populated on live reports: 'direct' = same format/product, 'indirect' = substitute/adjacent. */
+  type?: 'direct' | 'indirect';
 }
 
 export interface MarketTrend {

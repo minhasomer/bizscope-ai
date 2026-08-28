@@ -298,7 +298,8 @@ IMPORTANT RULES:
 4. When needsRefinement is true, provide 3–6 COMMERCIALLY DISTINCT options. Each option must represent a meaningfully different business model (NOT synonyms like "coffee shop / café / coffee house").
 5. The question field should be conversational and specific, e.g. "What kind of coffee shop are you considering?"
 6. NEVER comment on viability, market conditions, or whether an idea is good or bad.
-7. NEVER include "Keep it general" or "Other" in your options — those are added automatically by the UI.`;
+7. NEVER include "Keep it general" or "Other" in your options — those are added automatically by the UI.
+8. Both the label AND value fields must be human-readable business concept names with proper capitalization (e.g. "Coffee/Beverage Food Truck", "Artisan Bakery"). NEVER use snake_case, slugs, or machine-formatted identifiers. The value is passed directly to a business analysis tool and must be a clean, natural concept name.`;
 
 const refinementSchema = {
   type: Type.OBJECT,
