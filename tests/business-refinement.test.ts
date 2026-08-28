@@ -15,23 +15,17 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseRefinementResponse } from '../src/utils/refinementUtils';
+import { parseRefinementResponse, fetchRefinement } from '../src/utils/refinementUtils';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let passed = 0;
 let failed = 0;
 
-function check(name: string, fn: () => void) {
-  try {
-    fn();
-    passed++;
-    console.log(`ok   ${name}`);
-  } catch (err: any) {
-    failed++;
-    console.error(`FAIL ${name}`);
-    console.error('     ', err.message);
-  }
+const testQueue: Array<{ name: string; fn: () => void | Promise<void> }> = [];
+
+function check(name: string, fn: () => void | Promise<void>) {
+  testQueue.push({ name, fn });
 }
 
 // ─── parseRefinementResponse ──────────────────────────────────────────────────
@@ -290,7 +284,207 @@ check('parseRefinementResponse handles non-serializable-like garbage', () => {
   }
 });
 
-// ─── Summary ─────────────────────────────────────────────────────────────────
-console.log('');
-console.log(`${passed + failed} tests: ${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
+// ─── fetchRefinement fail-safe (network layer) ────────────────────────────────
+// These tests mock globalThis.fetch to simulate various failure modes and verify
+// that fetchRefinement ALWAYS returns { needsRefinement: false } rather than throwing.
+
+type MockFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+async function withMockedFetch(mockImpl: MockFetch, fn: () => Promise<void>): Promise<void> {
+  const orig = globalThis.fetch;
+  globalThis.fetch = mockImpl as typeof fetch;
+  try { await fn(); } finally { globalThis.fetch = orig; }
+}
+
+check('fetchRefinement: HTTP 500 → fail-safe passthrough', async () => {
+  await withMockedFetch(async () => ({ ok: false, status: 500 } as Response), async () => {
+    const r = await fetchRefinement('coffee shop', 'Chicago, IL');
+    assert.equal(r.needsRefinement, false, '500 must not block analysis');
+  });
+});
+
+check('fetchRefinement: malformed JSON body → fail-safe passthrough', async () => {
+  await withMockedFetch(async () => ({
+    ok: true,
+    json: async () => { throw new SyntaxError('Unexpected token'); },
+  } as Response), async () => {
+    const r = await fetchRefinement('bakery', 'Austin, TX');
+    assert.equal(r.needsRefinement, false, 'JSON parse failure must not block analysis');
+  });
+});
+
+check('fetchRefinement: network error (fetch throws) → fail-safe passthrough', async () => {
+  await withMockedFetch(async () => { throw new TypeError('Failed to fetch'); }, async () => {
+    const r = await fetchRefinement('gym', 'Seattle, WA');
+    assert.equal(r.needsRefinement, false, 'Network error must not block analysis');
+  });
+});
+
+check('fetchRefinement: abort / timeout → fail-safe passthrough', async () => {
+  await withMockedFetch(async (_input, init) => {
+    // Simulate abort by listening to the signal
+    return new Promise<Response>((_resolve, reject) => {
+      if (init?.signal) {
+        init.signal.addEventListener('abort', () => {
+          const err = new Error('The user aborted a request.');
+          (err as any).name = 'AbortError';
+          reject(err);
+        });
+      }
+      // Never resolve naturally — timeout will fire and abort
+    });
+  }, async () => {
+    const r = await fetchRefinement('restaurant', 'Phoenix, AZ', 50); // 50ms timeout
+    assert.equal(r.needsRefinement, false, 'Timeout/abort must not block analysis');
+  });
+});
+
+check('fetchRefinement: valid needsRefinement:false response passes through', async () => {
+  await withMockedFetch(async () => ({
+    ok: true,
+    json: async () => ({ needsRefinement: false }),
+  } as Response), async () => {
+    const r = await fetchRefinement('yemeni coffee shop', 'Arlington Heights, IL');
+    assert.equal(r.needsRefinement, false);
+    assert.equal(r.options, undefined);
+  });
+});
+
+check('fetchRefinement: valid broad response returns options', async () => {
+  const mockData = {
+    needsRefinement: true,
+    question: 'What kind of coffee shop are you considering?',
+    options: [
+      { label: 'Traditional coffee shop', value: 'Traditional coffee shop' },
+      { label: 'Specialty / third-wave coffee shop', value: 'Specialty third-wave coffee shop' },
+      { label: 'Drive-through coffee', value: 'Drive-through coffee' },
+    ],
+  };
+  await withMockedFetch(async () => ({
+    ok: true,
+    json: async () => mockData,
+  } as Response), async () => {
+    const r = await fetchRefinement('coffee shop', 'Chicago, IL');
+    assert.equal(r.needsRefinement, true);
+    assert.equal(r.options?.length, 3);
+    assert.equal(r.question, 'What kind of coffee shop are you considering?');
+  });
+});
+
+check('fetchRefinement: invalid schema (missing needsRefinement) → fail-safe', async () => {
+  await withMockedFetch(async () => ({
+    ok: true,
+    json: async () => ({ options: [{ label: 'A', value: 'a' }] }),
+  } as Response), async () => {
+    const r = await fetchRefinement('gym', 'Dallas, TX');
+    assert.equal(r.needsRefinement, false, 'Missing needsRefinement field must fall through');
+  });
+});
+
+check('fetchRefinement: empty options array → fail-safe', async () => {
+  await withMockedFetch(async () => ({
+    ok: true,
+    json: async () => ({ needsRefinement: true, options: [] }),
+  } as Response), async () => {
+    const r = await fetchRefinement('daycare', 'Miami, FL');
+    assert.equal(r.needsRefinement, false, 'Empty options must not show modal');
+  });
+});
+
+// ─── Flow verification (source-code structural checks) ───────────────────────
+// These checks verify the App.tsx wiring by scanning source — they are the
+// equivalent of contract tests for the component's props and callbacks.
+
+check('handleHeroSubmit funnels into handleAnalysisRequest for non-broad concepts', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // When needsRefinement is false, handleHeroSubmit must call handleAnalysisRequest
+  // directly — not set refinementPending.
+  assert.ok(
+    appSrc.includes('await handleAnalysisRequest(businessType, location)'),
+    'handleHeroSubmit must call handleAnalysisRequest directly for non-broad concepts',
+  );
+});
+
+check('handleHeroSubmit bypasses refinement in demo mode', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // In demo mode, refinement should be skipped entirely.
+  assert.ok(
+    appSrc.includes('if (isDemoMode)') && appSrc.includes('handleAnalysisRequest(businessType, location)'),
+    'Demo mode must bypass refinement and call handleAnalysisRequest directly',
+  );
+});
+
+check('"Keep it general" passes originalConcept exactly to handleAnalysisRequest', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // onKeepGeneral must extract originalConcept from refinementPending and pass it.
+  assert.ok(
+    appSrc.includes('handleAnalysisRequest(originalConcept, location)'),
+    '"Keep it general" must call handleAnalysisRequest with originalConcept, not a modified value',
+  );
+});
+
+check('selected option value passed directly to handleAnalysisRequest', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // onSelect must pass the selected/custom concept to handleAnalysisRequest unchanged.
+  assert.ok(
+    appSrc.includes('handleAnalysisRequest(refinedConcept, loc)'),
+    'onSelect must pass refinedConcept to handleAnalysisRequest without transformation',
+  );
+});
+
+check('"Other" custom text becomes the final analyzed concept via onSelect', () => {
+  const modalSrc = readFileSync(path.join(__dirname, '../components/BusinessRefinementModal.tsx'), 'utf8');
+  // The modal must call onSelect with the trimmed custom input.
+  assert.ok(
+    modalSrc.includes('onSelect(trimmed)'),
+    'Custom "Other" text must flow through onSelect unchanged',
+  );
+});
+
+check('refinementPending is cleared in both modal callbacks before calling handleAnalysisRequest', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // setRefinementPending(null) must appear in both the onSelect and onKeepGeneral
+  // handlers (at least 2 occurrences total) so stale modal state can't persist.
+  const clearCount = (appSrc.match(/setRefinementPending\(null\)/g) ?? []).length;
+  assert.ok(
+    clearCount >= 2,
+    `Expected setRefinementPending(null) at least twice (once per modal callback), found ${clearCount}`,
+  );
+  // Also verify it appears in the BusinessRefinementModal render block context.
+  const modalBlock = appSrc.slice(appSrc.indexOf('BusinessRefinementModal'));
+  assert.ok(
+    modalBlock.includes('setRefinementPending(null)'),
+    'setRefinementPending(null) must appear inside the BusinessRefinementModal render props',
+  );
+});
+
+check('handleHeroSubmit is what Hero.onSubmit receives (not handleAnalysisRequest directly)', () => {
+  const appSrc = readFileSync(path.join(__dirname, '../App.tsx'), 'utf8');
+  // The Hero component must receive handleHeroSubmit so the refinement step runs.
+  assert.ok(
+    appSrc.includes('onSubmit={handleHeroSubmit}'),
+    'Hero.onSubmit must be wired to handleHeroSubmit, not handleAnalysisRequest',
+  );
+  assert.ok(
+    !appSrc.includes('onSubmit={handleAnalysisRequest}'),
+    'Hero.onSubmit must NOT be wired directly to handleAnalysisRequest',
+  );
+});
+
+// ─── Run all tests sequentially (supports async) ──────────────────────────────
+(async () => {
+  for (const { name, fn } of testQueue) {
+    try {
+      await Promise.resolve(fn());
+      passed++;
+      console.log(`ok   ${name}`);
+    } catch (err: any) {
+      failed++;
+      console.error(`FAIL ${name}`);
+      console.error('     ', err.message);
+    }
+  }
+  console.log('');
+  console.log(`${passed + failed} tests: ${passed} passed, ${failed} failed`);
+  if (failed > 0) process.exit(1);
+})();

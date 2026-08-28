@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
   AI_BUDGET,
+  GEMINI_MODELS,
   aggregateGeminiUsage,
   wouldExceedHardCap,
 } from '../src/config/aiBudget.js';
