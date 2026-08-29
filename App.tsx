@@ -44,6 +44,8 @@ import { chatEnabled } from './src/config/appConfig';
 import { BusinessRefinementModal } from './components/BusinessRefinementModal';
 import { fetchRefinement } from './src/utils/refinementUtils';
 import type { RefinementResult } from './src/utils/refinementUtils';
+import { FAQSection } from './components/seo/FAQSection';
+import { FAQ_ITEMS } from './src/data/faqContent';
 
 /** Returns true when an error message is a browser-level network interruption
  *  (e.g. Android Chrome killed the TCP connection when the tab was backgrounded)
@@ -175,6 +177,7 @@ const App: React.FC = () => {
       samples:        'Sample Reports — BizScope',
       report:         'Report — BizScope',
       about:          'About BizScope',
+      faq:            'FAQ — Business Analysis & Market Research | BizScope',
     };
     const title = VIEW_TITLES[currentView] ?? 'BizScope';
     trackPageView(currentView, title);
@@ -1711,6 +1714,43 @@ const App: React.FC = () => {
                 <h2 className="text-base font-black text-gray-900 mb-2">10. Contact</h2>
                 <p className="text-sm">Questions? Use the <button onClick={() => navigate('contact')} className="text-indigo-600 hover:underline cursor-pointer">Contact page</button>.</p>
               </section>
+            </div>
+          </div>
+        );
+
+      case 'faq':
+        return (
+          <div className="min-h-[60vh] print:hidden">
+            <div className="bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0f172a] py-10 px-4">
+              <div className="max-w-3xl mx-auto text-center">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-4">
+                  Help &amp; FAQ
+                </span>
+                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-3 leading-tight">
+                  Frequently Asked Questions
+                </h1>
+                <p className="text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
+                  Answers to common questions about BizScope reports, market research, pricing, and how to interpret your results.
+                </p>
+              </div>
+            </div>
+            <FAQSection faqs={FAQ_ITEMS} title="Frequently Asked Questions" />
+            <div className="max-w-3xl mx-auto px-4 pb-16 text-center">
+              <p className="text-sm text-slate-500 mb-4">Ready to evaluate an idea?</p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  onClick={() => navigate('home')}
+                  className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors cursor-pointer"
+                >
+                  Run an Analysis
+                </button>
+                <button
+                  onClick={() => navigate('pricing')}
+                  className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+                >
+                  View Pricing
+                </button>
+              </div>
             </div>
           </div>
         );
