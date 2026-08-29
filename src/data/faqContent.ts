@@ -2,9 +2,22 @@ import type { FAQItem } from '../../components/seo/FAQSection';
 
 /**
  * FAQ content for the BizScope FAQ page.
- * Answers are verified against src/config/plans.ts, server/chat/knowledge.ts,
- * and current API behaviour. Do not edit answers without cross-checking the
- * source files listed in each section comment.
+ * Answers are verified against the following sources (checked 2026-08-29):
+ *   src/config/plans.ts          — pricing, limits, capabilities
+ *   src/config/usageTracking.ts  — Decision Pass entitlement logic
+ *   server/chat/knowledge.ts     — product descriptions
+ *   components/ReportDisplay.tsx — freshness banner / refresh UX
+ *   api/analyze.ts               — cache behavior
+ *
+ * Claims NOT included and why:
+ *   - "90-day" cache window: internal backend ceiling, not a user-facing promise;
+ *     UX shows generation date + Refresh button, not an expiry countdown.
+ *   - Pro 7-day trial: feature-flag controlled (VITE_PRO_TRIAL_ENABLED); omitted
+ *     because it may not be active for all users at any given time.
+ *   - Cache-hit credit behavior: ReportDisplay says "no credits used" but analyze.ts
+ *     increments usage_tracking on cache hits — wording kept neutral to avoid
+ *     contradicting either the UI or the backend code.
+ *   - Direct vs indirect competitor distinction: not in current main branch.
  */
 
 // ── Product / Using BizScope ───────────────────────────────────────────────────
@@ -23,7 +36,7 @@ const productFAQs: FAQItem[] = [
   {
     question: 'What does a Business Viability report include?',
     answer:
-      'A full report covers: a qualitative viability assessment, an executive summary, startup cost range and breakdown, financial projections (Year 1 and Year 3 revenue, break-even estimate), competitor analysis with nearby business locations, market trends, demographic insights, risk factors with mitigation strategies, and recommended next steps. Some sections require a Pro, Pro+, or Decision Pass plan.',
+      'A full report covers: a qualitative viability assessment, an executive summary, startup cost range and breakdown, financial projections (Year 1 and Year 3 revenue, break-even estimate), competitor analysis, market trends, demographic insights, risk factors with mitigation strategies, and recommended next steps. The competitor location map, full financial projections, and PDF export are available on Pro, Pro+, and Decision Pass — not on the free Explorer plan.',
   },
   {
     question: 'What is Business Concept Refinement?',
@@ -38,12 +51,12 @@ const productFAQs: FAQItem[] = [
   {
     question: 'What is Market Gap Discovery?',
     answer:
-      'Market Gap Discovery identifies potentially underserved business opportunities in a US city or region. It surfaces up to five ranked opportunities, each with demand signals, a competitive overview, and a revenue rationale. Pro and Pro+ subscribers see all five results and can generate an expanded dossier; Explorer (free) users see the top two opportunities.',
+      'Market Gap Discovery identifies potentially underserved business opportunities in a US city or region. It surfaces up to five ranked opportunities, each with demand signals, a competitive overview, and a revenue rationale. Explorer (free) users see the top two opportunities; Pro and Pro+ subscribers see all five and can generate an expanded dossier for a specific opportunity.',
   },
   {
     question: 'How current is the data in a BizScope report?',
     answer:
-      'BizScope synthesizes data from multiple sources at the time of analysis, including Google Search and Maps results, US Census data, and AI-driven market signals. Reports are cached on the server for up to 90 days. If a recent analysis exists for the same business and location, you will be offered the option to view it or run a fresh analysis with current data.',
+      'BizScope synthesizes data from multiple sources at the time of analysis, including Google Search and Maps results, US Census data, and AI-driven market signals. If a recent analysis already exists for the same business type and location, BizScope may return that result instead of running a new one. Each report shows the date it was generated. You can always request a fresh analysis using the "Refresh with new market research" option visible on the report.',
   },
 ];
 
@@ -53,10 +66,10 @@ const accuracyFAQs: FAQItem[] = [
   {
     question: 'How accurate are BizScope reports?',
     answer:
-      'BizScope reports are AI-generated research summaries intended to support early-stage decision-making — not to predict business outcomes. The AI synthesizes publicly available data, which means results reflect gaps in that data. Reports are most useful as a structured starting point for further due diligence, not as a final verdict.',
+      'BizScope reports are AI-generated research summaries intended to support early-stage decision-making — not to predict business outcomes. The AI synthesizes publicly available data, which means results reflect the quality and completeness of that data. Reports are most useful as a structured starting point for further due diligence, not as a final verdict.',
   },
   {
-    question: 'If a report says "Strong Opportunity," should I open the business?',
+    question: 'If a report shows a strong opportunity, does that mean I should open the business?',
     answer:
       'A positive assessment means the available market signals look favorable — not that success is guaranteed. Before committing capital, validate key findings locally, consult a financial or legal advisor, and conduct primary research. BizScope is a research aid, not a substitute for professional advice.',
   },
@@ -68,8 +81,8 @@ const accuracyFAQs: FAQItem[] = [
 ];
 
 // ── Pricing / Access ──────────────────────────────────────────────────────────
-// Prices verified against src/config/plans.ts PRICING_CARDS.
-// Decision Pass verified against server/chat/knowledge.ts DECISION_PASS.
+// Prices verified against src/config/plans.ts PRICING_CARDS (checked 2026-08-29).
+// Decision Pass verified against src/config/usageTracking.ts and server/chat/knowledge.ts.
 
 const pricingFAQs: FAQItem[] = [
   {
@@ -80,12 +93,17 @@ const pricingFAQs: FAQItem[] = [
   {
     question: 'What is the difference between Explorer, Pro, and Pro+?',
     answer:
-      'Explorer is free and includes 3 reports per month with a viability assessment and executive summary — full financial projections, competitor maps, PDF export, and saved reports are not included. Pro ($29/month) provides 20 reports per month with full financials, competitor maps, PDF export, and saved reports. Pro+ ($59/month) adds 50 standard reports and 10 Regional Intelligence analyses per month, covering multi-ZIP, county-level, and expansion strategy data.',
+      'Explorer is free and includes 3 standard reports per month. Explorer reports cover the viability assessment, executive summary, basic startup cost range, limited competitive insight, and basic market trends — the competitor location map, full financial projections, PDF export, and saved reports are not included. Pro ($29/month) provides 20 full reports per month with complete financials, the competitor location map, PDF export, saved reports, and side-by-side report comparison. Pro+ ($59/month) adds 50 standard reports and 10 Regional Intelligence analyses per month, which cover multi-ZIP, county-level, and expansion strategy data.',
   },
   {
     question: 'What is Decision Pass?',
     answer:
-      'Decision Pass is a $19 one-time purchase — not a subscription. It includes 3 Business Viability reports and 1 Market Gap Discovery report, with full report access including financial projections, competitor maps, and PDF export. Credits do not expire, and there is no automatic renewal. Decision Pass does not include ongoing subscription features such as saving reports to your dashboard or Regional Intelligence.',
+      'Decision Pass is a $19 one-time purchase — not a subscription. It includes 3 Business Viability reports and 1 Market Gap Discovery report, with full report access including financial projections, the competitor location map, and PDF export. Credits do not expire and there is no automatic renewal. Decision Pass does not include ongoing subscription features such as saving reports to your dashboard, comparing reports, or Regional Intelligence.',
+  },
+  {
+    question: 'Can I cancel a subscription?',
+    answer:
+      'Yes. You can cancel at any time through the Billing section in your account settings. After cancelling, your plan remains active until the end of the current billing period. Cancellation is handled through the Stripe billing portal — BizScope does not store payment details.',
   },
 ];
 
@@ -95,7 +113,7 @@ const reportsFAQs: FAQItem[] = [
   {
     question: 'Can I save reports and revisit them later?',
     answer:
-      'Saving reports to your Venture Hub dashboard is available on Pro, Pro+, and Enterprise plans. Explorer (free) accounts do not include report saving. Pro and higher subscribers can also compare two saved reports side by side.',
+      'Saving reports to your Venture Hub dashboard is available on Pro, Pro+, and Enterprise plans. Explorer (free) accounts do not include report saving or dashboard access. Pro and higher subscribers can also compare two saved reports side by side.',
   },
   {
     question: 'Can I export a report as a PDF?',

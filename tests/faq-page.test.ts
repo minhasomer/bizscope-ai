@@ -173,13 +173,16 @@ ok(
 
 ok(
   'FAQ content states Explorer has 3 reports/month',
-  faqContent.includes('3 reports per month') || faqContent.includes('3 standard reports/month') ||
-  faqContent.includes('3 reports'),
+  faqContent.includes('3 standard reports per month') ||
+  faqContent.includes('3 reports per month') ||
+  faqContent.includes('3/mo'),
 );
 
 ok(
   'FAQ content states Pro has 20 reports/month',
-  faqContent.includes('20 reports'),
+  faqContent.includes('20 reports per month') ||
+  faqContent.includes('20 full reports per month') ||
+  faqContent.includes('20/mo'),
 );
 
 ok(
@@ -203,8 +206,23 @@ ok(
 );
 
 ok(
-  'FAQ content states cache is up to 90 days',
-  faqContent.includes('90 days'),
+  'FAQ content describes report freshness / refresh option without overpromising a specific cache window',
+  faqContent.includes('Refresh with new market research') ||
+  faqContent.includes('fresh analysis'),
+);
+
+ok(
+  'FAQ content does NOT claim a specific cache duration as a user-facing promise',
+  !faqContent.includes('cached for 90') &&
+  !faqContent.includes('current for 90') &&
+  !faqContent.includes('valid for 90'),
+);
+
+ok(
+  'FAQ content does not falsely claim Explorer has NO competitor analysis (only map is locked)',
+  !faqContent.toLowerCase().includes('explorer has no competitor') &&
+  !faqContent.toLowerCase().includes('no competitor analysis') &&
+  (faqContent.includes('limited competitive') || faqContent.includes('competitor location map')),
 );
 
 ok(
@@ -215,6 +233,14 @@ ok(
     faqContent.includes('US locations') ||
     faqContent.includes('US-based')
   ),
+);
+
+ok(
+  'FAQ content does NOT claim cached reports use no credits (contradicts analyze.ts behavior)',
+  !faqContent.includes('cached reports do not use credits') &&
+  !faqContent.includes('cached version is free') &&
+  !faqContent.includes('cache hits are free') &&
+  !faqContent.includes('no credits used on cached'),
 );
 
 // ─── 9. No obsolete/unconditional trial claims ───────────────────────────────
