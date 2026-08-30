@@ -15,6 +15,8 @@ export interface Competition {
   address?: string;
   latitude?: number;
   longitude?: number;
+  distanceMiles?: number | null;
+  isLocal?: boolean;
 }
 
 export interface MarketTrend {

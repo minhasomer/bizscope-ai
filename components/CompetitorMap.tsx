@@ -52,7 +52,8 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
   const markerRefs = useRef<L.Marker[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const competitorsWithCoords = competitors.filter(c => c.latitude != null && c.longitude != null);
+  const localWithCoords = competitors.filter(c => c.latitude != null && c.longitude != null && c.isLocal !== false);
+  const regionalWithCoords = competitors.filter(c => c.latitude != null && c.longitude != null && c.isLocal === false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -85,7 +86,7 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
     }
 
     // Competitor markers — numbered red circles
-    markerRefs.current = competitorsWithCoords.map((comp, idx) => {
+    markerRefs.current = localWithCoords.map((comp, idx) => {
       const num = idx + 1;
       const icon = L.divIcon({
         className: '',
@@ -125,7 +126,7 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
     if (coordinatesAreReal && targetCoordinates) {
       points.push([targetCoordinates.latitude, targetCoordinates.longitude]);
     }
-    competitorsWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
+    localWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
 
     mapRef.current = map;
 
@@ -140,7 +141,7 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
       if (coordinatesAreReal && targetCoordinates) {
         points.push([targetCoordinates.latitude, targetCoordinates.longitude]);
       }
-      competitorsWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
+      localWithCoords.forEach(c => points.push([c.latitude!, c.longitude!]));
 
       if (points.length >= 2) {
         map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 15 });
@@ -181,48 +182,76 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
               Your Location
             </span>
           )}
-          {competitorsWithCoords.length > 0 && (
+          {localWithCoords.length > 0 && (
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-              Competitor (click for details)
+              Nearby Competitor (click for details)
             </span>
           )}
         </div>
       </div>
 
       {/* Competitor list panel */}
-      {competitorsWithCoords.length > 0 && (
+      {(localWithCoords.length > 0 || regionalWithCoords.length > 0) && (
         <div className="border-t border-gray-100 bg-white overflow-y-auto competitor-print-list" style={{ flex: '0 0 40%' }}>
-          <div className="px-3 pt-2 pb-0.5 flex items-baseline justify-between gap-2">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              {competitorsWithCoords.length} Competitor{competitorsWithCoords.length !== 1 ? 's' : ''} · click to focus
-            </span>
-          </div>
-          <div className="px-3 pb-1.5 text-[10px] text-gray-400 italic">
-            Showing representative competitors based on available location data.
-          </div>
-          <ul>
-            {competitorsWithCoords.map((comp, idx) => (
-              <li
-                key={idx}
-                onClick={() => handleListItemClick(idx)}
-                className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors border-b border-gray-50 last:border-0 avoid-break ${activeIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50'}`}
-              >
-                <span className="mt-0.5 w-5 h-5 flex-shrink-0 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                  {idx + 1}
+          {localWithCoords.length > 0 ? (
+            <>
+              <div className="px-3 pt-2 pb-0.5 flex items-baseline justify-between gap-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  {localWithCoords.length} Nearby Competitor{localWithCoords.length !== 1 ? 's' : ''} · click to focus
                 </span>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-900 truncate">{comp.name}</div>
-                  {comp.address
-                    ? <div className="text-[11px] text-gray-400 truncate">{comp.address}</div>
-                    : comp.details
-                      ? <div className="text-[11px] text-gray-500 truncate">{comp.details}</div>
-                      : <div className="text-[11px] text-gray-400 italic">Details unavailable</div>
-                  }
-                </div>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <div className="px-3 pb-1.5 text-[10px] text-gray-400 italic">
+                Showing representative competitors based on available location data.
+              </div>
+              <ul>
+                {localWithCoords.map((comp, idx) => (
+                  <li
+                    key={idx}
+                    onClick={() => handleListItemClick(idx)}
+                    className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors border-b border-gray-50 last:border-0 avoid-break ${activeIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50'}`}
+                  >
+                    <span className="mt-0.5 w-5 h-5 flex-shrink-0 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-gray-900 truncate">{comp.name}</div>
+                      {comp.address
+                        ? <div className="text-[11px] text-gray-400 truncate">{comp.address}</div>
+                        : comp.details
+                          ? <div className="text-[11px] text-gray-500 truncate">{comp.details}</div>
+                          : <div className="text-[11px] text-gray-400 italic">Details unavailable</div>
+                      }
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div className="px-3 pt-3 pb-2 text-[11px] text-gray-400 italic">
+              No nearby competitors found in this area.
+            </div>
+          )}
+          {regionalWithCoords.length > 0 && (
+            <div className="border-t border-gray-100 px-3 pt-2 pb-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                Regional ({regionalWithCoords.length} further away)
+              </p>
+              <ul className="space-y-1">
+                {regionalWithCoords.map((comp, idx) => (
+                  <li key={idx} className="flex items-start gap-2 py-1 border-b border-gray-50 last:border-0">
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-gray-900 truncate">{comp.name}</div>
+                      {comp.address && <div className="text-[11px] text-gray-400 truncate">{comp.address}</div>}
+                      {comp.distanceMiles != null && (
+                        <div className="text-[11px] text-gray-400">{comp.distanceMiles} mi away</div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>

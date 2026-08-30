@@ -1182,7 +1182,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     // research phases + every synthesis attempt + grounding. usage_logs and
     // report_activity_log are both written from this one object so they reconcile.
     const groundingCalls = (phase1Grounded ? 1 : 0) + (phase2Grounded ? 1 : 0);
-    const cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, ...synthesisUsages], groundingCalls);
+    let cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, ...synthesisUsages], groundingCalls);
     const inputTokens = cost.inputTokens;
     const outputTokens = cost.outputTokens; // billed output tokens — candidates + thinking, summed across phases + retry
     console.log(`[AICost] /api/analyze role=${verifiedRole} plan=${normalizedPlan} model=${model} in=${inputTokens} out=${outputTokens} (thinking=${cost.thinkingTokens} grounding=${cost.groundingCalls}) est=$${cost.estimatedCostUsd.toFixed(5)} phase3Ms=${phase3ElapsedMs}`);
@@ -1199,7 +1199,26 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       rawLength:    synthesisText.length,
       rawPrefix:    synthesisText.slice(0, 200),
     });
-    const parsed = cleanAndParseJSON(synthesisText, undefined, `${businessType} / ${location}`);
+    let parsed: any;
+    try {
+      parsed = cleanAndParseJSON(synthesisText, undefined, `${businessType} / ${location}`);
+    } catch (parseErr: any) {
+      if (parseErr.message === 'malformed_response' && remainingMs() > SYNTHESIS_FLOOR_MS) {
+        console.warn('[analyze] Phase 3 malformed response — one controlled retry', {
+          finishReason: synthesisFinishReason,
+          rawLength:    synthesisText.length,
+          rawPrefix:    synthesisText.slice(0, 100),
+        });
+        synthesis = await runSynthesis(SYNTHESIS_MAX_TOKENS);
+        synthesisUsages.push((synthesis as any).usageMetadata ?? null);
+        cost = aggregateGeminiUsage(model, [phase1Usage, phase2Usage, ...synthesisUsages], groundingCalls);
+        parsed = cleanAndParseJSON(synthesis.text || '', undefined, `${businessType} / ${location} retry`);
+      } else {
+        throw parseErr;
+      }
+    }
+    // Override AI-echoed businessType with the exact concept the user selected/submitted.
+    parsed.businessType = businessType;
     parsed.groundingSources = sources;
 
     // Ensure startupCostItems is populated — synthesize from total range if Gemini omitted it.
@@ -1217,18 +1236,27 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     }
 
     if (Array.isArray(parsed.competitionAnalysis?.competitors)) {
+      const { label: densityLabel } = competitorCountForCategory(businessType);
+      const localRadiusMiles = densityLabel === 'dense' ? 10 : densityLabel === 'sparse' ? 25 : 15;
       parsed.competitionAnalysis.competitors = parsed.competitionAnalysis.competitors.map(
         (comp: any, i: number) => {
-          if (typeof comp.latitude !== 'number' || typeof comp.longitude !== 'number') {
+          const hasRealCoords = typeof comp.latitude === 'number' && typeof comp.longitude === 'number';
+          let lat: number = comp.latitude;
+          let lng: number = comp.longitude;
+          if (!hasRealCoords) {
             const offsetLat = (i === 0 ? 0.005 : i === 1 ? -0.004 : 0.003) + Math.sin(i) * 0.001;
             const offsetLng = (i === 0 ? -0.003 : i === 1 ? 0.005 : -0.005) + Math.cos(i) * 0.001;
-            return {
-              ...comp,
-              latitude: parsed.targetCoordinates.latitude + offsetLat,
-              longitude: parsed.targetCoordinates.longitude + offsetLng,
-            };
+            lat = parsed.targetCoordinates.latitude + offsetLat;
+            lng = parsed.targetCoordinates.longitude + offsetLng;
           }
-          return comp;
+          const distanceMiles = hasRealCoords
+            ? Math.round(haversineMiles(
+                parsed.targetCoordinates.latitude, parsed.targetCoordinates.longitude,
+                lat, lng,
+              ) * 10) / 10
+            : null;
+          const isLocal = !hasRealCoords || distanceMiles === null || distanceMiles <= localRadiusMiles;
+          return { ...comp, latitude: lat, longitude: lng, distanceMiles, isLocal };
         },
       );
     }
@@ -1443,6 +1471,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
         groundingCalls: cost.groundingCalls,
       },
       competitorCount: parsed.competitionAnalysis?.competitors?.length ?? null,
+      localCompetitorCount: parsed.competitionAnalysis?.competitors?.filter((c: any) => c.isLocal !== false).length ?? null,
       sourceCount: sources.length,
     };
 
