@@ -52,8 +52,21 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
   const markerRefs = useRef<L.Marker[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const localWithCoords = competitors.filter(c => c.latitude != null && c.longitude != null && c.isLocal !== false);
-  const regionalWithCoords = competitors.filter(c => c.latitude != null && c.longitude != null && c.isLocal === false);
+  // Local: verified coordinates AND within the category radius.
+  // Backward compat: old-report competitors lack coordinatesVerified — treat as local (no change in behaviour).
+  const localWithCoords = competitors.filter(c =>
+    c.latitude != null && c.longitude != null &&
+    c.coordinatesVerified !== false &&  // undefined (old report) → passes
+    c.isLocal !== false,                // undefined (old report) → passes
+  );
+  // Regional: verified coordinates AND outside the local radius.
+  const regionalWithCoords = competitors.filter(c =>
+    c.latitude != null && c.longitude != null &&
+    c.coordinatesVerified === true &&
+    c.isLocal === false,
+  );
+  // Unverified: server-generated offset coordinates — location not confirmed.
+  const unverifiedList = competitors.filter(c => c.coordinatesVerified === false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -192,8 +205,9 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
       </div>
 
       {/* Competitor list panel */}
-      {(localWithCoords.length > 0 || regionalWithCoords.length > 0) && (
+      {(localWithCoords.length > 0 || regionalWithCoords.length > 0 || unverifiedList.length > 0) && (
         <div className="border-t border-gray-100 bg-white overflow-y-auto competitor-print-list" style={{ flex: '0 0 40%' }}>
+          {/* ── Nearby (verified, within radius) ── */}
           {localWithCoords.length > 0 ? (
             <>
               <div className="px-3 pt-2 pb-0.5 flex items-baseline justify-between gap-2">
@@ -202,7 +216,7 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
                 </span>
               </div>
               <div className="px-3 pb-1.5 text-[10px] text-gray-400 italic">
-                Showing representative competitors based on available location data.
+                Verified locations within the local search radius.
               </div>
               <ul>
                 {localWithCoords.map((comp, idx) => (
@@ -222,6 +236,9 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
                           ? <div className="text-[11px] text-gray-500 truncate">{comp.details}</div>
                           : <div className="text-[11px] text-gray-400 italic">Details unavailable</div>
                       }
+                      {comp.distanceMiles != null && (
+                        <div className="text-[11px] text-gray-400">{comp.distanceMiles} mi</div>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -229,9 +246,11 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
             </>
           ) : (
             <div className="px-3 pt-3 pb-2 text-[11px] text-gray-400 italic">
-              No nearby competitors found in this area.
+              No verified nearby competitors found in this area.
             </div>
           )}
+
+          {/* ── Regional (verified, outside local radius) ── */}
           {regionalWithCoords.length > 0 && (
             <div className="border-t border-gray-100 px-3 pt-2 pb-2">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
@@ -247,6 +266,27 @@ const LeafletMap: React.FC<CompetitorMapProps> = ({ competitors, targetCoordinat
                         <div className="text-[11px] text-gray-400">{comp.distanceMiles} mi away</div>
                       )}
                     </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* ── Unverified location (AI-estimated coordinates) ── */}
+          {unverifiedList.length > 0 && (
+            <div className="border-t border-gray-100 px-3 pt-2 pb-2">
+              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">
+                Unverified Location ({unverifiedList.length})
+              </p>
+              <p className="text-[10px] text-gray-400 italic mb-1.5">
+                Coordinate data unavailable — listed for reference only.
+              </p>
+              <ul className="space-y-1">
+                {unverifiedList.map((comp, idx) => (
+                  <li key={idx} className="py-1 border-b border-gray-50 last:border-0">
+                    <div className="text-xs font-semibold text-gray-700 truncate">{comp.name}</div>
+                    {comp.address && <div className="text-[11px] text-gray-400 truncate">{comp.address}</div>}
+                    {comp.details && <div className="text-[11px] text-gray-500 truncate">{comp.details}</div>}
                   </li>
                 ))}
               </ul>

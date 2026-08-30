@@ -16,6 +16,8 @@ export interface Competition {
   latitude?: number;
   longitude?: number;
   distanceMiles?: number | null;
+  /** true = AI returned real lat/lng; false = server-generated offset coordinates (location unverified) */
+  coordinatesVerified?: boolean;
   isLocal?: boolean;
 }
 

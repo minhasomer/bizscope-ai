@@ -1255,8 +1255,12 @@ Include ALL competitors found in the Competition Analysis above in the competiti
                 lat, lng,
               ) * 10) / 10
             : null;
-          const isLocal = !hasRealCoords || distanceMiles === null || distanceMiles <= localRadiusMiles;
-          return { ...comp, latitude: lat, longitude: lng, distanceMiles, isLocal };
+          // Only classify as local/regional when we have real, AI-supplied coordinates.
+          // Competitors with estimated/offset coordinates get coordinatesVerified:false and
+          // are shown in a separate "unverified location" section rather than on the map.
+          const coordinatesVerified = hasRealCoords;
+          const isLocal = hasRealCoords && distanceMiles !== null && distanceMiles <= localRadiusMiles;
+          return { ...comp, latitude: lat, longitude: lng, distanceMiles, coordinatesVerified, isLocal };
         },
       );
     }
@@ -1471,7 +1475,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
         groundingCalls: cost.groundingCalls,
       },
       competitorCount: parsed.competitionAnalysis?.competitors?.length ?? null,
-      localCompetitorCount: parsed.competitionAnalysis?.competitors?.filter((c: any) => c.isLocal !== false).length ?? null,
+      localCompetitorCount: parsed.competitionAnalysis?.competitors?.filter((c: any) => c.isLocal === true).length ?? null,
       sourceCount: sources.length,
     };
 

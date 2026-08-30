@@ -85,8 +85,10 @@ function classifyCompetitor(
   hasRealCoords: boolean,
   distanceMiles: number | null,
   localRadius: number,
-): { isLocal: boolean } {
-  return { isLocal: !hasRealCoords || distanceMiles === null || distanceMiles <= localRadius };
+): { isLocal: boolean; coordinatesVerified: boolean } {
+  const coordinatesVerified = hasRealCoords;
+  const isLocal = hasRealCoords && distanceMiles !== null && distanceMiles <= localRadius;
+  return { isLocal, coordinatesVerified };
 }
 
 check('dense category (Pakistani restaurant) uses 10-mile local radius', () => {
@@ -131,16 +133,19 @@ check('competitor just over boundary → isLocal false', () => {
   assert.equal(isLocal, false);
 });
 
-check('estimated/offset coordinates → isLocal true regardless of distance', () => {
-  // Competitors without real AI coordinates get estimated offsets; mark as local (conservative)
-  const { isLocal } = classifyCompetitor(false, null, 10);
-  assert.equal(isLocal, true, 'no-real-coord competitor must not be excluded');
+check('estimated/offset coordinates → coordinatesVerified false, isLocal false', () => {
+  // Competitors with no AI-supplied lat/lng must NOT be silently classified as local.
+  // They receive coordinatesVerified:false and appear in the unverified section only.
+  const { isLocal, coordinatesVerified } = classifyCompetitor(false, null, 10);
+  assert.equal(coordinatesVerified, false, 'estimated coords must be marked unverified');
+  assert.equal(isLocal, false, 'unverified competitor must not appear as confirmed local');
 });
 
-check('distanceMiles null with real coords → isLocal true (safe default)', () => {
-  // Edge case: real coords but distance could not be computed
-  const { isLocal } = classifyCompetitor(true, null, 10);
-  assert.equal(isLocal, true);
+check('distanceMiles null with real coords → isLocal false (cannot confirm)', () => {
+  // Real coords but no distance computed → cannot confirm local status
+  const { isLocal, coordinatesVerified } = classifyCompetitor(true, null, 10);
+  assert.equal(coordinatesVerified, true);
+  assert.equal(isLocal, false, 'null distance must not claim local');
 });
 
 check('Des Plaines scenario: ~28 miles from Gurnee → regional for dense', () => {
@@ -220,17 +225,43 @@ check('cost variable is declared as let (not const) to allow recompute after ret
 
 // ─── Issue 3: CompetitorMap local/regional split ──────────────────────────────
 
-check('CompetitorMap filters local competitors (isLocal !== false)', () => {
+check('CompetitorMap local filter requires both isLocal !== false AND coordinatesVerified !== false', () => {
+  assert.ok(
+    competitorSrc.includes('c.coordinatesVerified !== false'),
+    'local filter must exclude coordinatesVerified === false (unverified) competitors',
+  );
   assert.ok(
     competitorSrc.includes('c.isLocal !== false'),
-    'localWithCoords filter must exclude isLocal === false competitors',
+    'local filter must also check isLocal',
   );
 });
 
-check('CompetitorMap computes regionalWithCoords', () => {
+check('CompetitorMap regional filter requires coordinatesVerified === true', () => {
+  assert.ok(
+    competitorSrc.includes('c.coordinatesVerified === true'),
+    'regional list must only show verified-coordinate competitors',
+  );
   assert.ok(
     competitorSrc.includes('c.isLocal === false'),
-    'CompetitorMap must derive a regional competitor list',
+    'regional list must check isLocal === false',
+  );
+});
+
+check('CompetitorMap computes unverifiedList for offset-coordinate competitors', () => {
+  assert.ok(
+    competitorSrc.includes('c.coordinatesVerified === false'),
+    'unverifiedList must capture coordinatesVerified === false competitors',
+  );
+});
+
+check('CompetitorMap shows unverified section with disclaimer', () => {
+  assert.ok(
+    competitorSrc.includes('Unverified Location'),
+    'unverified section header must be present',
+  );
+  assert.ok(
+    competitorSrc.includes('Coordinate data unavailable'),
+    'unverified section must disclaim that coordinates are unavailable',
   );
 });
 
@@ -245,10 +276,10 @@ check('CompetitorMap shows regional section when regional competitors exist', ()
   );
 });
 
-check('CompetitorMap shows empty state when no local competitors found', () => {
+check('CompetitorMap shows empty state when no verified local competitors found', () => {
   assert.ok(
-    competitorSrc.includes('No nearby competitors found'),
-    'CompetitorMap must show a clean empty state for zero local competitors',
+    competitorSrc.includes('No verified nearby competitors found'),
+    'CompetitorMap must show a clean empty state for zero verified local competitors',
   );
 });
 
@@ -256,6 +287,21 @@ check('CompetitorMap legend updated to "Nearby Competitor"', () => {
   assert.ok(
     competitorSrc.includes('Nearby Competitor'),
     'legend must say "Nearby Competitor" instead of bare "Competitor"',
+  );
+});
+
+check('analyze.ts sets coordinatesVerified on each competitor', () => {
+  assert.ok(
+    analyzeSrc.includes('const coordinatesVerified = hasRealCoords') ||
+    analyzeSrc.includes('coordinatesVerified: hasRealCoords'),
+    'each competitor must be annotated with coordinatesVerified derived from hasRealCoords',
+  );
+});
+
+check('analyze.ts isLocal requires hasRealCoords (no false-positive for estimated coords)', () => {
+  assert.ok(
+    analyzeSrc.includes('const isLocal = hasRealCoords && distanceMiles !== null && distanceMiles <='),
+    'isLocal must require hasRealCoords — unverified coords must not claim local status',
   );
 });
 
