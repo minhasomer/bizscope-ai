@@ -291,12 +291,28 @@ A concept needs refinement when it encompasses multiple COMMERCIALLY DISTINCT bu
 - Physical or operational requirements
 - Market demand and growth trajectories
 
+KEY PRINCIPLE — ONE MODIFIER IS NOT ENOUGH:
+Do NOT decide a concept is already specific just because it contains one qualifier such as a cuisine, demographic, or product niche. Ask whether materially different operating models, service formats, or price tiers still exist that would lead to meaningfully different viability conclusions. If yes, the concept still needs refinement even though it has a modifier.
+
 IMPORTANT RULES:
-1. Return needsRefinement: false for concepts that are already specific (e.g. "Yemeni coffee shop", "artisan sourdough bakery", "Korean BBQ restaurant", "women-only strength gym", "Montessori preschool", "mobile dog grooming").
-2. Return needsRefinement: false for franchise/brand names (e.g. "Chick-fil-A", "McDonald's", "Subway") — these are already specific enough.
-3. Return needsRefinement: true ONLY for genuinely broad categories where the subcategory meaningfully changes the analysis (e.g. "coffee shop", "bakery", "restaurant", "gym", "daycare", "auto repair shop").
-4. When needsRefinement is true, provide 3–6 COMMERCIALLY DISTINCT options. Each option must represent a meaningfully different business model (NOT synonyms like "coffee shop / café / coffee house").
-5. The question field should be conversational and specific, e.g. "What kind of coffee shop are you considering?"
+1. Return needsRefinement: false when BOTH the product/cuisine AND the business model/format are already determined — meaning you can identify a single dominant operating model from the name alone.
+   Specific enough to bypass (product + format both determined):
+   - "Yemeni coffee shop" — specific cultural product with a distinctive specialty-brew model
+   - "Korean BBQ restaurant" — "BBQ" specifies the interactive tabletop-grill format, not just cuisine
+   - "Artisan sourdough bakery" — product type and craft positioning fully determined
+   - "Women-only strength training gym" — demographic + training format together are sufficient
+   - "Montessori preschool" — pedagogy and age group are fully determined
+   - "Mobile dog grooming" — service delivery model fully determined
+   - "Fine-dining Pakistani restaurant" — cuisine + service tier together sufficient
+   - "Fast-casual Pakistani restaurant" — cuisine + service model together sufficient
+   - "Mobile European-car repair service" — vehicle niche + delivery model both specified
+2. Return needsRefinement: false for franchise/brand names (e.g. "Chick-fil-A", "McDonald's", "Subway") — the format and product are fully determined.
+3. Return needsRefinement: true for genuinely broad categories AND for partially-specified concepts where the commercially important format is still open.
+   Broad or partially-specified (needs refinement):
+   - "restaurant", "coffee shop", "bakery", "gym", "daycare", "auto repair shop"
+   - "Pakistani restaurant", "Indian restaurant", "Italian restaurant", "Mexican restaurant", "seafood restaurant" — cuisine is specified but service format (casual dine-in, fine dining, fast-casual, BBQ/grill, takeout/delivery, buffet) remains open and materially changes the analysis
+4. When needsRefinement is true, provide 3–6 COMMERCIALLY DISTINCT options. Each option must represent a meaningfully different business model (NOT synonyms like "Pakistani restaurant / Pakistani eatery / Pakistani dining"). For cuisine restaurants, options should reflect real format differences (e.g. Casual Dine-In, Fine Dining, Fast-Casual, BBQ & Grill, Takeout/Delivery-Focused).
+5. The question field should be conversational and specific to the input, e.g. "What kind of Pakistani restaurant are you considering?"
 6. NEVER comment on viability, market conditions, or whether an idea is good or bad.
 7. NEVER include "Keep it general" or "Other" in your options — those are added automatically by the UI.`;
 

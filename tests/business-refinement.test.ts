@@ -594,6 +594,92 @@ check('subsequent submission after dismiss can trigger refinement normally', () 
   );
 });
 
+// ─── Refinement prompt: classification-gap regression tests ──────────────────
+// These tests assert that the REFINEMENT_SYSTEM_PROMPT in api/preview.ts contains
+// the structural rules needed to fix the "Pakistani Restaurant" bypass gap.
+// They cannot call the live AI, but they verify the prompt carries the right signal.
+
+const previewSrc = readFileSync(path.join(__dirname, '../api/preview.ts'), 'utf8');
+
+// Extract just the REFINEMENT_SYSTEM_PROMPT string for targeted assertions.
+const promptStart = previewSrc.indexOf('const REFINEMENT_SYSTEM_PROMPT = `');
+const promptEnd   = previewSrc.indexOf('`;', promptStart) + 2;
+const promptText  = previewSrc.slice(promptStart, promptEnd);
+
+check('REFINEMENT_SYSTEM_PROMPT contains the one-modifier-is-not-enough principle', () => {
+  assert.ok(
+    promptText.includes('ONE MODIFIER IS NOT ENOUGH'),
+    'Prompt must have an explicit rule that a single qualifier does not make a concept specific',
+  );
+});
+
+check('REFINEMENT_SYSTEM_PROMPT explicitly lists cuisine-qualified restaurants as needing refinement', () => {
+  assert.ok(
+    promptText.includes('Pakistani restaurant') && promptText.toLowerCase().includes('needs refinement'),
+    'Prompt must name cuisine-qualified restaurants in the needs-refinement list',
+  );
+  assert.ok(
+    promptText.includes('Indian restaurant') && promptText.includes('Italian restaurant'),
+    'Prompt must list multiple cuisine-only restaurant examples that need refinement',
+  );
+});
+
+check('REFINEMENT_SYSTEM_PROMPT includes cuisine+format bypass examples (fine-dining, fast-casual)', () => {
+  assert.ok(
+    promptText.includes('Fine-dining Pakistani restaurant') || promptText.includes('fine-dining Pakistani'),
+    'Prompt must include fine-dining Pakistani as a bypass example',
+  );
+  assert.ok(
+    promptText.includes('Fast-casual Pakistani restaurant') || promptText.includes('fast-casual Pakistani'),
+    'Prompt must include fast-casual Pakistani as a bypass example',
+  );
+});
+
+check('REFINEMENT_SYSTEM_PROMPT explains WHY Korean BBQ bypasses (format specifier, not cuisine)', () => {
+  // The prompt must clarify that "Korean BBQ" specifies the interactive grill FORMAT — not just cuisine.
+  // Without this, the model cannot distinguish "Pakistani restaurant" from "Korean BBQ restaurant".
+  const bbqSection = promptText.slice(promptText.indexOf('Korean BBQ'));
+  assert.ok(
+    bbqSection.slice(0, 200).toLowerCase().includes('format') ||
+    bbqSection.slice(0, 200).toLowerCase().includes('grill') ||
+    bbqSection.slice(0, 200).toLowerCase().includes('tabletop'),
+    'Prompt must explain that "Korean BBQ" specifies a cooking format, not just cuisine',
+  );
+});
+
+check('REFINEMENT_SYSTEM_PROMPT Rule 4 gives format-difference guidance for cuisine restaurants', () => {
+  // Rule 4 should instruct the model to offer format-based options (not cuisine synonyms)
+  // when refining a cuisine restaurant.
+  assert.ok(
+    promptText.includes('Casual Dine-In') || promptText.includes('casual dine-in') ||
+    promptText.includes('Fine Dining') || promptText.includes('fine dining') ||
+    promptText.includes('Fast-Casual') || promptText.includes('fast-casual'),
+    'Rule 4 must give concrete format-based option examples for cuisine restaurants',
+  );
+});
+
+check('api/preview.ts trims businessType before passing to AI', () => {
+  // businessType must be trimmed so "  Pakistani Restaurant  " hits the same AI path as
+  // "Pakistani Restaurant". This is already in the handler; test verifies it stays there.
+  assert.ok(
+    previewSrc.includes('.trim()') &&
+    previewSrc.indexOf('.trim()') < previewSrc.indexOf('handleRefinementMode'),
+    'businessType must be trimmed (trim() must appear before handleRefinementMode invocation)',
+  );
+});
+
+check('api/preview.ts businessType trim applies before the AI call inside handleRefinementMode', () => {
+  // More precise: find the refinement handler and confirm trim is in its input path.
+  const refSection = previewSrc.slice(
+    previewSrc.indexOf('async function handleRefinementMode'),
+    previewSrc.indexOf('export default async function handler'),
+  );
+  assert.ok(
+    refSection.includes('.trim()') || previewSrc.slice(previewSrc.indexOf("req.body?.businessType"), previewSrc.indexOf("const contents =")).includes('.trim()'),
+    'handleRefinementMode must receive a trimmed businessType',
+  );
+});
+
 // ─── Run all tests sequentially (supports async) ──────────────────────────────
 (async () => {
   for (const { name, fn } of testQueue) {
