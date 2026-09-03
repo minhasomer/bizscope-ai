@@ -352,20 +352,6 @@ function competitorCountForCategory(businessType: string): { target: number; lab
   return { target: 10, label: 'normal' };
 }
 
-/**
- * Heuristic: count approximate competitor entries in Phase 1 Maps research text.
- * Used to create a structured evidence hint for synthesis so the prompt input
- * is more consistent between runs for the same location.
- * Looks for numbered list items or bullet points — Maps responses typically
- * enumerate competitors this way. Returns 0 if text is the fallback string.
- */
-function estimateCompetitorCountFromResearch(text: string): number {
-  if (!text || text === 'No competitor data available.') return 0;
-  const numbered = (text.match(/^\s*\d+[.)]\s+\S/gm) ?? []).length;
-  const bulleted  = (text.match(/^\s*[-•*]\s+\S/gm)   ?? []).length;
-  return Math.max(numbered, bulleted);
-}
-
 function getCoordinatesForLocation(loc: string) {
   let h = 0;
   for (let i = 0; i < loc.length; i++) h = loc.charCodeAt(i) + ((h << 5) - h);
@@ -1062,14 +1048,22 @@ Return all results combined, existing same-brand locations listed first. Include
     await Promise.allSettled([runPhase1(), runPhase2()]);
 
     // Phase 3: synthesis
-    // Structured evidence fingerprint — derived from research without extra AI calls.
-    // Gives synthesis a consistent, parseable anchor so the same evidence produces
-    // consistent scores regardless of prose phrasing variation in the research text.
-    const approxCompetitorCount = estimateCompetitorCountFromResearch(competitionInfo);
+    // Research quality context — derived from reliable flags set during phases 1 & 2.
+    // No text-parsing heuristics: phase1Grounded is a boolean set only when the Maps
+    // call returned successfully; competitionInfo.length is a proxy for data richness.
+    // This is advisory context only — the authoritative competitor evidence is the
+    // full Competition Analysis prose above. The post-synthesis consistency check
+    // (Phase 16) uses the actual structured competitors array as the real count guard.
+    const { label: densityLabel } = competitorCountForCategory(businessType);
+    const phase1DataQuality = !phase1Grounded
+      ? 'grounding call did not return — no competitor data was retrieved from Maps'
+      : competitionInfo.length < 300
+        ? 'Maps returned limited data — treat the Competition Analysis section above with appropriate caution'
+        : 'Maps data retrieved successfully — see Competition Analysis section above';
     const evidenceSummary = `
-**STRUCTURED EVIDENCE SUMMARY (pre-processed from research above — use these facts as anchors when assigning sub-scores):**
-- Approximate direct competitors found in Maps research: ${approxCompetitorCount === 0 ? 'none identified' : `~${approxCompetitorCount}`}
-- Business category density class: ${competitorCountForCategory(businessType).label} (${competitorCountForCategory(businessType).label === 'dense' ? 'many near-identical operators typical in any metro' : competitorCountForCategory(businessType).label === 'sparse' ? 'few local operators typical even in metros' : 'standard density'})
+**RESEARCH QUALITY CONTEXT (advisory — calibrate confidence in the evidence above, do not treat as a competitor count):**
+- Maps competitor research status: ${phase1DataQuality}
+- Business category density class: ${densityLabel} (${densityLabel === 'dense' ? 'many near-identical operators typical in any metro' : densityLabel === 'sparse' ? 'few local operators typical even in metros' : 'standard density — typical number of operators for the trade area'})
 - Location: '${location}'`.trim();
 
     const prompt = `
@@ -1086,7 +1080,7 @@ ${marketInfo}
 
 ${evidenceSummary}
 
-Synthesize the data into a comprehensive JSON report. Do not output any wrapping markdown.
+Synthesize the data into a comprehensive JSON report. Base all scoring on the Competition Analysis and Market Trends sections above — the Research Quality Context is supporting metadata only. Do not output any wrapping markdown.
 
 **DATA CONSISTENCY RULE:** Use the specific population and median household income figures from the search results above for Demographic Insights. Do not estimate if factual data is present.
 
@@ -1125,7 +1119,7 @@ Competition Intensity (competitionIntensity — 0 = uncontested, 100 = fully sat
   41–60 (Moderate): 4–7 competitors OR 2–3 established players with meaningful substitutes; competitive but not saturated.
   61–80 (High): 8+ direct competitors OR several established chains/franchises plus strong substitute offerings.
   81–100 (Saturated): Dense direct competition plus strong substitutes; near-impossible to differentiate; market is at or beyond capacity.
-  IMPORTANT: Use the "Approximate direct competitors found" count from the Structured Evidence Summary above as your primary anchor. Do not diverge from this anchor without specific evidence justifying the divergence.
+  Base your score on the actual named businesses in the Competition Analysis section above — that is the primary evidence source. If Maps grounding was unavailable (noted in Research Quality Context), reflect that uncertainty in your score but do not assume zero competition.
 
 Financial Feasibility (financialFeasibility — 0 = not feasible, 100 = highly feasible):
   0–20 (Very High Capital): Extremely high capital relative to realistic revenue; unsustainable unit economics.

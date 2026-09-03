@@ -56,26 +56,48 @@ check('thinkingBudget: 0 is set to disable thinking on synthesis', () => {
   );
 });
 
-// ─── Phase 6: Evidence fingerprint ────────────────────────────────────────────
+// ─── Phase 6: Research quality context ────────────────────────────────────────
 
-check('estimateCompetitorCountFromResearch function is defined', () => {
+check('research quality context section is injected into synthesis prompt', () => {
   assert.ok(
-    analyzeSrc.includes('estimateCompetitorCountFromResearch'),
-    'competitor count estimator function must be defined',
+    analyzeSrc.includes('RESEARCH QUALITY CONTEXT'),
+    'synthesis prompt must include a RESEARCH QUALITY CONTEXT section',
   );
 });
 
-check('evidence summary is injected into synthesis prompt', () => {
+check('research quality context is advisory-only (no competitor count claim)', () => {
+  // Must NOT contain a text-parsed competitor count presented as fact.
+  // Reliable boolean flags (phase1Grounded) and length-based quality signals
+  // are used instead. The advisory nature is stated in the section header.
   assert.ok(
-    analyzeSrc.includes('STRUCTURED EVIDENCE SUMMARY'),
-    'synthesis prompt must include a STRUCTURED EVIDENCE SUMMARY section',
+    !analyzeSrc.includes('estimateCompetitorCountFromResearch'),
+    'unreliable text-parsing heuristic must not be present',
+  );
+  assert.ok(
+    !analyzeSrc.includes('approxCompetitorCount'),
+    'parsed competitor count variable must not be injected into the prompt',
+  );
+  assert.ok(
+    analyzeSrc.includes('do not treat as a competitor count'),
+    'section header must explicitly warn the model not to treat it as a count',
   );
 });
 
-check('evidence summary includes approximate competitor count', () => {
+check('research quality context uses reliable grounding flag, not text parsing', () => {
   assert.ok(
-    analyzeSrc.includes('approxCompetitorCount'),
-    'evidence summary must reference the approxCompetitorCount variable',
+    analyzeSrc.includes('phase1Grounded'),
+    'evidence summary must use the phase1Grounded boolean (reliable) not a parsed count',
+  );
+  assert.ok(
+    analyzeSrc.includes('competitionInfo.length'),
+    'evidence summary must use response length as a data-richness proxy',
+  );
+});
+
+check('evidence summary states scoring must be based on Competition Analysis section', () => {
+  assert.ok(
+    analyzeSrc.includes('Base all scoring on the Competition Analysis'),
+    'synthesis instruction must direct model to the Competition Analysis as the primary source',
   );
 });
 
@@ -99,14 +121,20 @@ check('rubric defines Risk Level bands with evidence anchors', () => {
   );
 });
 
-check('rubric defines Competition Intensity bands anchored to competitor count', () => {
+check('rubric defines Competition Intensity bands and directs model to Competition Analysis prose', () => {
   assert.ok(
     analyzeSrc.includes('0–20 (Very Low)') && analyzeSrc.includes('21–40 (Low)'),
     'competitionIntensity rubric must define Very Low and Low bands',
   );
+  // The rubric must point to the actual Competition Analysis text, not a heuristic count.
   assert.ok(
-    analyzeSrc.includes('"Approximate direct competitors found"'),
-    'competitionIntensity rubric must instruct model to use the evidence summary count as anchor',
+    analyzeSrc.includes('actual named businesses in the Competition Analysis section above'),
+    'competitionIntensity rubric must direct model to the Competition Analysis prose as primary source',
+  );
+  // Must NOT still reference the removed heuristic count as the primary anchor.
+  assert.ok(
+    !analyzeSrc.includes('"Approximate direct competitors found"'),
+    'rubric must not reference the removed heuristic count anchor',
   );
 });
 
