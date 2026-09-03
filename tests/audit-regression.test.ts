@@ -1081,9 +1081,12 @@ check('E: synthesis prompt does not assume low competition when grounding data i
 // ── Prompt version bumped after scoring-rule change ──
 
 check('PROMPT_VERSION updated to reflect the assessment-logic fix', () => {
+  // Accepts 2026-08-24 (previous) or any later date (e.g. 2026-09-03 after stability work).
+  const match = analyzeSrc.match(/const PROMPT_VERSION = '(\d{4}-\d{2}-\d{2})'/);
+  assert.ok(match, 'PROMPT_VERSION must be a date string constant in analyze.ts');
   assert.ok(
-    analyzeSrc.includes("const PROMPT_VERSION = '2026-08-24'"),
-    'PROMPT_VERSION must be updated to 2026-08-24 to track the assessment-logic fix',
+    match![1] >= '2026-08-24',
+    `PROMPT_VERSION must be 2026-08-24 or later, got ${match![1]}`,
   );
 });
 

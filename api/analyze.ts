@@ -352,6 +352,20 @@ function competitorCountForCategory(businessType: string): { target: number; lab
   return { target: 10, label: 'normal' };
 }
 
+/**
+ * Heuristic: count approximate competitor entries in Phase 1 Maps research text.
+ * Used to create a structured evidence hint for synthesis so the prompt input
+ * is more consistent between runs for the same location.
+ * Looks for numbered list items or bullet points — Maps responses typically
+ * enumerate competitors this way. Returns 0 if text is the fallback string.
+ */
+function estimateCompetitorCountFromResearch(text: string): number {
+  if (!text || text === 'No competitor data available.') return 0;
+  const numbered = (text.match(/^\s*\d+[.)]\s+\S/gm) ?? []).length;
+  const bulleted  = (text.match(/^\s*[-•*]\s+\S/gm)   ?? []).length;
+  return Math.max(numbered, bulleted);
+}
+
 function getCoordinatesForLocation(loc: string) {
   let h = 0;
   for (let i = 0; i < loc.length; i++) h = loc.charCodeAt(i) + ((h << 5) - h);
@@ -418,8 +432,8 @@ const VIABILITY_CACHE_MAX_AGE_DAYS = 90;
 // Bump PROMPT_VERSION when the synthesis prompt text changes; bump
 // MODEL_CONFIG_VERSION when the model, token budgets, temperature, or thinking
 // config change.
-const PROMPT_VERSION = '2026-08-24';
-const MODEL_CONFIG_VERSION = 'flash-synth16k-t0.4';
+const PROMPT_VERSION = '2026-09-03';
+const MODEL_CONFIG_VERSION = 'flash-synth-t0.2-rubric1';
 
 function normalizeCacheKey(s: string): string {
   return s.toLowerCase().trim();
@@ -1048,6 +1062,16 @@ Return all results combined, existing same-brand locations listed first. Include
     await Promise.allSettled([runPhase1(), runPhase2()]);
 
     // Phase 3: synthesis
+    // Structured evidence fingerprint — derived from research without extra AI calls.
+    // Gives synthesis a consistent, parseable anchor so the same evidence produces
+    // consistent scores regardless of prose phrasing variation in the research text.
+    const approxCompetitorCount = estimateCompetitorCountFromResearch(competitionInfo);
+    const evidenceSummary = `
+**STRUCTURED EVIDENCE SUMMARY (pre-processed from research above — use these facts as anchors when assigning sub-scores):**
+- Approximate direct competitors found in Maps research: ${approxCompetitorCount === 0 ? 'none identified' : `~${approxCompetitorCount}`}
+- Business category density class: ${competitorCountForCategory(businessType).label} (${competitorCountForCategory(businessType).label === 'dense' ? 'many near-identical operators typical in any metro' : competitorCountForCategory(businessType).label === 'sparse' ? 'few local operators typical even in metros' : 'standard density'})
+- Location: '${location}'`.trim();
+
     const prompt = `
 Act as an expert business consultant and financial analyst. Create a detailed business viability report.
 
@@ -1059,6 +1083,8 @@ ${competitionInfo}
 
 **Market Trends & Demographics (from Google Search):**
 ${marketInfo}
+
+${evidenceSummary}
 
 Synthesize the data into a comprehensive JSON report. Do not output any wrapping markdown.
 
@@ -1077,10 +1103,47 @@ Synthesize the data into a comprehensive JSON report. Do not output any wrapping
 2. Viability Score = (0.30 × Market Demand) + (0.25 × (100 - Competition Intensity)) + (0.25 × Financial Feasibility) + (0.20 × (100 - Risk Level))
 3. Classification: 0-39 Not Recommended, 40-69 Caution Advised, 70-100 Recommended. Final recommendation must match score.
 
+**EVIDENCE-BASED SCORING RUBRIC (mandatory — use these anchors to assign sub-scores; the goal is evidence-stable ratings, not arbitrary precision):**
+
+Risk Level (riskLevel — 0 = negligible risk, 100 = catastrophic):
+  0–20 (Very Low): Operationally simple business type; minimal regulatory burden; no staffing scarcity; this specific location has stable, documented demand; no material geographic constraints.
+  21–40 (Low): One manageable risk factor (e.g. standard licensing, moderate staffing challenge); location has some uncertainty but no severe market-size or execution concern.
+  41–60 (Moderate): At least one meaningful unresolved risk — specifically: small population limiting addressable market, OR geographic isolation reducing customer base, OR specialist staffing dependency, OR material demand uncertainty for this location. A small-town or rural location with limited commercial density almost always qualifies for this band or higher.
+  61–80 (Elevated): Two or more meaningful unresolved risks in combination (e.g. small population + geographic isolation + licensing complexity + staffing scarcity).
+  81–100 (High): Severe compounding risks: very small market + high capital requirements + regulatory burden + demonstrated market failure evidence.
+
+Market Demand (marketDemand — 0 = no demand for new entrant, 100 = exceptional demand):
+  0–20 (Very Weak): Declining category nationally or locally; virtually no commercial activity in the specific trade area.
+  21–44 (Weak): Very limited commercial density; suppressed or documented weak demand in the immediate area.
+  45–64 (Moderate): Some commercial activity in the area; category demand exists but no specific evidence of unmet demand for a new entrant.
+  65–79 (Strong): Clear commercial activity; underserved segments identified OR capacity constraints at existing operators documented; evidence supports a new entrant finding customers.
+  80–100 (Exceptional): Strong documented unmet demand; area is rapidly growing; whitespace clearly identified with evidence of demand that exceeds current supply.
+
+Competition Intensity (competitionIntensity — 0 = uncontested, 100 = fully saturated):
+  0–20 (Very Low): Zero or near-zero direct competitors in the trade area AND no meaningful substitutes. Use only when Maps research returns none or one competitor.
+  21–40 (Low): 1–3 direct competitors; limited substitute offerings; clear differentiation room for a new entrant.
+  41–60 (Moderate): 4–7 competitors OR 2–3 established players with meaningful substitutes; competitive but not saturated.
+  61–80 (High): 8+ direct competitors OR several established chains/franchises plus strong substitute offerings.
+  81–100 (Saturated): Dense direct competition plus strong substitutes; near-impossible to differentiate; market is at or beyond capacity.
+  IMPORTANT: Use the "Approximate direct competitors found" count from the Structured Evidence Summary above as your primary anchor. Do not diverge from this anchor without specific evidence justifying the divergence.
+
+Financial Feasibility (financialFeasibility — 0 = not feasible, 100 = highly feasible):
+  0–20 (Very High Capital): Extremely high capital relative to realistic revenue; unsustainable unit economics.
+  21–44 (High Capital): High startup costs, slow ROI, or tight margins; requires high utilization to break even.
+  45–64 (Significant Capital): Typical capital for the category; standard industry ROI profile; achievable with proper execution.
+  65–79 (Moderate Capital): Low-to-moderate capital requirements; favorable margins or proven ROI for this business type in comparable markets.
+  80–100 (Low Capital): Very low capital; fast ROI; strong recurring-revenue model with minimal fixed costs.
+
+Scalability (financialProjections.scalability — Low/Medium/High):
+  High: Business model can serve significantly more clients/customers without proportional overhead increase (e.g. route-based or recurring-contract services, SaaS). Commercial cleaning and similar contract-service businesses are typically High.
+  Medium: Growth requires roughly proportional cost increases (additional staff, equipment, or space).
+  Low: Growth is heavily constrained by physical capacity or specialist labor.
+
 **CRITICAL REASONING PRINCIPLES:**
 - High category demand is NOT equivalent to high opportunity for a new entrant. A category can have strong consumer demand while existing supply already satisfies or exceeds it. Assess whether there is actual whitespace, not just category attractiveness.
 - Many competitors can validate market demand OR indicate saturation. Determine which interpretation is better supported by the location-specific evidence in the research data above.
 - Do NOT reach a favorable conclusion (Recommended) if the competitive evidence shows a dense, mature market with no identifiable differentiation or underserved segment.
+- EVIDENCE STABILITY PRINCIPLE: Categorical rating bands (the ranges in the rubric above) should be driven by concrete evidence, not stylistic interpretation. If the evidence for a factor is essentially the same as a prior analysis, the sub-score should remain in the same rubric band. Only cross a band boundary when there is a concrete, identifiable evidence difference (e.g. one more competitor found, documented population constraint identified, specific risk uncovered).
 
 **RECONCILIATION REQUIREMENT (MANDATORY — complete this reasoning before assigning scores):**
 Before finalizing scores and the recommendation, explicitly weigh the following:
@@ -1157,7 +1220,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           config: {
             responseMimeType: 'application/json',
             responseSchema: reportSchema,
-            temperature: 0.4,
+            temperature: 0.2,
             maxOutputTokens,
             thinkingConfig: { thinkingBudget: 0 },
           },
@@ -1219,6 +1282,56 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     }
     // Override AI-echoed businessType with the exact concept the user selected/submitted.
     parsed.businessType = businessType;
+
+    // ── Phase 16: post-synthesis consistency validation ──────────────────────
+    // Lightweight contradiction guardrail — catches egregious score/evidence
+    // mismatches without overriding nuanced AI reasoning. Only fires when a
+    // claimed sub-score contradicts directly observable evidence from the same
+    // report (competitor count, severity list). Any correction is logged for
+    // transparency and the viability score is recomputed from corrected inputs.
+    // Does NOT lower confidence, does NOT add AI calls, does NOT alter prose.
+    const _sb = parsed.scoreBreakdown;
+    if (_sb && typeof _sb === 'object') {
+      const _competitorCount = Array.isArray(parsed.competitionAnalysis?.competitors)
+        ? parsed.competitionAnalysis.competitors.length
+        : 0;
+      const _highRisks = Array.isArray(parsed.riskAssessment?.risks)
+        ? parsed.riskAssessment.risks.filter((r: any) => r.severity === 'High').length
+        : 0;
+
+      // Contradiction 1: claimed "Very Low" competition but 4+ competitors listed.
+      // The rubric says 0–20 = "zero or near-zero direct competitors". 4+ competitors
+      // in the array contradicts this. Bump to at least the bottom of the Low band.
+      const _ci = typeof _sb.competitionIntensity === 'number' ? _sb.competitionIntensity : 50;
+      if (_ci <= 20 && _competitorCount >= 4) {
+        const _corrected = Math.max(_ci, 25);
+        console.warn(`[Consistency] competitionIntensity ${_ci}→${_corrected}: claimed Very Low but ${_competitorCount} competitors in array`);
+        _sb.competitionIntensity = _corrected;
+      }
+
+      // Contradiction 2: claimed "Very Low" risk but 2+ High-severity risks enumerated.
+      // If the AI identified multiple High-severity risks, riskLevel ≤30 contradicts them.
+      // Bump to at least the bottom of the Moderate band (41).
+      const _rl = typeof _sb.riskLevel === 'number' ? _sb.riskLevel : 50;
+      if (_rl <= 30 && _highRisks >= 2) {
+        const _corrected = Math.max(_rl, 42);
+        console.warn(`[Consistency] riskLevel ${_rl}→${_corrected}: claimed Very Low but ${_highRisks} High-severity risks enumerated`);
+        _sb.riskLevel = _corrected;
+      }
+
+      // Recompute viability score if any sub-score was corrected. The formula is
+      // the same one stated in the synthesis prompt — keeps scores consistent.
+      const _md  = typeof _sb.marketDemand        === 'number' ? _sb.marketDemand        : 50;
+      const _ff  = typeof _sb.financialFeasibility === 'number' ? _sb.financialFeasibility : 50;
+      const _ciF = typeof _sb.competitionIntensity === 'number' ? _sb.competitionIntensity : 50;
+      const _rlF = typeof _sb.riskLevel            === 'number' ? _sb.riskLevel            : 50;
+      const _recomputed = Math.round((0.30 * _md) + (0.25 * (100 - _ciF)) + (0.25 * _ff) + (0.20 * (100 - _rlF)));
+      if (typeof parsed.viabilityScore === 'number' && _recomputed !== parsed.viabilityScore) {
+        console.warn(`[Consistency] viabilityScore recomputed ${parsed.viabilityScore}→${_recomputed} after sub-score correction`);
+        parsed.viabilityScore = Math.max(0, Math.min(100, _recomputed));
+      }
+    }
+
     parsed.groundingSources = sources;
 
     // Ensure startupCostItems is populated — synthesize from total range if Gemini omitted it.
