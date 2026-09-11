@@ -6,6 +6,9 @@ import {
   getSupabaseAdmin,
   PRICE_TO_PLAN,
   PLAN_TO_DB_TIER,
+  DECISION_PASS_PRICE_ID,
+  DECISION_PASS_VIABILITY_QUANTITY,
+  DECISION_PASS_MARKET_GAP_QUANTITY,
   beginStripeEvent,
   completeStripeEvent,
   failStripeEvent,
@@ -132,12 +135,59 @@ async function setSubscriptionStatus(userId: string, status: string): Promise<vo
 
 // ─── Event handlers ───────────────────────────────────────────────────────────
 
+async function handleDecisionPassCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  const userId = session.client_reference_id;
+  if (!userId) throw new Error('Decision Pass checkout missing client_reference_id');
+
+  const purchaseType = session.metadata?.purchase_type;
+  if (purchaseType !== 'decision_pass') {
+    throw new Error(
+      `Decision Pass checkout: unexpected purchase_type="${purchaseType}" in metadata`,
+    );
+  }
+
+  const lineItemPriceId = (session as any).line_items?.data?.[0]?.price?.id as string | undefined;
+  if (lineItemPriceId && DECISION_PASS_PRICE_ID && lineItemPriceId !== DECISION_PASS_PRICE_ID) {
+    throw new Error(
+      `Decision Pass checkout: price_id mismatch — got ${lineItemPriceId}, ` +
+      `expected ${DECISION_PASS_PRICE_ID}`,
+    );
+  }
+
+  const viabilityQty = DECISION_PASS_VIABILITY_QUANTITY;
+  const marketGapQty = DECISION_PASS_MARKET_GAP_QUANTITY;
+  const sessionId = session.id;
+
+  const { error } = await getSupabaseAdmin()
+    .from('decision_pass_entitlements')
+    .insert({
+      user_id:                        userId,
+      stripe_checkout_session_id:     sessionId,
+      viability_total:                viabilityQty,
+      viability_remaining:            viabilityQty,
+      market_gap_total:               marketGapQty,
+      market_gap_remaining:           marketGapQty,
+    });
+
+  if (error) {
+    if ((error as any).code === '23505') {
+      console.log(
+        `[Stripe] Decision Pass already granted — sessionId=${sessionId} userId=${userId}`,
+      );
+      return;
+    }
+    throw new Error(`decision_pass_entitlements insert failed: ${error.message}`);
+  }
+
+  console.log(
+    `[Stripe] Decision Pass granted — userId=${userId} ` +
+    `viability=${viabilityQty} market_gap=${marketGapQty} sessionId=${sessionId}`,
+  );
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-  // Payment-mode checkouts (e.g. one-time purchases) are not handled in this
-  // deployment. Acknowledge without processing so Stripe stops retrying.
   if (session.mode === 'payment') {
-    console.log(`[Stripe] checkout.session.completed mode=payment — acknowledged without action (sessionId=${session.id})`);
-    return;
+    return handleDecisionPassCheckoutCompleted(session);
   }
 
   const userId = session.client_reference_id;
