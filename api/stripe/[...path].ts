@@ -15,6 +15,9 @@ import {
   getStripe,
   getSupabaseAdmin,
   getSubscriptionRow,
+  DECISION_PASS_PRICE_ID,
+  DECISION_PASS_VIABILITY_QUANTITY,
+  DECISION_PASS_MARKET_GAP_QUANTITY,
 } from './_shared.js';
 
 // ─── Body reader ──────────────────────────────────────────────────────────────
@@ -74,6 +77,20 @@ async function handleSubscriptionStatus(
     !profileTierElevated &&
     !roleElevated;
 
+  // Remaining Decision Pass credits for this user (viability + market_gap separately).
+  let decisionPassBalance = { viability: 0, marketGap: 0 };
+  try {
+    const { data: passData } = await getSupabaseAdmin()
+      .from('decision_pass_entitlements')
+      .select('viability_remaining, market_gap_remaining')
+      .eq('user_id', user.userId);
+    const rows: any[] = passData ?? [];
+    decisionPassBalance = {
+      viability: rows.reduce((s: number, r: any) => s + (r.viability_remaining  ?? 0), 0),
+      marketGap: rows.reduce((s: number, r: any) => s + (r.market_gap_remaining ?? 0), 0),
+    };
+  } catch { /* non-fatal — return zero balance on error */ }
+
   if (!row) {
     return json(res, 200, {
       plan:             'Explorer',
@@ -85,6 +102,7 @@ async function handleSubscriptionStatus(
       hasUsedTrial,
       trialEligible,
       proTrialEnabled,
+      decisionPassBalance,
     });
   }
 
@@ -125,6 +143,7 @@ async function handleSubscriptionStatus(
     trialing,
     trialStartedAt:   row.trial_started_at ?? null,
     trialEndsAt:      row.trial_ends_at    ?? null,
+    decisionPassBalance,
     ...(trialReportCount !== undefined && { trialReportCount }),
   });
 }
@@ -210,6 +229,42 @@ async function handleCreateCheckout(
   return json(res, 200, { url: session.url, trialEligible: isTrialEligible });
 }
 
+// ─── Route: POST create-decision-pass-checkout ───────────────────────────────
+
+async function handleCreateDecisionPassCheckout(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const user = await verifyAuth(req.headers['authorization'] as string | undefined);
+  if (!user) return json(res, 401, { error: 'Unauthorized.' });
+
+  if (!DECISION_PASS_PRICE_ID) {
+    console.error('[DecisionPass] STRIPE_PRICE_ID_DECISION_PASS is not configured.');
+    return json(res, 503, { error: 'Decision Pass checkout is not currently available.' });
+  }
+
+  const appUrl = process.env.APP_URL ?? process.env.VITE_APP_URL ?? '';
+  const stripe = getStripe();
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode:                'payment',
+      line_items:          [{ price: DECISION_PASS_PRICE_ID, quantity: 1 }],
+      client_reference_id: user.userId,
+      metadata: {
+        purchase_type: 'decision_pass',
+      },
+      success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${appUrl}/pricing`,
+    });
+    return json(res, 200, { url: session.url });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[DecisionPass] stripe.checkout.sessions.create failed:', msg);
+    return json(res, 502, { error: 'Could not start checkout. Please try again.' });
+  }
+}
+
 // ─── Route: POST create-portal-session ──────────────────────────────────────
 
 async function handleCreatePortal(
@@ -246,18 +301,27 @@ export default async function handler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const url = req.url ?? '';
-  const method = req.method ?? 'GET';
+  try {
+    const url = req.url ?? '';
+    const method = req.method ?? 'GET';
 
-  if (url.includes('subscription-status') && method === 'GET') {
-    return handleSubscriptionStatus(req, res);
-  }
-  if (url.includes('create-checkout-session') && method === 'POST') {
-    return handleCreateCheckout(req, res);
-  }
-  if (url.includes('create-portal-session') && method === 'POST') {
-    return handleCreatePortal(req, res);
-  }
+    if (url.includes('subscription-status') && method === 'GET') {
+      return handleSubscriptionStatus(req, res);
+    }
+    if (url.includes('create-checkout-session') && method === 'POST') {
+      return handleCreateCheckout(req, res);
+    }
+    if (url.includes('create-decision-pass-checkout') && method === 'POST') {
+      return handleCreateDecisionPassCheckout(req, res);
+    }
+    if (url.includes('create-portal-session') && method === 'POST') {
+      return handleCreatePortal(req, res);
+    }
 
-  return json(res, 404, { error: 'Not found.' });
+    return json(res, 404, { error: 'Not found.' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[stripe-handler] Unhandled error:', msg);
+    return json(res, 500, { error: 'Internal server error.' });
+  }
 }

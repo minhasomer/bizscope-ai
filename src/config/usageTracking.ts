@@ -178,3 +178,97 @@ export async function incrementTrialUsage(
     console.error('[UsageTracking] trial increment failed:', err.message ?? err);
   }
 }
+
+// ─── Decision Pass entitlements ──────────────────────────────────────────────
+// Separate from usage_tracking: one-time Decision Pass purchases via Stripe.
+// Each pass grants viability_remaining=3 and market_gap_remaining=1.
+// The two counters are independent — viability balance cannot be used for
+// Market Gap reports and vice versa.
+// RPCs use SELECT FOR UPDATE SKIP LOCKED for race-safe atomic decrements.
+
+export interface DecisionPassBalance {
+  viability: number;
+  marketGap: number;
+}
+
+/**
+ * Atomically decrements viability_remaining on the oldest pass with balance.
+ * Returns the row id of the decremented pass, or null if no balance exists.
+ * Never throws — returns null on any DB error.
+ */
+export async function decrementDecisionPassViability(
+  supabaseAdmin: any,
+  userId: string,
+): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin.rpc('decrement_decision_pass_viability', {
+      p_user_id: userId,
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass viability decrement failed:', err.message ?? err);
+    return null;
+  }
+}
+
+/**
+ * Restores one viability credit on a specific pass row (used on AI failure).
+ * Never throws.
+ */
+export async function restoreDecisionPassViability(
+  supabaseAdmin: any,
+  passId: string,
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin.rpc('restore_decision_pass_viability', {
+      p_pass_id: passId,
+    });
+    if (error) throw error;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass viability restore failed:', err.message ?? err);
+  }
+}
+
+/**
+ * Atomically decrements market_gap_remaining on the oldest pass with balance.
+ * Returns the row id of the decremented pass, or null if no balance exists.
+ * Never throws — returns null on any DB error.
+ */
+export async function decrementDecisionPassMarketGap(
+  supabaseAdmin: any,
+  userId: string,
+): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data, error } = await supabaseAdmin.rpc('decrement_decision_pass_market_gap', {
+      p_user_id: userId,
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass market_gap decrement failed:', err.message ?? err);
+    return null;
+  }
+}
+
+/**
+ * Restores one market_gap credit on a specific pass row.
+ * Never throws.
+ */
+export async function restoreDecisionPassMarketGap(
+  supabaseAdmin: any,
+  passId: string,
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin.rpc('restore_decision_pass_market_gap', {
+      p_pass_id: passId,
+    });
+    if (error) throw error;
+  } catch (err: any) {
+    console.error('[UsageTracking] decision pass market_gap restore failed:', err.message ?? err);
+  }
+}

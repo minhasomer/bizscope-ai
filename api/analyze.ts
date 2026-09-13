@@ -7,7 +7,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
-import { checkStandardQuota, checkTrialQuota, incrementUsageTracking, incrementTrialUsage } from '../src/config/usageTracking.js';
+import { checkStandardQuota, checkTrialQuota, incrementUsageTracking, incrementTrialUsage, decrementDecisionPassViability, restoreDecisionPassViability } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { detectFranchise, findSameBrandCompetitors, getFranchiseDensityTier } from '../src/utils/franchiseDetection.js';
 import {
@@ -807,6 +807,22 @@ export default async function handler(
         ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
         : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
       if (!cacheQuota.allowed) {
+        // Non-trial users: check purchased report passes before returning 429.
+        if (!_isTrialing) {
+          const passId = await decrementDecisionPassViability(supabaseAdmin, verifiedUserId);
+          if (passId) {
+            console.log(`[Analyze] Cache hit — Decision Pass viability consumed passId=${passId} userId=${verifiedUserId}`);
+            return json(res, 200, {
+              ...normalizeViabilityReport(cacheHit.report),
+              _cached:           true,
+              _generatedAt:      cacheHit.generatedAt,
+              _cacheAgeDays:     cacheHit.cacheAgeDays,
+              _freshnessDays:    VIABILITY_CACHE_MAX_AGE_DAYS,
+              _isStale:          false,
+              _usedDecisionPass: true,
+            });
+          }
+        }
         console.warn(`[Analyze] Quota exceeded (cache hit) — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${cacheQuota.used} limit=${cacheQuota.limit}`);
         return json(res, 429, {
           error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
@@ -843,14 +859,34 @@ export default async function handler(
   const quota = _isTrialing
     ? await checkTrialQuota(supabaseAdmin, verifiedUserId)
     : await checkStandardQuota(supabaseAdmin, verifiedUserId, verifiedPlan as any, _serverBetaFullAccess);
+  // Hoisted so the catch block can restore the pass if Gemini fails.
+  let usedDecisionPassId: string | null = null;
+
   if (!quota.allowed) {
-    console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${quota.used} limit=${quota.limit}`);
-    return json(res, 429, {
-      error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
-      code:  _isTrialing ? 'TRIAL_REPORT_LIMIT_REACHED' : 'QUOTA_EXCEEDED',
-      used:  quota.used,
-      limit: quota.limit,
-    });
+    // Non-trial users: try a purchased pass before returning 429.
+    if (!_isTrialing) {
+      const passId = await decrementDecisionPassViability(supabaseAdmin, verifiedUserId);
+      if (passId) {
+        usedDecisionPassId = passId;
+        console.log(`[Analyze] Quota exceeded — using Decision Pass viability passId=${passId} userId=${verifiedUserId}`);
+      } else {
+        console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} used=${quota.used} limit=${quota.limit}`);
+        return json(res, 429, {
+          error: 'Monthly report limit reached for your plan.',
+          code:  'QUOTA_EXCEEDED',
+          used:  quota.used,
+          limit: quota.limit,
+        });
+      }
+    } else {
+      console.warn(`[Analyze] Quota exceeded — userId=${verifiedUserId} plan=${verifiedPlan} trialing=${_isTrialing} used=${quota.used} limit=${quota.limit}`);
+      return json(res, 429, {
+        error: _isTrialing ? 'Trial report limit reached.' : 'Monthly report limit reached for your plan.',
+        code:  _isTrialing ? 'TRIAL_REPORT_LIMIT_REACHED' : 'QUOTA_EXCEEDED',
+        used:  quota.used,
+        limit: quota.limit,
+      });
+    }
   }
 
   // Hoisted so the failure-path catch block (outside the try below) can still
@@ -1483,6 +1519,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
       }
     } catch (logErr: any) {
       console.error('[ActivityLog] failed analyze failure-path:', logErr.message ?? logErr);
+    }
+
+    // Restore the Decision Pass credit if Gemini failed — the report was not delivered.
+    if (usedDecisionPassId) {
+      await restoreDecisionPassViability(supabaseAdmin, usedDecisionPassId);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });

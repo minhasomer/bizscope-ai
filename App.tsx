@@ -1054,6 +1054,28 @@ const App: React.FC = () => {
     navigate('contact');
   };
 
+  const handleDecisionPassCheckout = async () => {
+    if (!currentUser) {
+      navigate('settings', 'signup');
+      return;
+    }
+    setPricingActionError(null);
+    setPricingActionLoading(true);
+    trackEvent('decision_pass_checkout_started', {
+      source_page: currentView,
+      authenticated: true,
+    });
+    try {
+      const result = await StripeService.startDecisionPassCheckout();
+      if (!result) return; // demo mode
+      window.location.href = result.url;
+    } catch (err: any) {
+      setPricingActionError(err?.message || 'Could not start checkout. Please try again.');
+    } finally {
+      setPricingActionLoading(false);
+    }
+  };
+
   const renderSEOTemplate = () => {
     if (!seoRoute) return null;
     switch (seoRoute.type) {
@@ -1149,6 +1171,8 @@ const App: React.FC = () => {
               pricingActionLoading={pricingActionLoading}
               pricingActionError={pricingActionError}
               trialEligible={trialEligible}
+              onDecisionPassCheckout={handleDecisionPassCheckout}
+              showDecisionPass={!hasPaidSubscription}
             />
           </div>
         );

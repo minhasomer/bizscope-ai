@@ -7,7 +7,7 @@ import {
   wouldExceedHardCap,
   aggregateGeminiUsage,
 } from '../src/config/aiBudget.js';
-import { checkRegionalQuota, incrementUsageTracking } from '../src/config/usageTracking.js';
+import { checkRegionalQuota, incrementUsageTracking, decrementDecisionPassMarketGap, restoreDecisionPassMarketGap } from '../src/config/usageTracking.js';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories.js';
 import { validateUSLocation } from '../src/utils/locationValidation.js';
 
@@ -491,16 +491,29 @@ export default async function handler(
     req.headers['authorization'] as string | undefined,
   );
 
-  // Gate: must be authenticated and have an upgraded plan.
-  // When BETA_FULL_ACCESS=true, getServerSidePlan() already promotes any
-  // authenticated non-Admin user to Pro+, so this check passes transparently.
-  // Unauthenticated users always fall back to verifiedUserId=null / plan=Explorer.
-  if (!verifiedUserId || verifiedPlan === 'Explorer') {
-    console.warn(`[Opportunities] Rejected — userId=${verifiedUserId ?? 'null'} plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
+  // Gate: must be authenticated. Pro+ and Enterprise have included regional quota.
+  // Explorer and Pro may access Market Gap only via a purchased Decision Pass.
+  // Hoisted so catch block can restore if Gemini fails.
+  let explorerProDecisionPassId: string | null = null;
+
+  if (!verifiedUserId) {
     return json(res, 403, {
-      error: 'Market Gap analysis with real AI requires a Pro or higher plan.',
-      code: 'INSUFFICIENT_PLAN',
+      error: 'Market Gap analysis requires an account.',
+      code: 'UNAUTHENTICATED',
     });
+  }
+
+  if (verifiedPlan !== 'Pro+' && verifiedPlan !== 'Enterprise') {
+    const passId = await decrementDecisionPassMarketGap(supabaseAdmin, verifiedUserId);
+    if (!passId) {
+      console.warn(`[Opportunities] Rejected — userId=${verifiedUserId} plan="${verifiedPlan}" role="${verifiedRole}" betaFullAccess=${_serverBetaFullAccess}`);
+      return json(res, 403, {
+        error: 'Market Gap analysis requires a Pro+ plan or a Decision Pass with Market Gap credit.',
+        code: 'INSUFFICIENT_PLAN',
+      });
+    }
+    explorerProDecisionPassId = passId;
+    console.log(`[Opportunities] Explorer/Pro — Decision Pass market_gap passId=${passId} userId=${verifiedUserId}`);
   }
 
   const requestStartMs = Date.now();
@@ -897,6 +910,11 @@ Generate output in JSON adhering to the opportunity schema. No wrapping markdown
       }
     } catch (logErr: any) {
       console.error('[ActivityLog] failed opportunities failure-path:', logErr.message ?? logErr);
+    }
+
+    // Restore the Decision Pass credit if Gemini failed — the report was not delivered.
+    if (explorerProDecisionPassId) {
+      await restoreDecisionPassMarketGap(supabaseAdmin, explorerProDecisionPassId);
     }
 
     return json(res, httpStatus, { error: resMessage, code: resCode });

@@ -35,6 +35,13 @@ interface PricingTiersProps {
    * Drives trial-specific CTA copy on the Pro card.
    */
   trialEligible?: boolean;
+  /** Called when the user clicks "Buy Decision Pass". Not called in demo mode. */
+  onDecisionPassCheckout?: () => void;
+  /**
+   * When false, the Decision Pass section is hidden.
+   * Pass !hasPaidSubscription so active subscribers don't see it.
+   */
+  showDecisionPass?: boolean;
 }
 
 const PLAN_ORDER: Record<string, number> = { Explorer: 0, Pro: 1, 'Pro+': 2, Enterprise: 3 };
@@ -66,6 +73,8 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
   pricingActionLoading = false,
   pricingActionError = null,
   trialEligible = false,
+  onDecisionPassCheckout,
+  showDecisionPass = true,
 }) => {
   const isDemo = isDemoMode;
 
@@ -336,6 +345,93 @@ export const PricingTiers: React.FC<PricingTiersProps> = ({
         <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-xs text-red-700">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
           <span>{pricingActionError}</span>
+        </div>
+      )}
+
+      {/* Decision Pass — one-time purchase, hidden in demo mode and for active subscribers */}
+      {!isDemo && showDecisionPass && onDecisionPassCheckout && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider shrink-0">One-Time Access</h4>
+            <div className="h-px flex-1 bg-gray-100" />
+          </div>
+
+          <div className="bg-gradient-to-br from-slate-900 to-gray-900 rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.12)_0%,_transparent_65%)] pointer-events-none" />
+
+            <div className="mb-6 relative">
+              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400 mb-1.5">
+                Not ready for a subscription?
+              </p>
+              <h3 className="text-lg sm:text-xl font-black text-white tracking-tight leading-snug">
+                You don't need a monthly plan to use BizScope.
+              </h3>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-6 relative">
+              <div className="lg:w-60 shrink-0 flex flex-col gap-5">
+                <div>
+                  <div className="flex items-baseline gap-1.5 mb-1">
+                    <span className="text-4xl font-black text-white tracking-tight">$19</span>
+                    <span className="text-sm text-gray-400 font-semibold">one time</span>
+                  </div>
+                  <p className="text-base font-black text-white tracking-tight">Decision Pass</p>
+                  <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                    Explore multiple opportunities without an ongoing commitment.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-white/10 text-gray-300 px-2.5 py-1 rounded-full border border-white/10">
+                    No subscription
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-white/10 text-gray-300 px-2.5 py-1 rounded-full border border-white/10">
+                    No recurring charge
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => !pricingActionLoading && onDecisionPassCheckout?.()}
+                  disabled={pricingActionLoading}
+                  className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wide bg-white text-gray-900 hover:bg-gray-100 transition-all duration-150 disabled:opacity-50 cursor-pointer"
+                >
+                  {pricingActionLoading ? 'Loading…' : 'Get Decision Pass — $19'}
+                </button>
+              </div>
+
+              <div className="h-px lg:h-auto lg:w-px bg-white/10 shrink-0" />
+
+              <div className="flex-1 flex flex-col gap-5">
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span><strong className="text-white">3 Business Viability Reports</strong> — demand, competition, demographics, and risks</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span><strong className="text-white">1 Market Gap Discovery Report</strong> — find underserved niches in your target market</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span>Full financial projections and analysis</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span>Competitor location mapping</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-gray-300">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                    <span>PDF export</span>
+                  </li>
+                </ul>
+
+                <p className="text-xs text-gray-400 leading-relaxed border-t border-white/10 pt-4">
+                  <strong className="text-gray-200">One payment. No subscription. No recurring charge.</strong>{' '}
+                  Perfect for evaluating a few business ideas, comparing franchise opportunities, or researching a market before deciding what to pursue.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
