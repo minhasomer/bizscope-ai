@@ -1,5 +1,5 @@
 /**
- * Analytics utility — GA4 (Google Analytics 4) + Microsoft Clarity.
+ * Analytics utility — GA4 (Google Analytics 4) + Microsoft Clarity + Meta Pixel.
  *
  * Rules:
  * - Completely disabled when VITE_GA_MEASUREMENT_ID / VITE_CLARITY_PROJECT_ID are absent.
@@ -23,15 +23,30 @@ declare global {
     dataLayer: unknown[];
     gtag: (...args: unknown[]) => void;
     clarity: (command: string, ...args: unknown[]) => void;
+    fbq: ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: unknown; loaded?: boolean; version?: string };
+    _fbq: unknown;
   }
 }
 
 // Baked in at Vite build time — empty string when variable is absent.
 const GA_ID: string = process.env.VITE_GA_MEASUREMENT_ID ?? '';
 const CLARITY_ID: string = process.env.VITE_CLARITY_PROJECT_ID ?? '';
+const META_PIXEL_ID: string = process.env.VITE_META_PIXEL_ID ?? '';
 
 let gaInitialized = false;
 let clarityInitialized = false;
+let metaPixelInitialized = false;
+let metaLeadSent = false;
+
+// Internal event name → Meta standard event. Only these funnel events reach
+// Meta; every other trackEvent call stays GA4-only. Params are never forwarded.
+const META_EVENT_MAP: Record<string, string> = {
+  sign_up: 'CompleteRegistration',
+  pricing_viewed: 'ViewContent',
+  begin_checkout: 'InitiateCheckout',
+  decision_pass_checkout_started: 'InitiateCheckout',
+  viability_report_completed: 'Lead',
+};
 
 const UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const;
 
@@ -85,6 +100,36 @@ function loadClarity(): void {
   first?.parentNode?.insertBefore(script, first);
 }
 
+// ─── Meta Pixel loader ────────────────────────────────────────────────────────
+
+function loadMetaPixel(): void {
+  if (metaPixelInitialized || !META_PIXEL_ID || !isClient()) return;
+  metaPixelInitialized = true;
+
+  // Meta's standard fbq queue stub (equivalent to the official base snippet),
+  // so calls made before fbevents.js loads are queued, not lost.
+  const fbq: any = function (...args: unknown[]) {
+    fbq.callMethod ? fbq.callMethod(...args) : fbq.queue.push(args);
+  };
+  fbq.push = fbq;
+  fbq.loaded = true;
+  fbq.version = '2.0';
+  fbq.queue = [];
+  window.fbq = fbq;
+  if (!window._fbq) window._fbq = fbq;
+
+  // autoConfig off: no automatic button-click / page-metadata collection.
+  // No advanced-matching user data is passed to init.
+  // PageView is sent manually per SPA view change in trackPageView.
+  window.fbq('set', 'autoConfig', false, META_PIXEL_ID);
+  window.fbq('init', META_PIXEL_ID);
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+  document.head.appendChild(script);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export type EventParams = Record<string, string | number | boolean>;
@@ -98,18 +143,21 @@ export function initAnalytics(): void {
   try {
     if (GA_ID) loadGA();
     if (CLARITY_ID) loadClarity();
+    if (META_PIXEL_ID) loadMetaPixel();
   } catch {
     // Non-fatal — analytics must never interrupt the app.
   }
 }
 
 /**
- * Send a manual SPA page_view to GA4.
+ * Send a manual SPA page_view to GA4 and a PageView to Meta Pixel.
  * @param viewName  Internal view name (e.g. 'pricing', 'home')
  * @param title     Human-readable page title
  */
 export function trackPageView(viewName: string, title: string): void {
-  if (!isClient() || !GA_ID) return;
+  if (!isClient()) return;
+  trackMetaEvent('PageView');
+  if (!GA_ID) return;
   try {
     const base = 'https://www.bizscope.app';
     let path: string;
@@ -141,16 +189,35 @@ export function trackPageView(viewName: string, title: string): void {
 }
 
 /**
- * Send a named event to GA4.
+ * Send a named event to GA4, and to Meta Pixel when it is a mapped funnel event.
  * Params must contain ONLY non-sensitive categorical data.
  * Never include: names, emails, user IDs, Stripe IDs, report text, prompts.
  */
 export function trackEvent(name: string, params?: EventParams): void {
-  if (!isClient() || !GA_ID) return;
+  if (!isClient()) return;
+  const metaEvent = META_EVENT_MAP[name];
+  if (metaEvent === 'Lead') {
+    // Lead = first completed report per page load, not every report.
+    if (!metaLeadSent && trackMetaEvent('Lead')) metaLeadSent = true;
+  } else if (metaEvent) {
+    trackMetaEvent(metaEvent);
+  }
+  if (!GA_ID) return;
   try {
     window.gtag('event', name, params ?? {});
   } catch {
     // Non-fatal.
+  }
+}
+
+// Sends a Meta standard event with no parameters. Returns true if sent.
+function trackMetaEvent(event: string): boolean {
+  if (!META_PIXEL_ID || !metaPixelInitialized) return false;
+  try {
+    window.fbq('track', event);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -167,8 +234,15 @@ export function isClarityEnabled(): boolean {
   return !!CLARITY_ID;
 }
 
+/** Whether Meta Pixel is active in the current build. */
+export function isMetaPixelEnabled(): boolean {
+  return !!META_PIXEL_ID;
+}
+
 /** Expose initialization state for testing. */
 export function _testOnlyResetAnalytics(): void {
   gaInitialized = false;
   clarityInitialized = false;
+  metaPixelInitialized = false;
+  metaLeadSent = false;
 }

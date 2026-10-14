@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 // ─── Set env vars BEFORE loading analytics module ─────────────────────────────
 process.env.VITE_GA_MEASUREMENT_ID = 'G-TEST123456';
 process.env.VITE_CLARITY_PROJECT_ID = 'testclarity00';
+process.env.VITE_META_PIXEL_ID = '1234567890';
 
 // ─── Browser environment mock ─────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ const {
   trackPageView,
   isAnalyticsEnabled,
   isClarityEnabled,
+  isMetaPixelEnabled,
   _testOnlyResetAnalytics,
 } = await import('../src/utils/analytics');
 
@@ -306,6 +308,106 @@ check("trackPageView('home') with no UTMs in URL → page_path is '/'", () => {
   trackPageView('home', 'BizScope');
   const pv = dl.slice(before).find((e: any) => e[0] === 'event' && e[1] === 'page_view');
   assert.equal(pv?.[2]?.page_path, '/', `Expected '/' when no UTMs present`);
+});
+
+// ─── Meta Pixel ───────────────────────────────────────────────────────────────
+
+/** Meta events tracked via fbq('track', ...) since the fbq queue was created. */
+function metaTracked(): string[] {
+  const q: any[] = (global as any).window.fbq?.queue ?? [];
+  return q.filter((a: any[]) => a[0] === 'track').map((a: any[]) => a[1]);
+}
+
+// 26.
+check('isMetaPixelEnabled() returns true when Meta Pixel ID env var is set', () => {
+  assert.equal(isMetaPixelEnabled(), true);
+});
+
+// 27.
+check('initAnalytics() inits Meta Pixel with autoConfig off and injects fbevents.js', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  const q: any[] = (global as any).window.fbq.queue;
+  assert.deepEqual(q[0], ['set', 'autoConfig', false, '1234567890']);
+  assert.deepEqual(q[1], ['init', '1234567890']);
+  assert.ok(injectedScripts.includes('https://connect.facebook.net/en_US/fbevents.js'));
+});
+
+// 28.
+check('initAnalytics() does not inject fbevents.js twice (idempotent)', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  initAnalytics();
+  assert.equal(injectedScripts.filter(s => s.includes('fbevents.js')).length, 1);
+});
+
+// 29.
+check('trackPageView() sends a Meta PageView', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  trackPageView('pricing', 'Pricing — BizScope');
+  assert.deepEqual(metaTracked(), ['PageView']);
+});
+
+// 30.
+check('trackEvent() maps funnel events to Meta standard events with no params', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  trackEvent('sign_up', { method: 'email' });
+  trackEvent('pricing_viewed');
+  trackEvent('begin_checkout', { subscription_tier: 'Pro' });
+  trackEvent('decision_pass_checkout_started', { source_page: 'pricing' });
+  assert.deepEqual(metaTracked(), ['CompleteRegistration', 'ViewContent', 'InitiateCheckout', 'InitiateCheckout']);
+  const q: any[] = (global as any).window.fbq.queue;
+  assert.ok(q.filter((a: any[]) => a[0] === 'track').every((a: any[]) => a.length === 2), 'Meta events must carry no params');
+});
+
+// 31.
+check('trackEvent() does not send unmapped events to Meta', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  trackEvent('plan_selected', { subscription_tier: 'Pro' });
+  trackEvent('market_gap_started');
+  assert.deepEqual(metaTracked(), []);
+});
+
+// 32.
+check('viability_report_completed sends Meta Lead only once per page load', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  trackEvent('viability_report_completed', { subscription_tier: 'Explorer' });
+  trackEvent('viability_report_completed', { subscription_tier: 'Explorer' });
+  assert.deepEqual(metaTracked(), ['Lead']);
+});
+
+// 33.
+check('Meta mapping does not change the GA4 event that is sent', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  const dl: any[] = (global as any).window.dataLayer;
+  const before = dl.length;
+  trackEvent('begin_checkout', { subscription_tier: 'Pro' });
+  const ga = dl.slice(before).filter((e: any) => e[0] === 'event');
+  assert.equal(ga.length, 1);
+  assert.equal(ga[0][1], 'begin_checkout');
+  assert.equal(ga[0][2]?.subscription_tier, 'Pro');
+});
+
+// 34.
+check('trackEvent() does not throw when window.fbq throws internally', () => {
+  setupMocks();
+  _testOnlyResetAnalytics();
+  initAnalytics();
+  (global as any).window.fbq = () => { throw new Error('fbq exploded'); };
+  assert.doesNotThrow(() => trackEvent('sign_up', { method: 'email' }));
+  assert.doesNotThrow(() => trackPageView('home', 'BizScope'));
 });
 
 // ─── attribution.ts ───────────────────────────────────────────────────────────

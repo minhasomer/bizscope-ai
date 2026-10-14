@@ -1588,7 +1588,7 @@ const App: React.FC = () => {
             <div className="mb-8">
               <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Legal</span>
               <h1 className="text-3xl font-black tracking-tight text-gray-900 mt-1">Privacy Policy</h1>
-              <p className="text-gray-400 text-sm mt-1">Last updated: July 2026</p>
+              <p className="text-gray-400 text-sm mt-1">Last updated: October 2026</p>
             </div>
             <div className="prose prose-sm max-w-none space-y-6 text-gray-600 leading-relaxed">
               <section>
@@ -1614,7 +1614,7 @@ const App: React.FC = () => {
                   <li>Send transactional emails (password reset, billing receipts).</li>
                   <li>Debug errors and monitor service reliability.</li>
                 </ul>
-                <p className="mt-2 text-sm">We do <strong>not</strong> sell your personal data to third parties or use it for advertising.</p>
+                <p className="mt-2 text-sm">We do <strong>not</strong> sell your personal data to third parties. We use the Meta Pixel to measure and improve our advertising on Meta platforms (see Section 6); we do not share your email address, account details, business descriptions, report content, or payment information with Meta.</p>
               </section>
               <section>
                 <h2 className="text-base font-black text-gray-900 mb-2">4. Data Storage & Security</h2>
@@ -1625,13 +1625,14 @@ const App: React.FC = () => {
                 <p className="text-sm">BizScope uses: <strong>Supabase</strong> (authentication and database), <strong>Google Gemini API</strong> (AI analysis — your query text is sent to Google's servers), <strong>Stripe</strong> (billing), and <strong>Google OAuth</strong> (sign-in). Each service operates under its own privacy policy.</p>
               </section>
               <section>
-                <h2 className="text-base font-black text-gray-900 mb-2">6. Analytics &amp; Session Recording</h2>
-                <p className="text-sm">We use the following analytics tools to understand how visitors use BizScope so we can improve the product:</p>
+                <h2 className="text-base font-black text-gray-900 mb-2">6. Analytics, Advertising &amp; Session Recording</h2>
+                <p className="text-sm">We use the following tools to understand how visitors use BizScope, improve the product, and measure our advertising:</p>
                 <ul className="list-disc list-inside space-y-1 text-sm mt-2">
                   <li><strong>Google Analytics 4 (GA4):</strong> Collects aggregated information about page views, feature usage, traffic sources, device and browser characteristics, approximate geographic location, and session activity. Google states that IP addresses may be used during collection to determine general location but are not logged or stored in Google Analytics. We do not intentionally send names, email addresses, business descriptions, report content, payment information, or BizScope account identifiers to GA4. GA4 may use cookies and similar browser technologies to distinguish users and sessions.</li>
                   <li><strong>Microsoft Clarity:</strong> Provides session replays, heatmaps, and interaction analytics that help us identify usability issues. We configure Clarity masking on authentication fields, business-description inputs, report output, saved-report information, account settings, and billing surfaces. Masked content is intended to be excluded before it is uploaded to Clarity. We do not intentionally send email addresses, business descriptions, report content, payment information, or BizScope account identifiers through custom Clarity events or identifiers.</li>
+                  <li><strong>Meta Pixel:</strong> A Meta (Facebook/Instagram) tool that records page views and a small set of actions — account sign-up, viewing pricing, starting checkout, and completing a report — so we can measure which ads bring visitors to BizScope and show relevant ads to people who have visited. Meta receives these events together with information such as your IP address, browser and device characteristics, and Meta cookies, and may link them to your Meta account if you have one. We do not send names, email addresses, business descriptions, report content, payment information, or BizScope account identifiers to Meta. Meta processes this data under its own <a href="https://www.facebook.com/privacy/policy/" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</li>
                 </ul>
-                <p className="mt-2 text-sm">You can opt out of GA4 by installing the <a href="https://tools.google.com/dlpage/gaoptout" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">Google Analytics Opt-out Browser Add-on</a>. You can opt out of Clarity by visiting <a href="https://clarity.microsoft.com/optout" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">clarity.microsoft.com/optout</a>.</p>
+                <p className="mt-2 text-sm">You can opt out of GA4 by installing the <a href="https://tools.google.com/dlpage/gaoptout" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">Google Analytics Opt-out Browser Add-on</a>. You can opt out of Clarity by visiting <a href="https://clarity.microsoft.com/optout" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">clarity.microsoft.com/optout</a>. You can control how Meta uses this data for ads in your Meta <a href="https://www.facebook.com/adpreferences/ad_settings" className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">ad preferences</a>, and you can block Meta cookies through your browser settings.</p>
               </section>
               <section>
                 <h2 className="text-base font-black text-gray-900 mb-2">7. Your Rights</h2>

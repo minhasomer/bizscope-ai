@@ -1,6 +1,6 @@
 # Analytics Setup
 
-BizScope uses **Google Analytics 4 (GA4)** and **Microsoft Clarity** for privacy-conscious product analytics. Both are fully opt-in via environment variables — the app runs normally with no analytics when the variables are absent.
+BizScope uses **Google Analytics 4 (GA4)**, **Microsoft Clarity**, and **Meta Pixel** for privacy-conscious product and ad analytics. All are fully opt-in via environment variables — the app runs normally with no analytics when the variables are absent.
 
 ---
 
@@ -83,6 +83,26 @@ Clarity is initialized via `initAnalytics()` in `App.tsx`. It loads asynchronous
 
 ---
 
+## Meta Pixel Setup
+
+1. In Meta Events Manager, create (or open) a **Web** data source / Pixel.
+2. Copy the **Pixel ID** (numeric, ~15–16 digits).
+3. Set `VITE_META_PIXEL_ID` in Vercel environment, then redeploy (it is baked in at build time).
+
+The Pixel is initialized via `initAnalytics()` with `autoConfig` disabled (no automatic button-click or page-metadata collection) and no advanced-matching user data. Only these events are sent, with **no parameters**:
+
+| Meta standard event | Source `trackEvent` / call |
+|---------------------|----------------------------|
+| `PageView` | `trackPageView()` — every SPA view change |
+| `CompleteRegistration` | `sign_up` |
+| `ViewContent` | `pricing_viewed` |
+| `InitiateCheckout` | `begin_checkout`, `decision_pass_checkout_started` |
+| `Lead` | `viability_report_completed` — first one per page load only |
+
+All other `trackEvent` calls stay GA4-only. `Purchase` is not sent client-side; it should come from the Stripe webhook via Meta Conversions API in a future change. Also disable **Automatic advanced matching** in Events Manager → Settings so Meta does not scrape form fields.
+
+---
+
 ## UTM Attribution
 
 `captureAttribution()` runs on app mount (before `initAnalytics()`). It reads `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, and `utm_term` from the URL and stores them in `sessionStorage['bizscope_attr']`.
@@ -96,7 +116,7 @@ Clarity is initialized via `initAnalytics()` in `App.tsx`. It loads asynchronous
 
 ## Prohibited Data
 
-The following must **never** be sent to GA4 or Clarity:
+The following must **never** be sent to GA4, Clarity, or Meta Pixel:
 
 - User names, email addresses, Supabase user IDs
 - Stripe customer IDs, subscription IDs, payment method IDs
