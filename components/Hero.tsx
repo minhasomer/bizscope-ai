@@ -6,6 +6,8 @@ import { filterLocationSuggestions, defaultLocationSuggestions, getGeolocationSu
 import { resolveLocationDisplay } from '../src/utils/locationUtils';
 import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/blockedCategories';
 import { trackEvent } from '../src/utils/analytics';
+import { UsageTrackerService } from '../services/usageTrackerService';
+import { StayNudge } from './StayNudge';
 
 interface HeroProps {
   onSubmit: (businessType: string, location: string) => void;
@@ -122,6 +124,13 @@ export const Hero: React.FC<HeroProps> = ({
   // Refs to handle clicking outside
   const businessRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const businessInputRef = useRef<HTMLInputElement>(null);
+
+  // Anonymous visitor who still has their one free preview — drives the
+  // "first report free" badge and the StayNudge prompts.
+  const freePreviewAvailable =
+    !authResolving && !isAuthenticated && UsageTrackerService.canRunAnonymousPreview();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -195,6 +204,25 @@ export const Hero: React.FC<HeroProps> = ({
       const displayLocation = await resolveLocationDisplay(location);
       onSubmit(businessType, displayLocation);
     }
+  };
+
+  // StayNudge submit — same validation and submit path as the form above.
+  const handleNudgeRun = async (nudgeBusiness: string, nudgeLocation: string) => {
+    setBusinessType(nudgeBusiness);
+    setLocation(nudgeLocation);
+    setBlockedError(null);
+    const check = checkBlockedCategory(nudgeBusiness);
+    if (check.matched) {
+      setBlockedError(blockedCategoryMessage(check.category));
+      return;
+    }
+    const displayLocation = await resolveLocationDisplay(nudgeLocation);
+    onSubmit(nudgeBusiness, displayLocation);
+  };
+
+  const focusHeroForm = () => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    businessInputRef.current?.focus({ preventScroll: true });
   };
 
   // Async location autocomplete state.
@@ -381,6 +409,12 @@ export const Hero: React.FC<HeroProps> = ({
 
   return (
     <>
+    <StayNudge
+      enabled={freePreviewAvailable && !hasResults && !isLoading}
+      formRef={formRef}
+      onRun={handleNudgeRun}
+      onEnterOwnIdea={focusHeroForm}
+    />
     <div className={`relative ${heightClass} bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] flex items-center justify-center`}>
         {/* Background Graphics - Absolute positioning */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -410,12 +444,19 @@ export const Hero: React.FC<HeroProps> = ({
                     For Startups, Franchises &amp; Local Markets
                 </p>
 
+                {freePreviewAvailable && !hasResults && (
+                  <p className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-300/30 text-emerald-200 text-sm font-semibold">
+                    <span aria-hidden="true">✓</span>
+                    Your first report is free · no account needed
+                  </p>
+                )}
+
                 <p className="text-base md:text-lg text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
                     Evaluate startups, franchises, and local markets with structured AI-powered research.
                 </p>
 
                 {/* Input Form */}
-                <form onSubmit={handleSubmit} className="max-w-2xl mx-auto mb-8 relative">
+                <form ref={formRef} onSubmit={handleSubmit} className="max-w-2xl mx-auto mb-8 relative">
                     <div className="bg-white/[0.07] backdrop-blur-md rounded-2xl p-5 md:p-7 border border-white/[0.1] shadow-2xl">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5" data-clarity-mask="True">
                             {/* Business Type Input */}
@@ -424,6 +465,7 @@ export const Hero: React.FC<HeroProps> = ({
                                     Business or franchise idea
                                 </label>
                                 <input
+                                    ref={businessInputRef}
                                     type="text"
                                     value={businessType}
                                     onChange={(e) => handleBusinessChange(e.target.value)}
