@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../src/utils/analytics';
+import { chatEnabled } from '../src/config/appConfig';
 
 /**
  * Bounce-reduction prompts for anonymous visitors who still have their free preview:
@@ -143,7 +144,8 @@ export const StayNudge: React.FC<StayNudgeProps> = ({ enabled, formRef, onRun, o
   return (
     <>
       {barVisible && !nudgeOpen && (
-        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-3 print:hidden">
+        // When the floating chat button (bottom-6 right-6, h-14) is on, sit above it instead of under it.
+        <div className={`md:hidden fixed bottom-0 inset-x-0 z-40 px-3 print:hidden ${chatEnabled ? 'pb-[88px]' : 'pb-3'}`}>
           <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur border border-white/10 rounded-2xl shadow-2xl pl-4 pr-2 py-2">
             <p className="flex-1 text-sm text-white font-semibold leading-tight">
               Your first report is free
