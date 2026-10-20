@@ -8,6 +8,7 @@ import { checkBlockedCategory, blockedCategoryMessage } from '../src/utils/block
 import { trackEvent } from '../src/utils/analytics';
 import { UsageTrackerService } from '../services/usageTrackerService';
 import { StayNudge } from './StayNudge';
+import { Testimonials } from './Testimonials';
 
 interface HeroProps {
   onSubmit: (businessType: string, location: string) => void;
@@ -437,22 +438,15 @@ export const Hero: React.FC<HeroProps> = ({
         <div className="relative z-10 w-full px-4">
             <div className="max-w-4xl mx-auto text-center">
                 {/* Main Headline */}
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-2 leading-tight tracking-tight">
-                    Validate a Business Idea Before You Invest
+                <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
+                    Gut Feelings Don’t Build Successful Businesses.
+                    <span className="block text-indigo-300">Data Does.</span>
                 </h1>
-                <p className="text-lg sm:text-xl font-bold text-indigo-300 mb-5">
-                    For Startups, Franchises &amp; Local Markets
-                </p>
-
-                {freePreviewAvailable && !hasResults && (
-                  <p className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-300/30 text-emerald-200 text-sm font-semibold">
-                    <span aria-hidden="true">✓</span>
-                    Your first report is free · no account needed
-                  </p>
-                )}
-
-                <p className="text-base md:text-lg text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-                    Evaluate startups, franchises, and local markets with structured AI-powered research.
+                <p className="text-lg sm:text-xl text-slate-200 mb-8 max-w-2xl mx-auto leading-relaxed">
+                    Know if your idea will work before you spend a cent.
+                    {freePreviewAvailable && !hasResults && (
+                      <span className="font-bold text-emerald-300"> First report is free.</span>
+                    )}
                 </p>
 
                 {/* Input Form */}
@@ -713,6 +707,8 @@ export const Hero: React.FC<HeroProps> = ({
     {/* ── Below-hero sections — hidden once a report is in progress ── */}
     {!hasResults && (
       <>
+        <Testimonials />
+
         {/* Demo video section */}
         <section id="demo" className="bg-gradient-to-br from-[#0a0f1e] via-[#1e1b4b] to-[#0a0f1e] py-14 sm:py-16 border-t border-white/10">
           <div className="max-w-4xl mx-auto px-4 text-center">
