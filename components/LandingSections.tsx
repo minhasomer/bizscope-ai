@@ -196,3 +196,85 @@ export const HomeFAQ: React.FC = () => (
     <FAQSection faqs={HOME_FAQS} title="Questions before you try it" />
   </div>
 );
+
+// ── Above-the-fold hero additions ─────────────────────────────────────────────
+
+const PROOF_POINTS = ['Verdict, competitors & startup costs', 'About 1 minute', 'Google Maps + US Census data'];
+
+/** One-glance answer to "what do I get, how long, is it real?" — sits under the hero button. */
+export const HeroProofLine: React.FC = () => (
+  <ul className="flex flex-wrap justify-center gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] sm:text-sm text-slate-200">
+    {PROOF_POINTS.map((p) => (
+      <li key={p} className="flex items-center gap-1.5">
+        <Check className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+        {p}
+      </li>
+    ))}
+  </ul>
+);
+
+interface HeroExampleProps {
+  onNavigate?: (page: string) => void;
+}
+
+/**
+ * Shows what a result looks like without scrolling.
+ *  - Below xl: a compact one-row strip under the form.
+ *  - xl and up: a small card absolutely positioned to the right of the form (no layout shift).
+ */
+export const HeroExample: React.FC<HeroExampleProps> = ({ onNavigate }) => {
+  const assessment = viabilityScoreToAssessment(EXAMPLE.viabilityScore);
+  const openSamples = onNavigate
+    ? () => { trackEvent('hero_example_click'); onNavigate('samples'); }
+    : undefined;
+  return (
+    <>
+      {/* Compact strip (phones, tablets, small laptops) */}
+      <button
+        type="button"
+        onClick={openSamples}
+        className="xl:hidden mx-auto mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-2 rounded-xl bg-white/[0.06] border border-white/10 text-xs text-slate-300 hover:bg-white/[0.1] cursor-pointer"
+      >
+        <span className="text-slate-400">Example:</span>
+        <span className="font-semibold text-white">{EXAMPLE.businessType}, {EXAMPLE.location}</span>
+        <span className="flex items-center gap-1 font-bold text-emerald-300">
+          <AssessmentDot color={assessment.dotColor} variant={assessment.indicatorVariant} size={10} />
+          {assessment.label}
+        </span>
+        <span className="text-slate-400">· {EXAMPLE.startupCost} to start</span>
+      </button>
+
+      {/* Side card (wide desktop) */}
+      <aside className="hidden xl:block absolute left-full top-0 ml-6 w-60 text-left rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Example result</span>
+          <p className="text-sm font-black text-slate-900 leading-tight">{EXAMPLE.businessType}</p>
+          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {EXAMPLE.location}</p>
+        </div>
+        <div className="px-4 py-3 border-b border-slate-100">
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${assessment.bgClass} ${assessment.borderClass}`}>
+            <AssessmentDot color={assessment.dotColor} variant={assessment.indicatorVariant} size={12} />
+            <span className={`text-[10px] font-black uppercase tracking-wide ${assessment.colorClass}`}>{assessment.label}</span>
+          </div>
+        </div>
+        <div className="px-4 py-3 space-y-1.5 border-b border-slate-100">
+          {[
+            { label: 'Startup cost', value: EXAMPLE.startupCost },
+            { label: 'Year 1 revenue', value: EXAMPLE.year1Revenue },
+            { label: 'Break-even', value: EXAMPLE.breakEven },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-500">{label}</span>
+              <span className="text-xs font-bold text-slate-900">{value}</span>
+            </div>
+          ))}
+        </div>
+        {openSamples && (
+          <button type="button" onClick={openSamples} className="w-full px-4 py-2.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 text-left cursor-pointer">
+            See sample reports →
+          </button>
+        )}
+      </aside>
+    </>
+  );
+};

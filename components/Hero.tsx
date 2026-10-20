@@ -8,7 +8,7 @@ import { trackEvent } from '../src/utils/analytics';
 import { UsageTrackerService } from '../services/usageTrackerService';
 import { StayNudge } from './StayNudge';
 import { Testimonials } from './Testimonials';
-import { WhatYouGet, HowItWorks, BuiltFor, HomeFAQ } from './LandingSections';
+import { WhatYouGet, HowItWorks, BuiltFor, HomeFAQ, HeroProofLine, HeroExample } from './LandingSections';
 
 interface HeroProps {
   onSubmit: (businessType: string, location: string) => void;
@@ -676,11 +676,13 @@ export const Hero: React.FC<HeroProps> = ({
                                   </>
                                 )}
                             </button>
+                            {!hasResults && <HeroProofLine />}
                             <span className="text-sm text-slate-200 font-medium text-center">
                                 {getPlanAccessLabel(currentPlan)}
                             </span>
                         </div>
                     </div>
+                    {!hasResults && <HeroExample onNavigate={onNavigate} />}
                 </form>
 
                 {/* Blocked category error */}
