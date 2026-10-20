@@ -5,8 +5,9 @@ import { chatEnabled } from '../src/config/appConfig';
 
 /**
  * Bounce-reduction prompts for anonymous visitors who still have their free preview:
- *  - Sticky bottom bar on small screens, shown once the visitor scrolls past the
- *    form, that jumps back to it.
+ *  - Sticky "Try it free" CTA, shown once the visitor scrolls past the form, that
+ *    jumps back to it: a full-width bottom bar on small screens, a compact pill
+ *    in the bottom-left corner on desktop (the chat button sits bottom-right).
  *  - "Before you go" nudge, shown once per session: on desktop when the pointer
  *    leaves through the top of the window (exit intent); on touch devices after
  *    INACTIVITY_MS without the visitor touching the form (most mobile traffic is
@@ -144,9 +145,10 @@ export const StayNudge: React.FC<StayNudgeProps> = ({ enabled, formRef, onRun, o
   return (
     <>
       {barVisible && !nudgeOpen && (
-        // When the floating chat button (bottom-6 right-6, h-14) is on, sit above it instead of under it.
-        <div className={`md:hidden fixed bottom-0 inset-x-0 z-40 px-3 print:hidden ${chatEnabled ? 'pb-[88px]' : 'pb-3'}`}>
-          <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur border border-white/10 rounded-2xl shadow-2xl pl-4 pr-2 py-2">
+        // Mobile: full width; with the floating chat button (bottom-6 right-6, h-14) on, sit above it.
+        // Desktop: compact pill in the bottom-left corner, clear of the chat button.
+        <div className={`fixed bottom-0 inset-x-0 z-40 px-3 print:hidden ${chatEnabled ? 'pb-[88px]' : 'pb-3'} md:inset-x-auto md:left-6 md:bottom-6 md:px-0 md:pb-0`}>
+          <div className="flex items-center gap-2 md:gap-3 bg-slate-900/95 backdrop-blur border border-white/10 rounded-2xl shadow-2xl pl-4 pr-2 py-2">
             <p className="flex-1 text-sm text-white font-semibold leading-tight">
               Your first report is free
               <span className="block text-xs text-slate-300 font-normal">No signup needed</span>
