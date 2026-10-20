@@ -164,7 +164,7 @@ const App: React.FC = () => {
   // This covers initial load, navigate() calls, and browser back/forward.
   useEffect(() => {
     const VIEW_TITLES: Record<string, string> = {
-      home:           'BizScope — AI-Powered Business Viability Analysis',
+      home:           'BizScope — Know If Your Business Idea Will Work Before You Spend a Cent',
       pricing:        'Pricing — BizScope',
       opportunities:  'Market Gap Explorer — BizScope',
       dashboard:      'Reports Dashboard — BizScope',

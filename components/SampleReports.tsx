@@ -19,7 +19,7 @@ interface SampleCard {
   insight: string;
 }
 
-const SAMPLES: SampleCard[] = [
+export const SAMPLES: SampleCard[] = [
   {
     businessType: 'Urgent Care Clinic',
     location: 'Gurnee, IL',

@@ -44,6 +44,21 @@ check('subheadline "Know if your idea will work before you spend a cent." is pre
   );
 });
 
+check('landing sections (what you get, how it works, who it is for, FAQ) render below the hero', () => {
+  for (const tag of ['<WhatYouGet', '<HowItWorks', '<BuiltFor', '<HomeFAQ']) {
+    assert.ok(heroSrc.includes(tag), `${tag} not rendered in Hero.tsx`);
+  }
+});
+
+check('homepage FAQ questions all exist in the verified FAQ content', () => {
+  const landingSrc = fs.readFileSync(path.join(repoRoot, 'components', 'LandingSections.tsx'), 'utf8');
+  const faqSrc = fs.readFileSync(path.join(repoRoot, 'src', 'data', 'faqContent.ts'), 'utf8');
+  const block = landingSrc.slice(landingSrc.indexOf('HOME_FAQ_QUESTIONS = ['), landingSrc.indexOf('];', landingSrc.indexOf('HOME_FAQ_QUESTIONS')));
+  const questions = [...block.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  assert.equal(questions.length, 6, 'expected 6 homepage FAQ questions');
+  for (const q of questions) assert.ok(faqSrc.includes(`question: '${q}'`), `FAQ question missing from faqContent.ts: ${q}`);
+});
+
 // ── 2. Old clutter strings absent from Hero ───────────────────────────────────
 
 const REMOVED_STRINGS: Array<[string, string]> = [
