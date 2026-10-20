@@ -437,6 +437,11 @@ export const Hero: React.FC<HeroProps> = ({
 
         <div className="relative z-10 w-full px-4">
             <div className="max-w-4xl mx-auto text-center">
+                {/* Audience label */}
+                <p className="text-[11px] tracking-[0.04em] sm:text-sm sm:tracking-[0.18em] font-bold uppercase text-indigo-300 mb-3">
+                    Startups · Franchises · Local businesses
+                </p>
+
                 {/* Main Headline */}
                 <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
                     Gut Feelings Don’t Build Successful Businesses.
