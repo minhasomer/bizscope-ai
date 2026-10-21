@@ -1443,7 +1443,7 @@ const OpportunityDossierModal: React.FC<{
               {!isAuthenticated ? (
                 <>
                   <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-                    Create a free account to unlock the complete business analysis — market breakdown, competitive landscape, financial projections, and risk assessment.
+                    The complete business analysis — market breakdown, competitive landscape, financial projections, and risk assessment — comes with Pro. Create a free account to get started.
                   </p>
                   <button
                     onClick={onSignIn}
