@@ -36,7 +36,8 @@ import { BestBusinessesTemplate } from './components/seo/BestBusinessesTemplate'
 import { BusinessViabilityTemplate } from './components/seo/BusinessViabilityTemplate';
 import { FranchiseOpportunitiesTemplate } from './components/seo/FranchiseOpportunitiesTemplate';
 import { MarketGapsTemplate } from './components/seo/MarketGapsTemplate';
-import { SampleReports } from './components/SampleReports';
+import { SampleReports, SAMPLES } from './components/SampleReports';
+import { SampleReportPage } from './components/SampleReportPage';
 import { ReportSummaryCard } from './components/ReportSummaryCard';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { BizScopeChatButton } from './src/components/chat/BizScopeChatButton';
@@ -180,7 +181,10 @@ const App: React.FC = () => {
       about:          'About BizScope',
       faq:            'FAQ — Business Analysis & Market Research | BizScope',
     };
-    const title = VIEW_TITLES[currentView] ?? 'BizScope';
+    const sample = SAMPLES.find((s) => `sample-${s.slug}` === currentView);
+    const title = sample
+      ? `${sample.businessType} in ${sample.location} — Real BizScope Report`
+      : VIEW_TITLES[currentView] ?? 'BizScope';
     trackPageView(currentView, title);
     // pricing_viewed and decision_pass_viewed fire once per navigation to pricing.
     if (currentView === 'pricing') {
@@ -1206,6 +1210,11 @@ const App: React.FC = () => {
           onAccepted={(timestamp) => setCurrentUser({ ...currentUser, tos_accepted_at: timestamp })}
         />
       );
+    }
+
+    // Public sample report pages: ?view=sample-<slug>
+    if (activeView.startsWith('sample-')) {
+      return <SampleReportPage slug={activeView.slice('sample-'.length)} onNavigate={navigate} />;
     }
 
     switch (activeView) {

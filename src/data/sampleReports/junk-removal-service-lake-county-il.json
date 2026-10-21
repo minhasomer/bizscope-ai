@@ -1,0 +1,574 @@
+{
+  "businessType": "Junk Removal Service",
+  "location": "Lake County, IL",
+  "viabilityScore": 58,
+  "scoreBreakdown": {
+    "marketDemand": 65,
+    "competitionIntensity": 60,
+    "financialFeasibility": 55,
+    "riskLevel": 50
+  },
+  "executiveSummary": "The Lake County, IL market presents a viable opportunity for a new junk removal service, driven by a growing population, high median household income, and increasing consumer awareness for decluttering and eco-friendly disposal. While the market has established competitors, there is consistent demand from both residential and commercial sectors, particularly with ongoing real estate activity and a preference for convenient, on-demand services. Success will hinge on effective differentiation through strong customer service, transparent pricing, and a clear commitment to sustainable practices. Initial startup costs are manageable, and the business model demonstrates solid profitability potential with efficient operations and strategic marketing.",
+  "financialProjections": {
+    "summary": "A junk removal service in Lake County, IL, can achieve profitability within 1-2 years, with strong revenue potential driven by consistent demand. Managing disposal costs and optimizing operational efficiency will be crucial for maximizing profit margins.",
+    "startupCostRange": "$4,900\n\n$49,000",
+    "startupCostBreakdown": "Startup costs for a junk removal business in Lake County, IL, can range from a lean operation with a used truck and solo operator to a more comprehensive setup with a dump truck, trailer, and employees. Key expenses include vehicle acquisition, insurance, permits, basic equipment, and initial disposal fees.",
+    "startupCostItems": [
+      {
+        "category": "Vehicle (used pickup/cargo van/box truck)",
+        "amount": "$4,900\n\n$29,400"
+      },
+      {
+        "category": "Insurance (General Liability & Commercial Auto)",
+        "amount": "$1,675\n\n$4,425",
+        "notes": "Annual estimates"
+      },
+      {
+        "category": "Local Business License & Hauler Permits",
+        "amount": "$100\n\n$500",
+        "notes": "Varies by municipality/county"
+      },
+      {
+        "category": "Equipment & Tools",
+        "amount": "$300\n\n$1,475",
+        "notes": "Dollies, straps, tarps, safety gear"
+      },
+      {
+        "category": "Initial Disposal Fees/Deposit",
+        "amount": "$100\n\n$500",
+        "notes": "Estimate for initial loads/deposit at transfer stations"
+      },
+      {
+        "category": "Working Capital Reserve",
+        "amount": "$5,000\n\n$10,000",
+        "notes": "For initial operating expenses and unexpected costs"
+      }
+    ],
+    "revenueYear1": "$100,000\n\n$180,000",
+    "revenueYear3": "$250,000\n\n$400,000",
+    "breakEvenTime": "12-18 months",
+    "roiTime": "2-3 years",
+    "profitMargin": "15%-25%",
+    "scalability": "Medium",
+    "keyStats": [
+      {
+        "label": "Average Job Price",
+        "value": "$98\n\n$588"
+      },
+      {
+        "label": "Jobs per Vehicle per Day (Franchise Average)",
+        "value": "3.8"
+      },
+      {
+        "label": "Residential Market Share",
+        "value": ">63%"
+      },
+      {
+        "label": "Consumers preferring eco-friendly services",
+        "value": ">70%"
+      }
+    ],
+    "startupSpaceContext": {
+      "buildOutIntensity": "Low",
+      "monthlyRent": "$1,000\n\n$2,500/month",
+      "sqft": "500\n\n1,000 sq ft"
+    }
+  },
+  "competitionAnalysis": {
+    "summary": "The Lake County, IL market for junk removal services is competitive, with several established local and regional players. While this indicates a validated market, a new entrant will need to differentiate effectively to capture market share. Competitors emphasize community commitment, transparent pricing, and eco-friendly disposal.",
+    "competitors": [
+      {
+        "name": "Two Men and a Junk Truck",
+        "details": "An established junk removal service operating in the Gurnee area.",
+        "address": "1350 Tri State Pkwy Ste 114, Gurnee, IL 60031",
+        "latitude": 42.3688,
+        "longitude": -87.9065
+      },
+      {
+        "name": "Junkies Junk Removal",
+        "details": "A local junk removal service based in Wauconda.",
+        "address": "535 S Main St Ste D3, Wauconda, IL 60084",
+        "latitude": 42.2741,
+        "longitude": -88.1345
+      },
+      {
+        "name": "Northwest Junk Hauling & Removal",
+        "details": "Serving the McHenry area, offering hauling and removal services.",
+        "address": "418 Magnolia Ave, McHenry, IL 60051",
+        "latitude": 42.3414,
+        "longitude": -88.2612
+      },
+      {
+        "name": "Butterfly junk removal LLC",
+        "details": "A junk removal service located in Round Lake Beach.",
+        "address": "93 E Shorewood Dr, Round Lake Beach, IL 60073",
+        "latitude": 42.3923,
+        "longitude": -88.0837
+      },
+      {
+        "name": "On Demand Junk Removal, LLC",
+        "details": "An on-demand junk removal service operating from Algonquin.",
+        "address": "1520 Arquilla Dr, Algonquin, IL 60102",
+        "latitude": 42.1648,
+        "longitude": -88.2932
+      }
+    ]
+  },
+  "marketTrends": {
+    "summary": "The junk removal market in Lake County, IL, is experiencing robust growth, driven by urbanization, increased consumer awareness, and significant real estate activity. Key trends include a strong residential demand, a preference for eco-friendly and on-demand services, and an impact from e-commerce packaging waste.",
+    "trends": [
+      {
+        "trend": "Growing Demand",
+        "impact": "Increased urbanization, consumer awareness, and higher disposable incomes are driving demand for efficient waste management solutions, particularly for decluttering homes."
+      },
+      {
+        "trend": "Residential Dominance",
+        "impact": "The residential sector accounts for the largest revenue share, with over 63% of households generating bulky waste at least twice a year, indicating consistent demand."
+      },
+      {
+        "trend": "Eco-Friendly Practices",
+        "impact": "Over 70% of consumers prefer services prioritizing recycling and responsible disposal, creating an opportunity for businesses to differentiate through sustainable methods."
+      },
+      {
+        "trend": "On-Demand Services",
+        "impact": "Demand for convenient, on-demand services is rising, with mobile app platforms seeing increased user engagement, suggesting a need for flexible scheduling."
+      },
+      {
+        "trend": "E-commerce Impact",
+        "impact": "The expansion of e-commerce leads to more packaging waste, creating an additional segment for junk removal services to address."
+      },
+      {
+        "trend": "Seasonal Peaks",
+        "impact": "Demand spikes during spring cleaning (April-September), moving seasons, and post-holiday periods, offering predictable high-volume opportunities."
+      }
+    ]
+  },
+  "demographicInsights": {
+    "summary": "Lake County, IL, presents a strong demographic profile for a junk removal service, characterized by a large and growing population with a high median household income. This indicates a significant customer base with the financial capacity to utilize professional decluttering and waste removal services.",
+    "demographics": [
+      {
+        "metric": "Projected Population (2026)",
+        "value": "719,416",
+        "insight": "A large and growing population base ensures a broad potential customer pool for junk removal services."
+      },
+      {
+        "metric": "Current Population (2024)",
+        "value": "714,223",
+        "insight": "Lake County is the 3rd most populated county in Illinois, signaling substantial market size."
+      },
+      {
+        "metric": "Median Household Income (2024)",
+        "value": "$110,416",
+        "insight": "High disposable income suggests residents can afford professional junk removal services, supporting premium pricing."
+      },
+      {
+        "metric": "Median Household Income (2020-2024)",
+        "value": "$110,400",
+        "insight": "Consistent high income levels over time indicate a stable and affluent customer base."
+      }
+    ]
+  },
+  "riskAssessment": {
+    "summary": "While the market is promising, a new junk removal service in Lake County, IL, faces several risks, including intense competition, operational challenges, and fluctuating disposal costs. Proactive mitigation strategies are essential for long-term success.",
+    "risks": [
+      {
+        "risk": "High Competition Intensity",
+        "impact": "Multiple established competitors could make customer acquisition challenging and put pressure on pricing, potentially limiting market share for a new entrant.",
+        "severity": "Medium",
+        "mitigation": "Differentiate through superior customer service, transparent pricing, eco-friendly practices, and targeted marketing to underserved niches or specific geographic areas."
+      },
+      {
+        "risk": "Fluctuating Disposal Costs",
+        "impact": "Unpredictable landfill fees or transfer station charges can erode profit margins if not accurately factored into pricing and managed efficiently.",
+        "severity": "Medium",
+        "mitigation": "Establish relationships with multiple disposal sites, negotiate favorable rates, and implement dynamic pricing models that account for disposal cost variations. Prioritize recycling and donation to reduce landfill volume."
+      },
+      {
+        "risk": "Operational Inefficiencies",
+        "impact": "Poor route planning, inefficient loading, or vehicle breakdowns can lead to increased fuel costs, labor expenses, and customer dissatisfaction.",
+        "severity": "Medium",
+        "mitigation": "Invest in reliable vehicles, implement route optimization software, provide thorough staff training on efficient loading and safety, and establish a preventative maintenance schedule."
+      },
+      {
+        "risk": "Permit and Regulatory Compliance",
+        "impact": "Failure to obtain necessary local permits (e.g., SWALCO hauler permit) or improper handling of certain waste types can lead to fines and operational shutdowns.",
+        "severity": "Low",
+        "mitigation": "Thoroughly research and obtain all required local, county, and state permits before launching. Stay updated on waste disposal regulations and ensure staff are trained on compliance."
+      },
+      {
+        "risk": "Customer Acquisition Challenges",
+        "impact": "Without a strong brand presence, attracting initial customers can be difficult and costly, impacting early revenue and cash flow.",
+        "severity": "Medium",
+        "mitigation": "Develop a robust digital marketing strategy (SEO, local ads), leverage social media, offer introductory promotions, and build strong local partnerships (real estate agents, contractors)."
+      }
+    ]
+  },
+  "successFactors": {
+    "summary": "Success for a new junk removal service in Lake County, IL, will depend on a combination of strategic positioning, operational excellence, and strong customer focus. Emphasizing key differentiators will be crucial in a competitive market.",
+    "factors": [
+      {
+        "factor": "Exceptional Customer Service",
+        "description": "Providing prompt, reliable, and courteous service from booking to job completion will build trust and generate positive reviews and referrals.",
+        "importance": "Critical"
+      },
+      {
+        "factor": "Transparent and Competitive Pricing",
+        "description": "Clear, upfront pricing without hidden fees will attract customers and build confidence in a market where pricing can vary significantly.",
+        "importance": "High"
+      },
+      {
+        "factor": "Eco-Friendly Disposal Practices",
+        "description": "Highlighting a commitment to recycling, donating, and responsible waste management aligns with consumer preferences and provides a strong competitive advantage.",
+        "importance": "High"
+      },
+      {
+        "factor": "Efficient Operations and Logistics",
+        "description": "Optimizing routes, managing disposal costs effectively, and maintaining reliable equipment will ensure profitability and operational smoothness.",
+        "importance": "Critical"
+      },
+      {
+        "factor": "Strong Local Marketing and Partnerships",
+        "description": "Building a visible local presence through online marketing, community engagement, and collaborations with real estate agents, contractors, and property managers.",
+        "importance": "Medium"
+      }
+    ]
+  },
+  "recommendation": {
+    "decision": "Caution Advised",
+    "reasoning": "The Lake County, IL market for junk removal services is attractive due to its affluent and growing population, indicating a consistent demand for decluttering and waste management. However, the presence of several established direct competitors, some with strong local recognition, suggests that a new entrant will face significant competitive pressure. While there's a clear preference for eco-friendly and on-demand services, which can be leveraged for differentiation, the core demand appears to be largely met by existing operators. Success will require a highly strategic approach to marketing, operational efficiency, and a compelling value proposition to carve out market share rather than tapping into significant unmet demand. The opportunity exists, but it is not without substantial challenges in customer acquisition and differentiation within an already serviced market."
+  },
+  "methodology": "This viability report was developed using a comprehensive analysis of provided data, including specific competitor information from Google Maps, and market trends and demographic insights from Google Search for Lake County, IL. Financial benchmarks were derived from industry averages for junk removal services in Illinois. The viability score was calculated based on a weighted formula considering market demand, competition intensity, financial feasibility, and risk level. Qualitative assessments were made by an expert business consultant and financial analyst.",
+  "targetCoordinates": {
+    "latitude": 42.4047,
+    "longitude": -87.9402
+  },
+  "groundingSources": [
+    {
+      "title": "illinois-demographics.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH8RzKjWCFMoJpKoXXj3HXEqvAxASjgFF_AXw_uwjXOAlj9yk6GNlSKu51fmdJyWZMHDIisBDbdOPfWeqMHnyRF20c_0KAq37vUllVnGdQz6MylutsbWH2fmiS6-zvpyvciA3S-8J_vmB4MjrCIJzVqREAeHC9YmSkJ"
+    },
+    {
+      "title": "usafacts.org",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHb8EMWyvxSFWUDYb2i_ZBEDcsaP46DTMzjwWqkQjgsTzalvHi1XcZ2rk6iMrByq2hYHOlkmkS022z6sPBB2zUNIpeP6tTdHuyDq-f_NnkrWzcVr4WauWLSclB6SIr7oeBk0GiyI-USR36-k9sAdo-bteKNolWBdzR-TaIUVuzXeFMHbQ8uJfPABcCqzWGAupWkTbo="
+    },
+    {
+      "title": "sectordatainsights.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGbRKSkhlvkZK7bNzU5kplfwyjhFJzDodLJyGCEOAWdPLEVhiihjnnMR-ZLE2Ek8BO82YcgHIJiViGiP3Tx03iSPR5KnxpE1Ls_rusOmEmnoa-deI7cJBwTk2mWaTuMGe5KSBR5Th3QGlrTOCKaUDhQLdcyj5kHaw3FquFm2AOA"
+    },
+    {
+      "title": "openpr.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEHMV5e4826544AToxyFCBmhw_eTDm0xLC9zbideRBQqXTy0Y5aAdR0fNNGEEt278u8tS4UTFZ8O8TYN22yjNh-a6g_WIyFNew_u_4qtmGDuIVxW4EATbDXF_hyW0FTQdyYK0YOEYZSX_ZSiyN_hmvSSceVScZ7i-hpDGxBmfiFLGStQmI860hbzHJKOtuAqwLjjUIDw_FLnzn0mSlw7Q=="
+    },
+    {
+      "title": "marketreportsworld.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEzk7xnRMvxV1CnP9k_FwLM6I5IbljvSIdZslp3SOZNs-JrL-Ne5R0o0pkl3A8THhFC06bZt5kFisGHHQlW4XOq-S1Nu3-77lnGdUTrl1bvC2gKYVMYiMBhDOXjzEQ-SshH6BOavek5wnQwBueBtSchdzjgHW0GBWFZS8VmB-fKw1ggsvvbRcQwrWiBWdBLVQafKWM="
+    },
+    {
+      "title": "thunderwolfhauling.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEjoHvyKw0bVNeceNV_5sDhladhwXmACM2LA-xCNucv5jSbSEvFaM4YV1-MtKBH0D5YVA_RPPqMbvIO_umLKAFpV6cOgx3b_W1L67lvViWJlUNct2aqSN-gZj0="
+    },
+    {
+      "title": "lakejunk.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEhTm8udlbnVnxSZNlIvXuVllXP5NJ6X6KKhhXWRwt7LVdxLs_DAzm1I7N1Bvkw39nvRwhJb5xGS0MGD9GTaRxk-SUn4LoTQfEHF-AXTKshiQ=="
+    },
+    {
+      "title": "99calls.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQERCx_yNwhMdo48Dc3ShbpN4byS9VxpaSK6SeJgMBA4mFNqM3DA6JzgKy-gzTHkKy1QS_FtU2GV01ydjkSm-68y6StwdMJNlzem282O0nurEKttnaVDP7NqEd0ijRrhX5Ll0w_YNWo1wUyM9YTYhcx_wyKzYM6PgLQ="
+    },
+    {
+      "title": "ondemandjunkremovalllc.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG1MXz0YL8bP0kFU2RyqBHlF1MCgbQr0EVQkM_yHPlpnwDsCELybruOOgJgSBW4lVj6RQThGxQl1tDrPrjV6M3_oEXGrqj2YuREXxQb0-fhfnsoVWlwBldYyeuAjle7kXL5DQ=="
+    },
+    {
+      "title": "collegehunkshaulingjunk.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFYCkzljHmmBqjqaAi-EjDixs5zPrphOkM8YU6y2XQg03tR-zNoSFmkPq0c-Fj06naFXW1BS7fONe1K-Q7bmgUne0haCeRasa0AQTnQYxCYUd9F8GSLxYykVKnsCubYBN4ybn_Xl_7O_0ny_zl9zPk="
+    },
+    {
+      "title": "1800gotjunk.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFLIZ8sDgJSWdkZS1ZTWiYiGYKVml2gL3mOCwvbRSocA6hiipaZl1cZUSs1sfiEqJ6f7pqFjSkm6uVwhsuLxyFNZ0TATHHbM548HjUzZU_8UgduiEnNpgkxy8Vup4YAaYv8bEHOz0Ug5BKejTjSOFNaKrUlGW5Sv-m20ivHlv38LVPJWXcGTOhU58vAbtvviA=="
+    },
+    {
+      "title": "ridtherubbishtoday.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHHUsav4c35mcg_AoyiehpAFTDjGzfs5kg2gIXGKxMcDMmWkZxBhL3chOQkMhIrNMPQ8EbVJW7bobrqBpyvkA-14Ee68MKezpaMB93vu-LnBXjehf1yHv9tyzbYTvYsvhz6fwY4sQJ37X4ifjzoiQNiPcnTIS0SW2uyDOr7jEwKKBkt"
+    },
+    {
+      "title": "bbb.org",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH-Lmveyr5AC3b0mxSSqJuIV3tsP0XT9-I-rWFMe9mjL5Pn7sMer68HsqsuqGJX3LEDmaEoiHh4l-9LuEFc4WY2rV3j3i4oHPQB13uJrrkPg9JaC8WmAdnypiCbZiK5v3RR4QYJZ8qTWWUsy5ZnAmpc0o2_zoVoWcXYCWzZrqsW"
+    },
+    {
+      "title": "junkiesjunkremoval.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGHMtg3esXt3sVoDyENcPYikBTY_ntsYwzsRR4DJjh6QD9PM2vVKWMM7wPhudyW2NJBb49nMdL2Kg5LZAetOIZ3joGd6nWQyeiXnfxg-5pqkcojheshrbUxLxmxrAqiblVwSY8nLxXgbS5ApmX6kQ=="
+    },
+    {
+      "title": "angi.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPMP-Iq5KPFHYGwGE4XQ3Igx_RaODnNeRtKeh5o_7BD9YozD6W7kkrB3wJCyfkD-p_0caftDtZnkiiGxeej-u2GZWtRDochNz7BpqwX7Aco7Gj0_A7xZqlQlnHmBLgsUB-cMyCs241W_ywHJyJ9gVXxDmJaTqW8Vu7SmHIkCl0TWzCBiyMQzrVnfoPQ1qNMaOFyy8sQnGah-fJaSnX"
+    },
+    {
+      "title": "startcosts.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHcgkzGUIzb_nv4NzWFy2XJ31TvnMiWpTS97mP5AgbdRtUIMcXfRfgzhkOf67kNZLtWxRtSkjVeIzXiWiZ_bTlYuMNmV6fSM4-yybW_dr2UBUNeifFhENWpqJgiC1hDJ2b3W7F1tVSq"
+    },
+    {
+      "title": "gushwork.ai",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG2kuOKB8RCSEGvQc08CbMKoxMF2ZnaieWlDzgBJv9jTarRm_p-INLC_eb6RUg-Mx0TlXs0QW119L_YJSGD-8bRuJnYPV4NjNPVl8tNNAEl4z_d08m1TcOSEjbPR9gbDp7eAkAgCtrrLEDeGDa6gf0jOHwO6fTv-b2dAA=="
+    },
+    {
+      "title": "yoracleaning.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFXmuEEEG3gtMlOO4_dXoovCxdSikxJwaSOp_iQWVbv3z22JvU2knJDWviHBrnWyTl1oAnzgci8nhB3pTf-Y1HQc3KIWyOabUayG48iCH4O3IUr6cW2n07qsmqycC57c8rxRAHLcZm7enCCQ6zrQo1hb2H8WivUHfzHz0U5qLSXuoVX"
+    },
+    {
+      "title": "Two Men and a Junk Truck - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=862266149729865697"
+    },
+    {
+      "title": "Review of Two Men and a Junk Truck - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21oUVJFcGxMVFpUY1d0eVdWRlhhbU0zZVRSeU4wRRAB!2m1!1s0x880f8fdc056a52a3:0xbf7627ea47e0fe1"
+    },
+    {
+      "title": "Review of Two Men and a Junk Truck - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21ORlQzSXliWEIyTlhOWlozUTBTa3BPWDJwdVdVRRAB!2m1!1s0x880f8fdc056a52a3:0xbf7627ea47e0fe1"
+    },
+    {
+      "title": "Review of Two Men and a Junk Truck - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tkMFFtd3hPRWxET0hNMlZFVnpPV1YyVDBaRFdHYxAB!2m1!1s0x880f8fdc056a52a3:0xbf7627ea47e0fe1"
+    },
+    {
+      "title": "Review of Two Men and a Junk Truck - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2t4UlZrTllSV3RKVDBGeGNHTjZlbkp5UzNsVVgzYxAB!2m1!1s0x880f8fdc056a52a3:0xbf7627ea47e0fe1"
+    },
+    {
+      "title": "Review of Two Men and a Junk Truck - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tOU1gwcFFhR0pETmpkbVZXMVZNbFZoVGtGMlYwRRAB!2m1!1s0x880f8fdc056a52a3:0xbf7627ea47e0fe1"
+    },
+    {
+      "title": "Gino's Junk Removal Services - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=11673011390734882710"
+    },
+    {
+      "title": "Review of Gino's Junk Removal Services - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT201WlRtbFplSGhxYXpkaGIwRnhWMlppYkZOTFdXYxAB!2m1!1s0x880e5385729c784d:0xa1fede037bd75796"
+    },
+    {
+      "title": "Review of Gino's Junk Removal Services - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNOMDliSDF3RRAB!2m1!1s0x880e5385729c784d:0xa1fede037bd75796"
+    },
+    {
+      "title": "Review of Gino's Junk Removal Services - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSUN4MnNQcFNnEAE!2m1!1s0x880e5385729c784d:0xa1fede037bd75796"
+    },
+    {
+      "title": "Review of Gino's Junk Removal Services - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSURYeDhpQkJBEAE!2m1!1s0x880e5385729c784d:0xa1fede037bd75796"
+    },
+    {
+      "title": "Review of Gino's Junk Removal Services - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2s5ck1uWlhWemxMYkcxR1VVUkxRMUZMWVROWU0wRRAB!2m1!1s0x880e5385729c784d:0xa1fede037bd75796"
+    },
+    {
+      "title": "Junkies Junk Removal - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=3729925464774978339"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pZeVJIbHllRmcyWTBRMVgwRTFjRUZJWW1KcFgzYxAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnTURBbHZTRXN3RRAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT25wT00zcDJjVXd4TUU4ME4yc3pSVkZUTm1wVGRGRRAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT25kS05tY3RhakV3V1RWeVpUaGxlVGR2TFVWUk5uYxAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tVeFJYZGpkMHhzVUVKQ1pXSk1VRk5ITVRZM05GRRAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Sunny’s Junk - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=3875508111377046788"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tkbE16TjVWbTlLU0RWS1lUTTVPVWxWTkdSemEzYxAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21aNWRYVTRabTkwZVRsRFNrNDNhSGQzZW05a2FVRRAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pNMlVrUkhNa1ZCVVdobFlYTjFNSGMzZDJ4VmVIYxAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pWVmFXOXdPVE4zYUhwdVZUaEtTRjg1V1doUWVtYxAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT25kcFlUQXlhV0U1ZW5kdFdUSnVRWFEwV0VVemJWRRAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Clutter Cleans Junk Removal - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=11035231827127577847"
+    },
+    {
+      "title": "Review of Clutter Cleans Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2t0NmNXRXpkbWwxV1dGUFNrcFpkMk5IU0d0M1lrRRAB!2m1!1s0x6a5f2aa9d3ef0d7:0x992504e12e062cf7"
+    },
+    {
+      "title": "Review of Clutter Cleans Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSUNsMFB6UllnEAE!2m1!1s0x6a5f2aa9d3ef0d7:0x992504e12e062cf7"
+    },
+    {
+      "title": "Review of Clutter Cleans Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tsMVgzZEZOSEpDUzFSRU9IaFhVSGhRU1ZKNk0wRRAB!2m1!1s0x6a5f2aa9d3ef0d7:0x992504e12e062cf7"
+    },
+    {
+      "title": "Review of Clutter Cleans Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2w5cGJrSnJNVnBETVhkYU5qUm5iVVZ2ZDJ4bFdGRRAB!2m1!1s0x6a5f2aa9d3ef0d7:0x992504e12e062cf7"
+    },
+    {
+      "title": "Review of Clutter Cleans Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pKamNtYzJjMHRzYmxCUVR5MUdaVVZDT0d0WFJuYxAB!2m1!1s0x6a5f2aa9d3ef0d7:0x992504e12e062cf7"
+    },
+    {
+      "title": "Northwest Junk Hauling & Removal - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=11712419642372788"
+    },
+    {
+      "title": "Butterfly junk removal LLC - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=137631713837491556"
+    },
+    {
+      "title": "Junkies Junk Removal - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=3729925464774978339"
+    },
+    {
+      "title": "On Demand Junk Removal, LLC - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=2707239778529770942"
+    },
+    {
+      "title": "Review of Northwest Junk Hauling & Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSUNSMS1hN0tBEAE!2m1!1s0x880f7708e16c1cd1:0x299c62343e72b4"
+    },
+    {
+      "title": "Review of Northwest Junk Hauling & Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2t0eVYwdFFlVTE0VVZsNFpEVXlZMVZyZFRnMVJtYxAB!2m1!1s0x880f7708e16c1cd1:0x299c62343e72b4"
+    },
+    {
+      "title": "Review of Northwest Junk Hauling & Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURIdDdQSi1BRRAB!2m1!1s0x880f7708e16c1cd1:0x299c62343e72b4"
+    },
+    {
+      "title": "Review of Northwest Junk Hauling & Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNkOUtyYXVnRRAB!2m1!1s0x880f7708e16c1cd1:0x299c62343e72b4"
+    },
+    {
+      "title": "Review of Northwest Junk Hauling & Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT210NGRuWnlNVkF6TWxOMVZtZG5hWHBTWjNBNVkyYxAB!2m1!1s0x880f7708e16c1cd1:0x299c62343e72b4"
+    },
+    {
+      "title": "Sunny’s Junk - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=3875508111377046788"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tkbE16TjVWbTlLU0RWS1lUTTVPVWxWTkdSemEzYxAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21aNWRYVTRabTkwZVRsRFNrNDNhSGQzZW05a2FVRRAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pNMlVrUkhNa1ZCVVdobFlYTjFNSGMzZDJ4VmVIYxAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pWVmFXOXdPVE4zYUhwdVZUaEtTRjg1V1doUWVtYxAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Sunny’s Junk - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2xSdFJVWjJaVkZNYzI0NVFrZHdlbVkzUlhNeGRIYxAB!2m1!1s0xb9318ae55b1c261:0x35c892180ec61d04"
+    },
+    {
+      "title": "Review of Butterfly junk removal LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUR0dXE3UDNBRRAB!2m1!1s0x880f9bd9df8fe28f:0x1e8f750851ca564"
+    },
+    {
+      "title": "Review of Butterfly junk removal LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUQteS1qNnV3RRAB!2m1!1s0x880f9bd9df8fe28f:0x1e8f750851ca564"
+    },
+    {
+      "title": "Review of Butterfly junk removal LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSUQ3MU9mbEx3EAE!2m1!1s0x880f9bd9df8fe28f:0x1e8f750851ca564"
+    },
+    {
+      "title": "Review of Butterfly junk removal LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURUeU5Qd3pnRRAB!2m1!1s0x880f9bd9df8fe28f:0x1e8f750851ca564"
+    },
+    {
+      "title": "Review of Butterfly junk removal LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNweHMzYjZnRRAB!2m1!1s0x880f9bd9df8fe28f:0x1e8f750851ca564"
+    },
+    {
+      "title": "Review of On Demand Junk Removal, LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSUNwaHBQSEdnEAE!2m1!1s0x2938e6ea0d7f1365:0x25920c3c2912fdbe"
+    },
+    {
+      "title": "Review of On Demand Junk Removal, LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURwODRUYjh3RRAB!2m1!1s0x2938e6ea0d7f1365:0x25920c3c2912fdbe"
+    },
+    {
+      "title": "Review of On Demand Junk Removal, LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNMbk1fTjR3RRAB!2m1!1s0x2938e6ea0d7f1365:0x25920c3c2912fdbe"
+    },
+    {
+      "title": "Review of On Demand Junk Removal, LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUR0dy02Zm5nRRAB!2m1!1s0x2938e6ea0d7f1365:0x25920c3c2912fdbe"
+    },
+    {
+      "title": "Review of On Demand Junk Removal, LLC - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUQ5dHUzVTdnRRAB!2m1!1s0x2938e6ea0d7f1365:0x25920c3c2912fdbe"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnTURBbHZTRXN3RRAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pZeVJIbHllRmcyWTBRMVgwRTFjRUZJWW1KcFgzYxAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT25wT00zcDJjVXd4TUU4ME4yc3pSVkZUTm1wVGRGRRAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT25kS05tY3RhakV3V1RWeVpUaGxlVGR2TFVWUk5uYxAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    },
+    {
+      "title": "Review of Junkies Junk Removal - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tVeFJYZGpkMHhzVUVKQ1pXSk1VRk5ITVRZM05GRRAB!2m1!1s0xfa8c0e4927d81c1:0x33c35b72be98ab23"
+    }
+  ],
+  "generationMeta": {
+    "model": "gemini-2.5-flash",
+    "isLiveGenerated": true,
+    "generatedAt": "2026-10-21T16:46:47.916Z",
+    "promptVersion": "2026-08-24",
+    "modelConfigVersion": "flash-synth16k-t0.4",
+    "grounding": {
+      "mapsGrounded": true,
+      "searchGrounded": true,
+      "groundingCalls": 2
+    },
+    "competitorCount": 5,
+    "sourceCount": 78
+  },
+  "_generatedAt": "2026-10-21T16:46:47.916Z"
+}

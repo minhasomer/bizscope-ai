@@ -1,0 +1,431 @@
+{
+  "businessType": "Coffee Shop",
+  "location": "Austin, TX",
+  "viabilityScore": 54,
+  "scoreBreakdown": {
+    "marketDemand": 60,
+    "competitionIntensity": 70,
+    "financialFeasibility": 65,
+    "riskLevel": 60
+  },
+  "executiveSummary": "Austin presents a dynamic and growing market for coffee, driven by a strong local appreciation for quality and a culture of innovation. While the city has been recognized as a top coffee destination, indicating robust consumer interest, the competitive landscape is already well-established with numerous local favorites and diverse offerings. A new entrant would need a highly differentiated concept to capture market share. Financial projections suggest a moderate path to profitability, but significant startup capital is required, and achieving break-even could take 18-36 months. Success will hinge on strategic positioning and strong operational execution in a crowded market.",
+  "financialProjections": {
+    "summary": "Opening a coffee shop in Austin, TX, involves substantial startup costs, typically ranging from $80,000 to $300,000. Revenue generation is projected to be strong in the first year, with potential for significant growth by year three. Break-even is anticipated within 18-36 months, and return on investment within 3-5 years, assuming effective management and market penetration. Profit margins are expected to be healthy, around 72% gross margin, but net profitability will depend on controlling operating expenses.",
+    "startupCostRange": "$80,000–$300,000",
+    "startupCostBreakdown": "Startup costs are primarily driven by leasehold improvements, high-quality espresso equipment, initial inventory, and a crucial working capital reserve. The range can vary significantly based on the chosen format (e.g., full cafe vs. kiosk).",
+    "startupCostItems": [
+      {
+        "category": "Retail Space Lease & Renovation",
+        "amount": "$20,000–$150,000",
+        "notes": "Includes leasehold improvements; lower for kiosks, higher for full cafes."
+      },
+      {
+        "category": "Espresso Equipment",
+        "amount": "$20,000–$80,000",
+        "notes": "High-quality commercial espresso machine alone can be $11,040-$46,000."
+      },
+      {
+        "category": "Furniture, Fixtures & Decor",
+        "amount": "$4,600–$36,800"
+      },
+      {
+        "category": "Licenses & Permits",
+        "amount": "$1,380–$6,440",
+        "notes": "Excludes potential alcohol licenses."
+      },
+      {
+        "category": "Initial Inventory",
+        "amount": "$3,220–$13,800",
+        "notes": "2-4 weeks of inventory."
+      },
+      {
+        "category": "POS System",
+        "amount": "$1,840–$7,360",
+        "notes": "Plus ongoing monthly subscriptions."
+      },
+      {
+        "category": "Insurance",
+        "amount": "$2,375–$7,600",
+        "notes": "General liability and product liability."
+      },
+      {
+        "category": "Marketing & Branding",
+        "amount": "$2,760–$13,800"
+      },
+      {
+        "category": "Working Capital Reserve",
+        "amount": "$17,020–$64,400",
+        "notes": "Recommended 3-4 months of expenses."
+      }
+    ],
+    "revenueYear1": "$350,000–$450,000",
+    "revenueYear3": "$500,000–$700,000",
+    "breakEvenTime": "18–36 months",
+    "roiTime": "3–5 years",
+    "profitMargin": "72% (Gross Margin)",
+    "scalability": "Medium",
+    "keyStats": [
+      {
+        "label": "Average Startup Cost",
+        "value": "$150,000–$200,000"
+      },
+      {
+        "label": "EBIT Break-even (Independent Shop)",
+        "value": "117.23 orders per trading day"
+      }
+    ],
+    "startupSpaceContext": {
+      "buildOutIntensity": "Moderate",
+      "monthlyRent": "$3,500–$7,000/month",
+      "sqft": "1,000–2,000 sq ft"
+    }
+  },
+  "competitionAnalysis": {
+    "summary": "The Austin coffee market is highly competitive and diverse, featuring a mix of established local institutions, specialty shops, and mobile operations. While this indicates strong market demand, it also means a new entrant will face significant challenges in differentiating itself and capturing market share from loyal customer bases. The presence of unique concepts like Mozart's and Epoch, alongside more niche options, suggests that quality, experience, and community integration are key competitive battlegrounds.",
+    "competitors": [
+      {
+        "name": "Mozart's Coffee Roasters",
+        "details": "A well-established, large-scale coffee roaster and cafe known for its lakeside location and vibrant atmosphere.",
+        "address": "3825 Lake Austin Blvd, Austin, TX 78703",
+        "latitude": 30.2818,
+        "longitude": -97.7981
+      },
+      {
+        "name": "Epoch Coffee",
+        "details": "A popular local chain known for its 24/7 operations and strong community presence.",
+        "address": "221 W N Loop Blvd, Austin, TX 78751",
+        "latitude": 30.3392,
+        "longitude": -97.7289
+      },
+      {
+        "name": "Black Cat Coffee",
+        "details": "A local coffee shop offering a cozy atmosphere and quality beverages.",
+        "address": "603 W Live Oak St, Austin, TX 78704",
+        "latitude": 30.2443,
+        "longitude": -97.7601
+      },
+      {
+        "name": "Noble Joe Coffee Co.",
+        "details": "A coffee truck operating within a food truck park, offering convenience and a unique setting.",
+        "address": "Southshore Eatery Food Truck Park, 1620 E Riverside Dr, Austin, TX 78741",
+        "latitude": 30.2464,
+        "longitude": -97.7317
+      },
+      {
+        "name": "BRB Coffee",
+        "details": "A coffee shop located near the university area, likely catering to students and local residents.",
+        "address": "3501 Guadalupe St, Austin, TX 78705",
+        "latitude": 30.304,
+        "longitude": -97.741
+      }
+    ]
+  },
+  "marketTrends": {
+    "summary": "Austin is a highly attractive market for coffee shops, evidenced by its ranking as a top U.S. coffee city. Key trends include rapid growth in new coffee businesses, favorable economic conditions (no state income tax), and a vibrant culture that embraces innovation and diverse coffee experiences. Coffee shops serve as vital community hubs, and there's a strong consumer demand for quality, authenticity, and personalized service, suggesting opportunities for well-executed, unique concepts.",
+    "trends": [
+      {
+        "trend": "Rapid Growth in Coffee Businesses",
+        "impact": "Indicates a thriving market with high consumer demand, but also increasing competition."
+      },
+      {
+        "trend": "Favorable Economic Drivers",
+        "impact": "Texas's lack of state income tax and lower acquisition costs make it an attractive market for entrepreneurs."
+      },
+      {
+        "trend": "Cultural Fusion and Innovation",
+        "impact": "Consumers appreciate diverse and experimental coffee offerings, creating opportunities for unique concepts and niche markets."
+      },
+      {
+        "trend": "Coffee Shops as Community Hubs",
+        "impact": "Strong potential for businesses that foster community connection through events and collaborations."
+      },
+      {
+        "trend": "Demand for Quality and Authenticity",
+        "impact": "Consumers are willing to pay a premium for high-quality products and personalized service, allowing for premium pricing strategies."
+      }
+    ]
+  },
+  "demographicInsights": {
+    "summary": "Austin, TX, boasts a robust and affluent demographic profile, with a population nearing one million and a high median household income. This creates a strong consumer base with disposable income, capable of supporting premium coffee experiences. The city's continuous growth and economic vitality further enhance its attractiveness for new businesses, suggesting a sustained demand for quality food and beverage services.",
+    "demographics": [
+      {
+        "metric": "Total Population (2024 Estimates)",
+        "value": "979,539",
+        "insight": "A large and growing urban population provides a substantial customer base."
+      },
+      {
+        "metric": "Median Household Income (2024 Estimates)",
+        "value": "$93,658",
+        "insight": "High median income indicates strong purchasing power and willingness to spend on premium products like specialty coffee."
+      },
+      {
+        "metric": "Average Annual Household Income (2024)",
+        "value": "$135,028",
+        "insight": "Further reinforces the affluent nature of the market, supporting higher price points and specialty offerings."
+      }
+    ]
+  },
+  "riskAssessment": {
+    "summary": "Entering the Austin coffee market carries several risks, primarily due to intense competition and the need for significant startup capital. Operational challenges related to staffing and supply chain, coupled with the inherent difficulties of establishing a new brand, contribute to a moderate to high overall risk profile. Mitigation strategies focus on strong differentiation, robust financial planning, and efficient operational management.",
+    "risks": [
+      {
+        "risk": "Intense Competition",
+        "impact": "Difficulty in attracting and retaining customers, leading to lower market share and potential price wars.",
+        "severity": "High",
+        "mitigation": "Develop a unique value proposition, strong branding, and targeted marketing. Focus on an underserved niche or a superior customer experience."
+      },
+      {
+        "risk": "High Startup Costs",
+        "impact": "Significant upfront investment required, increasing financial pressure and extending break-even time.",
+        "severity": "Medium",
+        "mitigation": "Secure adequate funding, meticulously plan budget, and explore cost-effective equipment and build-out options without compromising quality."
+      },
+      {
+        "risk": "Achieving Brand Recognition & Loyalty",
+        "impact": "In a crowded market, it's challenging for a new business to stand out and build a loyal customer base.",
+        "severity": "Medium",
+        "mitigation": "Invest in consistent quality, exceptional customer service, community engagement, and effective local marketing campaigns."
+      },
+      {
+        "risk": "Operational Inefficiencies",
+        "impact": "Poor management of inventory, staffing, or customer flow can lead to increased costs and reduced customer satisfaction.",
+        "severity": "Medium",
+        "mitigation": "Implement robust operational procedures, invest in staff training, and utilize efficient POS and inventory management systems."
+      },
+      {
+        "risk": "Economic Downturn/Consumer Spending Shifts",
+        "impact": "Reduced discretionary spending on non-essential items like specialty coffee.",
+        "severity": "Low",
+        "mitigation": "Maintain flexible pricing strategies, offer value options, and build a strong local following less susceptible to broad economic shifts."
+      }
+    ]
+  },
+  "successFactors": {
+    "summary": "Success in the Austin coffee market will depend on a combination of strategic differentiation, operational excellence, and strong community engagement. Given the mature and competitive landscape, merely offering good coffee will not suffice; a unique identity and an exceptional customer experience are paramount.",
+    "factors": [
+      {
+        "factor": "Unique Value Proposition & Differentiation",
+        "description": "Offering a distinct concept, specialized menu items, unique ambiance, or a strong ethical/sustainability focus to stand out from competitors.",
+        "importance": "Critical"
+      },
+      {
+        "factor": "Exceptional Customer Experience",
+        "description": "Providing consistent high-quality products, friendly and efficient service, and a welcoming atmosphere that encourages repeat visits.",
+        "importance": "Critical"
+      },
+      {
+        "factor": "Strategic Location & Accessibility",
+        "description": "Choosing a location with high foot traffic, good visibility, ample parking, and proximity to target demographics while avoiding direct saturation.",
+        "importance": "High"
+      },
+      {
+        "factor": "Effective Marketing & Community Engagement",
+        "description": "Building brand awareness through local marketing, social media, and actively participating in community events to foster loyalty.",
+        "importance": "High"
+      },
+      {
+        "factor": "Efficient Operations & Cost Management",
+        "description": "Optimizing inventory, managing labor costs, and maintaining high operational efficiency to ensure healthy profit margins.",
+        "importance": "Medium"
+      }
+    ]
+  },
+  "recommendation": {
+    "decision": "Caution Advised",
+    "reasoning": "Austin is undoubtedly a vibrant market for coffee, characterized by high demand and a culture that values quality and innovation. However, the existing competitive landscape is dense and mature, with many established players offering diverse experiences. While there is strong evidence of overall market demand, there is no clear indication of an underserved segment or significant unmet demand that a new entrant could easily capture without substantial differentiation. The financial investment is considerable, and achieving profitability will require overcoming significant competitive hurdles. A new coffee shop would need a highly compelling and unique concept, coupled with a well-executed strategy, to carve out a sustainable niche amidst the strong incumbent competition."
+  },
+  "methodology": "This viability report was compiled using a combination of publicly available data from Google Maps for competitor analysis, and Google Search for market trends, demographic insights, and financial benchmarks specific to Austin, TX. The analysis synthesizes this information to assess market demand, competitive intensity, financial feasibility, and overall risk. A proprietary scoring model was applied to quantify viability, and a qualitative narrative provides context and strategic recommendations.",
+  "groundingSources": [
+    {
+      "title": "Mozart's Coffee Roasters - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=13569331606629044653"
+    },
+    {
+      "title": "Epoch Coffee - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=140078896924485689"
+    },
+    {
+      "title": "Black Cat Coffee - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=17914209406041812439"
+    },
+    {
+      "title": "Noble Joe Coffee Co. - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=14642568393068113237"
+    },
+    {
+      "title": "BRB Coffee - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=13612481716647551678"
+    },
+    {
+      "title": "Review of Mozart's Coffee Roasters - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2sxMlEyWlBZMUp4WlZaNmNWOWZhWEZKUVUxTU9GRRAB!2m1!1s0x8644b5554461664d:0xbc4ff333ec9ad1ad"
+    },
+    {
+      "title": "Review of Mozart's Coffee Roasters - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2xwV1FWSXdPVFIxUld4UFIyZHpUMDlYU2kxWlpHYxAB!2m1!1s0x8644b5554461664d:0xbc4ff333ec9ad1ad"
+    },
+    {
+      "title": "Review of Mozart's Coffee Roasters - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2s1WVNYbFNZakJ4VlUxNFNHRllUbmRwV1RsMk9VRRAB!2m1!1s0x8644b5554461664d:0xbc4ff333ec9ad1ad"
+    },
+    {
+      "title": "Review of Mozart's Coffee Roasters - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tObFkxSXpPRUV5YUV0blRsWXRjakpIVGs1bGJHYxAB!2m1!1s0x8644b5554461664d:0xbc4ff333ec9ad1ad"
+    },
+    {
+      "title": "Review of Mozart's Coffee Roasters - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21WT1YzSmxUR2czVjB4VFlrVTVTWE5KWHpCeE4yYxAB!2m1!1s0x8644b5554461664d:0xbc4ff333ec9ad1ad"
+    },
+    {
+      "title": "Review of Epoch Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tSS1ZtOUdNMlZ6Wm05eVowWnFXa2RKVFdOdVNHYxAB!2m1!1s0x8644ca6bc309e81b:0x1f1a903bbb66839"
+    },
+    {
+      "title": "Review of Epoch Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURWcDktN3hBRRAB!2m1!1s0x8644ca6bc309e81b:0x1f1a903bbb66839"
+    },
+    {
+      "title": "Review of Epoch Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tvMWNrVXpaekpoWVRoMVYwUlJWMUZwUWxGcFprRRAB!2m1!1s0x8644ca6bc309e81b:0x1f1a903bbb66839"
+    },
+    {
+      "title": "Review of Epoch Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSURlcHFTdVVnEAE!2m1!1s0x8644ca6bc309e81b:0x1f1a903bbb66839"
+    },
+    {
+      "title": "Review of Epoch Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNaczhHRnZRRRAB!2m1!1s0x8644ca6bc309e81b:0x1f1a903bbb66839"
+    },
+    {
+      "title": "Review of Black Cat Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pkZmVISnhOVnBhVFRka1drOTRhbnBxY2tWME5IYxAB!2m1!1s0x8644b515515fd62f:0xf89c0e8a8f156dd7"
+    },
+    {
+      "title": "Review of Black Cat Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tkMGRTMHdjSFpFWWpCbVUyNVdOVlp1Y25OcVVrRRAB!2m1!1s0x8644b515515fd62f:0xf89c0e8a8f156dd7"
+    },
+    {
+      "title": "Review of Black Cat Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2xVMVJWbEpiMHg2TUVsVWJsaDRhSE53YlVOWlJFRRAB!2m1!1s0x8644b515515fd62f:0xf89c0e8a8f156dd7"
+    },
+    {
+      "title": "Review of Black Cat Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pOSWNYRmZRVzVSVGxvM1FtOHpXV1ZXYlZkWVpWRRAB!2m1!1s0x8644b515515fd62f:0xf89c0e8a8f156dd7"
+    },
+    {
+      "title": "Review of Black Cat Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21sRVZFOU1la3M0U1hoek1HdHRWazFUYlZjdFJsRRAB!2m1!1s0x8644b515515fd62f:0xf89c0e8a8f156dd7"
+    },
+    {
+      "title": "Review of Noble Joe Coffee Co. - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT20xbWFVZzRkSGRvYTAxd2IyZExPV3BsUTNGbFVrRRAB!2m1!1s0x8644b5d7fca8a21d:0xcb34da5fb42fed55"
+    },
+    {
+      "title": "Review of Noble Joe Coffee Co. - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURmeHJlUm1BRRAB!2m1!1s0x8644b5d7fca8a21d:0xcb34da5fb42fed55"
+    },
+    {
+      "title": "Review of Noble Joe Coffee Co. - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSUNQNUpHX1dREAE!2m1!1s0x8644b5d7fca8a21d:0xcb34da5fb42fed55"
+    },
+    {
+      "title": "Review of Noble Joe Coffee Co. - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2s5MWJraFVRa0pIWm01NFdHUjNlSEoxWkdwbFprRRAB!2m1!1s0x8644b5d7fca8a21d:0xcb34da5fb42fed55"
+    },
+    {
+      "title": "Review of Noble Joe Coffee Co. - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSURub3BPY0x3EAE!2m1!1s0x8644b5d7fca8a21d:0xcb34da5fb42fed55"
+    },
+    {
+      "title": "Review of BRB Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT205eGNqQlZYMHhPYVRBd1ptcFJOMk5ZYlZWZmQxRRAB!2m1!1s0x8644cb19d5f5779b:0xbce93fffd046e2be"
+    },
+    {
+      "title": "Review of BRB Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VNYmh5X0htM28yLTd3RRAB!2m1!1s0x8644cb19d5f5779b:0xbce93fffd046e2be"
+    },
+    {
+      "title": "Review of BRB Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnTUNvdDltZEdBEAE!2m1!1s0x8644cb19d5f5779b:0xbce93fffd046e2be"
+    },
+    {
+      "title": "Review of BRB Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2s1U2RESnZhRXR4ZURneloyVTBTSE5uYzB0bmJXYxAB!2m1!1s0x8644cb19d5f5779b:0xbce93fffd046e2be"
+    },
+    {
+      "title": "Review of BRB Coffee - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tObE5IbGlWMkZTTjBSRVVuTlVYek5QWlZOa2EwRRAB!2m1!1s0x8644cb19d5f5779b:0xbce93fffd046e2be"
+    },
+    {
+      "title": "datausa.io",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGwXFJenTKBkR4hjFcEszg8kj38LhgbODgqEJT6T_2VRvnqz7HvTMhxZdFLKTe6yZU6i9tuUub-RciguiE513ax5dHrJKUpu3lvL_bvC_Xl-ie6JsaaF1M4ADsnnOqVEXSGuOR7"
+    },
+    {
+      "title": "census.gov",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHlHw-9L1nl0ULrHX5roRbtk_0Le4-V57t5eZQBirIEkHRFifUlFKPaEJVbKxokolbFMMTgOYfvDfJvBJbAoxPYWlr0EE6sU40DkYSFWfngV94Ga4X4kHfAGNaUvJ_dsZLu6RRHL6uzlS5eLkydg4Rpb3dqw3ewkj38dg=="
+    },
+    {
+      "title": "census.gov",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF0FMGyjQCz4Fha3GVEIzrRZO9NR-5rEoverAG3B3406BgU5OFoz_xrlt41m7RHhldg_usTv7RyXvCIVgr0589ZW5Hto5melbpgHp7jLnIRCDTv81wQppI0YoqqDkJVMM146AUkF2ArE55hhwOis2tZRvh-trpcjBJtgFfqIEB_NA=="
+    },
+    {
+      "title": "point2homes.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwGRbesjagMN3HB-lCHKUtJZ8bORNd_kuwAJHYzT_oLbwsBLBkBsnTzJOaET0jb8RFel-Rg9PYpRcfS6eWrGUjf4L8YhshIjTrOBu5X-0cBMdBH31_9n_WslmO2n_2IIFwwrUS4ghFN5DcXABAcDbFkndvcCCXCpXlQJQw4uWN8kvh"
+    },
+    {
+      "title": "font-mag.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEB2HoebgGU0iBmynm8-t49fBdopo-c0ETJagzMhjNADPO0mppbG4cZR5-G9xSiOxfsMhw2k-qMtDxNiy5zitjroaK46r6lXgkQEjKti47Tjr5Yv0Vr9855KRihOe2ULW-jKJqUzQuNOVVJfNPaWO6KJwu9ZuUVSzACplahLxSos0fL_A=="
+    },
+    {
+      "title": "aldianews.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFf4tCOYhklHHWKpycJBuhDhTEe0cfQZHyT60vPnHqOqbCsbonfXEBG-eXUl73w7lMEbF9nzpU-04Fo1w75vBLTZE_Bv42wtb-dbHwxeuknbXqI3Trg2GOisMMtSHu-P3zobYIOVMTx3bGp7EMQxXzq820wzAmNGCjn"
+    },
+    {
+      "title": "communityimpact.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHuhuCTH_dR3B6YwRVxE8kzEOa81me0fGqchLF4zUX7oRr0xerxoHdc3sBZ-N8MwiOss_725vMhLuKdWR8Bi_M7SIlEPpPseXX0jOKCVvpaF0P4J7qLdRQH-hAlEn_zpAlgWnz5Ec6Tt2g-NS-FzZyN7Mkkz-IZbNeztZYJfXYm7qbf4St5GiFfiETWlAglxhMnUenbKGKHrSbImQYMLLnyLkehnIRhvbtZSvu2BjhPC7S_pINU4KOhf_Kb92z6oko="
+    },
+    {
+      "title": "kumarawilcoxon.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFVZ2xFCqSFdKxkZe3D8ygyVXoM7-4IgfIXlWCC0_wTeHixtmCZ5dX4XAefKd6IMkCEydjC2j6Hkx2Q-bztEv-A0KHFckKfb54gToAoQzHVdClF_SJg4RqLSS7jAgJeMdDZq_zrdFzmB25tEiDsUDj39jbFr8id"
+    },
+    {
+      "title": "bossworks.ai",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGqP17-lQhAQ4g80UdXg7daK7zFjJM8-ShB0VY__9fvxaD076EqUyUed57HFj3z8jsmWNMnbUCtCZdiugfDTV-zjCogqCOwLQHMLEfL9_r5s0Uw6jIIGeIRUHriNmWez-ZuTZmFguu1TMV_6PKymspzBA=="
+    },
+    {
+      "title": "mycoffeeexplorer.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFlFewYCvhbBkRJVivWIfmExJRgyupLxFJJGvOiTI0ForbGDV4lpz9zlm2pcJPJbUc-8HVUQyDcTTgsMazv_UtKmfE6Xj-dMADVo_XwYn6NlvDCpjgjX9zo8fhJucLYzcgpSxmOJCBKUnu6bomzI2gywXRecDNyvUd6Pw=="
+    },
+    {
+      "title": "bellwethercoffee.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGR8jq-gkICiYzdV9dpnO3X0-JbvJsTpCoXit5tMuSsLj6Hum033lFXcvpGtJWEjDRwISGCqhDIuR3KTTMUUQk6PP6kmo7I61Z-_LCB_CZr10qAwR1KTzEEcO82c0mo5mqhY5Y8LS4kENhU8zICJwtrJBXYmOrn"
+    },
+    {
+      "title": "howmuchtostart.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEIazc0c4RUKZkr0iiPtP3OGLq6KQXBf4a-7FXX66Kaho6QnTwfYqFofMy1Wr9UtiWsjvkGwc8Brb-DP0V-qnpI8qxMJ_2MikblpCZ99lAArZrDFHbtDazl34maCH_GnAOdLXSh1SSg9fNYNQ=="
+    },
+    {
+      "title": "startup-costs.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGg96hEgnJz7eadRO48GtTVicUuCeSkCa_GVSYUPTDKIDXgktTyOPZ0dMjdDQO6IWSndHe_vG2dSwnddvlHHgqOOdYkxBQnpGfRSyNAJ5baemDgZ0lgWZLtkMBxA9qrjZFzYk63cK_BFuVfboPC"
+    }
+  ],
+  "targetCoordinates": {
+    "latitude": 27.4,
+    "longitude": -96.2
+  },
+  "generationMeta": {
+    "model": "gemini-2.5-flash",
+    "isLiveGenerated": true,
+    "generatedAt": "2026-10-21T16:56:17.990Z",
+    "promptVersion": "2026-08-24",
+    "modelConfigVersion": "flash-synth16k-t0.4",
+    "grounding": {
+      "mapsGrounded": true,
+      "searchGrounded": true,
+      "groundingCalls": 2
+    },
+    "competitorCount": 5,
+    "sourceCount": 43
+  },
+  "_generatedAt": "2026-10-21T16:56:17.990Z"
+}
