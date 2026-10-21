@@ -339,7 +339,7 @@ export const Hero: React.FC<HeroProps> = ({
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
             <button
               onClick={handler}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-xl transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-orange-500 hover:bg-orange-400 text-slate-950 font-bold rounded-xl transition-all cursor-pointer"
             >
               Start Free 7-Day Trial →
             </button>
@@ -657,7 +657,7 @@ export const Hero: React.FC<HeroProps> = ({
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold uppercase tracking-wide bg-indigo-500 text-white hover:bg-indigo-400 rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-wait shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                                className="w-full flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold uppercase tracking-wide bg-orange-500 text-slate-950 hover:bg-orange-400 rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-wait shadow-xl hover:-translate-y-0.5 active:translate-y-0"
                             >
                                 {isLoading ? (
                                   <>
@@ -765,7 +765,7 @@ export const Hero: React.FC<HeroProps> = ({
             <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
               <button
                 onClick={focusHeroForm}
-                className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-slate-900 hover:bg-indigo-50 font-bold rounded-xl transition-all shadow-lg cursor-pointer"
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-orange-500 text-slate-950 hover:bg-orange-400 font-bold rounded-xl transition-all shadow-lg cursor-pointer"
               >
                 Analyze My Business Idea
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

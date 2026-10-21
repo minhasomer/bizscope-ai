@@ -46,6 +46,7 @@ import { fetchRefinement } from './src/utils/refinementUtils';
 import type { RefinementResult } from './src/utils/refinementUtils';
 import { FAQSection } from './components/seo/FAQSection';
 import { FAQ_ITEMS } from './src/data/faqContent';
+import { PreviewUpsell, PREVIEW_UPSELL_SHOWN_KEY } from './components/PreviewUpsell';
 
 /** Returns true when an error message is a browser-level network interruption
  *  (e.g. Android Chrome killed the TCP connection when the tab was backgrounded)
@@ -250,6 +251,8 @@ const App: React.FC = () => {
   // True when an anonymous user has already used their one free preview.
   // Drives a signup CTA in the results area instead of an error message.
   const [showPreviewCTA, setShowPreviewCTA] = useState(false);
+  // Sign-up pop-up shown once per session right after the anonymous preview loads.
+  const [showPreviewUpsell, setShowPreviewUpsell] = useState(false);
 
   // Pending refinement: set when /api/preview?mode=refine says the concept is broad enough
   // to warrant a clarification step. Cleared once the user picks or dismisses.
@@ -729,6 +732,16 @@ const App: React.FC = () => {
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
+      let upsellShown = false;
+      try { upsellShown = sessionStorage.getItem(PREVIEW_UPSELL_SHOWN_KEY) === '1'; } catch { /* storage unavailable */ }
+      if (!upsellShown) {
+        // Short delay so the visitor sees their score before the pop-up covers it.
+        setTimeout(() => {
+          try { sessionStorage.setItem(PREVIEW_UPSELL_SHOWN_KEY, '1'); } catch { /* storage unavailable */ }
+          setShowPreviewUpsell(true);
+          trackEvent('preview_upsell_shown');
+        }, 1500);
+      }
     } catch (err) {
       console.error(err);
       const rawMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
@@ -2021,6 +2034,13 @@ const App: React.FC = () => {
             trackEvent('business_refinement_skipped', { reason: 'dismissed' });
             setRefinementPending(null);
           }}
+        />
+      )}
+
+      {showPreviewUpsell && (
+        <PreviewUpsell
+          onClose={() => setShowPreviewUpsell(false)}
+          onSignUp={() => navigate('settings', 'signup')}
         />
       )}
 

@@ -63,7 +63,7 @@ export const WhatYouGet: React.FC<WhatYouGetProps> = ({ freePreviewAvailable, on
             <button
               type="button"
               onClick={() => { trackEvent('landing_what_you_get_cta'); onTryIt(); }}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-md cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-400 text-slate-950 text-sm font-bold rounded-xl shadow-md cursor-pointer"
             >
               Check my idea
             </button>

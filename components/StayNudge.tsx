@@ -156,7 +156,7 @@ export const StayNudge: React.FC<StayNudgeProps> = ({ enabled, formRef, onRun, o
             <button
               type="button"
               onClick={() => { trackEvent('sticky_cta_clicked'); onEnterOwnIdea(); }}
-              className="flex items-center gap-1 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-bold rounded-xl"
+              className="flex items-center gap-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-slate-950 text-sm font-bold rounded-xl"
             >
               Try it free <ArrowRight className="w-4 h-4" />
             </button>
@@ -239,7 +239,7 @@ export const StayNudge: React.FC<StayNudgeProps> = ({ enabled, formRef, onRun, o
                   <button
                     type="submit"
                     disabled={!city.trim()}
-                    className="mt-3 w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl"
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-slate-950 text-sm font-bold rounded-xl"
                   >
                     Run my free report <ArrowRight className="w-4 h-4" />
                   </button>
