@@ -290,6 +290,20 @@ function cleanAndParseJSON(text: string, fallback?: any, context?: string): any 
 }
 
 /**
+ * True when Phase 1 (Maps) research failed and the report has no competitors.
+ * Maps grounding often takes longer than RESEARCH_TIMEOUT_MS in dense markets
+ * (e.g. coffee shops in Austin: 14–109 s), so these reports are not cached
+ * and existing ones are treated as a miss: the next request retries research
+ * instead of serving every visitor a report with an empty competitor list.
+ */
+export function isMissingMapsResearch(report: any): boolean {
+  return (
+    report?.generationMeta?.grounding?.mapsGrounded === false &&
+    (report?.competitionAnalysis?.competitors?.length ?? 0) === 0
+  );
+}
+
+/**
  * Validates that a report object retrieved from report_cache has the minimum
  * fields required to render correctly. Returns false for truncated/corrupted
  * entries so the caller can treat them as a cache miss and regenerate.
@@ -302,7 +316,8 @@ function isCachedReportValid(report: any): boolean {
     typeof report.viabilityScore === 'number' &&
     typeof report.recommendation === 'object' &&
     report.recommendation !== null &&
-    typeof report.executiveSummary === 'string'
+    typeof report.executiveSummary === 'string' &&
+    !isMissingMapsResearch(report)
   );
 }
 
@@ -1526,7 +1541,11 @@ Include ALL competitors found in the Competition Analysis above in the competiti
     normalizeViabilityReport(parsed);
 
     // Store in shared server-side cache — all accounts/devices get the same report.
-    await setInServerCache(businessType, location, 'standard', verifiedPlan, parsed);
+    if (isMissingMapsResearch(parsed)) {
+      console.warn(`[ServerCache] SKIP — ${businessType} / ${location}: Maps research failed, 0 competitors`);
+    } else {
+      await setInServerCache(businessType, location, 'standard', verifiedPlan, parsed);
+    }
 
     return json(res, 200, parsed);
   } catch (err: any) {
