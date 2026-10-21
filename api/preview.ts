@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { extractClientGeo } from '../server/activityGeo.js';
+import { clientIp, hashIp, previewIpLimitReached } from '../server/previewIpLimit.js';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -462,11 +463,12 @@ export default async function handler(
   if (!_simCtx && supabaseAdmin) {
     try {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { count } = await supabaseAdmin
+      const { count, error: countErr } = await supabaseAdmin
         .from('usage_logs')
         .select('id', { count: 'exact', head: true })
         .eq('report_type', 'preview')
-        .gte('created_at', oneHourAgo);
+        .gte('generated_at', oneHourAgo);
+      if (countErr) throw countErr;
       if (typeof count === 'number' && count >= 200) {
         console.warn('[preview] global rate limit exceeded:', { count });
         return json(res, 429, {
@@ -477,6 +479,27 @@ export default async function handler(
     } catch (rateErr: any) {
       // Non-fatal — continue even if the rate-limit check fails
       console.warn('[preview] rate limit check failed (non-fatal):', rateErr.message);
+    }
+  }
+
+  // ── Per-IP daily guard ─────────────────────────────────────────────────────
+  // Stops incognito/direct-API reuse and one visitor exhausting the global cap.
+  const ip = clientIp(req);
+  const ipHash = ip && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? hashIp(ip, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null;
+  if (!_simCtx && supabaseAdmin && ipHash) {
+    try {
+      if (await previewIpLimitReached(supabaseAdmin, ipHash)) {
+        console.warn('[preview] per-IP daily limit reached');
+        return json(res, 429, {
+          error: 'You’ve used today’s free previews. Create a free account to run 3 reports a month.',
+          code: 'PREVIEW_IP_LIMIT',
+        });
+      }
+    } catch (ipErr: any) {
+      // Non-fatal — fail open like the global guard
+      console.warn('[preview] per-IP limit check failed (non-fatal):', ipErr.message);
     }
   }
 
@@ -685,6 +708,7 @@ Include ALL competitors found in the Competition Analysis above in the competiti
           within_hard_cap: withinHardCap,
           business_type: businessType,
           location,
+          ip_hash: ipHash,
         });
         if (usageLogError) {
           console.error('[UsageLog] /preview insert failed:', usageLogError);
