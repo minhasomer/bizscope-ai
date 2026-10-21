@@ -108,7 +108,7 @@ export const Hero: React.FC<HeroProps> = ({
       case 'Pro':        return '20 reports/month';
       case 'Pro+':       return '50 standard + 10 regional/month';
       case 'Enterprise': return 'Custom access';
-      default:           return 'Free account · Pro plan required for reports'; // Explorer
+      default:           return 'Free account · 3 reports/month'; // Explorer
     }
   };
 

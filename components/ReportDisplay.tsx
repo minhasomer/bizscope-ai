@@ -866,7 +866,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <div className="text-center sm:text-left">
               <p className="text-white font-black text-sm">You're viewing your free preview</p>
               <p className="text-indigo-200 text-xs mt-0.5">
-                Create a free account to save this report, run more analyses, and unlock detailed projections.
+                Create a free account to run 3 reports a month, with the startup cost range and market trends for each idea.
               </p>
             </div>
             <button
