@@ -2,6 +2,7 @@
 import React from 'react';
 import { viabilityScoreToAssessment } from '../src/utils/assessmentUtils';
 import { AssessmentDot } from './AssessmentDot';
+import { trackEvent } from '../src/utils/analytics';
 
 interface SampleReportsProps {
   onNavigate: (page: string) => void;
@@ -9,6 +10,8 @@ interface SampleReportsProps {
 }
 
 interface SampleCard {
+  /** View id suffix: the full report lives at ?view=sample-<slug>. */
+  slug: string;
   businessType: string;
   location: string;
   category: string;
@@ -19,38 +22,53 @@ interface SampleCard {
   insight: string;
 }
 
+/**
+ * Real, unedited reports generated with BizScope (src/data/sampleReports/<slug>.json).
+ * Card figures are copied from each report's financialProjections and the
+ * insight is the first sentence of its executive summary; a test keeps them in sync.
+ */
 export const SAMPLES: SampleCard[] = [
   {
+    slug: 'urgent-care-clinic-gurnee-il',
     businessType: 'Urgent Care Clinic',
     location: 'Gurnee, IL',
     category: 'Medical / Healthcare',
-    viabilityScore: 78,
-    startupCost: '$380k – $520k',
-    year1Revenue: '$1.1M',
-    breakEven: '18 months',
-    insight: 'Underserved suburban corridor with high insurance penetration and a growing senior population driving walk-in demand.',
+    viabilityScore: 43,
+    startupCost: '$800,000–$1,500,000',
+    year1Revenue: '$700,000–$1,200,000',
+    breakEven: '24–36 months',
+    insight: 'The Gurnee, IL market presents a challenging environment for a new urgent care clinic.',
   },
   {
-    businessType: 'Artisan Coffee Shop',
+    slug: 'coffee-shop-austin-tx',
+    businessType: 'Coffee Shop',
     location: 'Austin, TX',
     category: 'Food & Beverage',
-    viabilityScore: 74,
-    startupCost: '$130k – $195k',
-    year1Revenue: '$360k',
-    breakEven: '16 months',
-    insight: 'Dense tech-worker population with high disposable income and a strong third-place workspace culture.',
+    viabilityScore: 54,
+    startupCost: '$80,000–$300,000',
+    year1Revenue: '$350,000–$450,000',
+    breakEven: '18–36 months',
+    insight: 'Austin presents a dynamic and growing market for coffee, driven by a strong local appreciation for quality and a culture of innovation.',
   },
   {
+    slug: 'junk-removal-service-lake-county-il',
     businessType: 'Junk Removal Service',
     location: 'Lake County, IL',
     category: 'Local Services',
-    viabilityScore: 68,
-    startupCost: '$35k – $65k',
-    year1Revenue: '$185k',
-    breakEven: '9 months',
-    insight: 'Low barrier to entry with strong seasonal demand — competitive differentiation requires a fleet expansion strategy.',
+    viabilityScore: 58,
+    startupCost: '$4,900–$49,000',
+    year1Revenue: '$100,000–$180,000',
+    breakEven: '12–18 months',
+    insight: 'The Lake County, IL market presents a viable opportunity for a new junk removal service, driven by a growing population, high median household income, and increasing consumer awareness for decluttering and eco-friendly disposal.',
   },
 ];
+
+/** Lazy loaders so the full report JSON is only downloaded on its own page. */
+export const SAMPLE_REPORT_LOADERS: Record<string, () => Promise<{ default: unknown }>> = {
+  'urgent-care-clinic-gurnee-il':        () => import('../src/data/sampleReports/urgent-care-clinic-gurnee-il.json'),
+  'coffee-shop-austin-tx':               () => import('../src/data/sampleReports/coffee-shop-austin-tx.json'),
+  'junk-removal-service-lake-county-il': () => import('../src/data/sampleReports/junk-removal-service-lake-county-il.json'),
+};
 
 
 export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunSample }) => {
@@ -66,7 +84,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                 Sample Reports
               </span>
               <span className="text-slate-700">·</span>
-              <span className="text-[10px] text-slate-500 italic">Pre-generated illustrative analyses — not live reports</span>
+              <span className="text-[10px] text-slate-500 italic">Real, unedited reports — click any card to read the full analysis</span>
             </div>
             <h1 className="text-xl font-black text-white tracking-tight leading-snug">
               Example BizScope Reports
@@ -88,7 +106,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
       <div className="max-w-5xl mx-auto px-4 pt-6 pb-8">
         {/* Framing line — sets expectation before users touch any card */}
         <p className="text-xs text-gray-400 text-center mb-5">
-          The reports below are pre-generated illustrative examples. Figures are representative estimates, not live-generated analysis.
+          These are real BizScope reports, shown exactly as generated. Open any one to see the full analysis.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {SAMPLES.map((s) => {
@@ -117,7 +135,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                     </p>
                   </div>
                   <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full border border-slate-200 mt-0.5 whitespace-nowrap">
-                    Sample Report
+                    Real Report
                   </span>
                 </div>
 
@@ -148,8 +166,18 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                   <p className="text-xs text-gray-500 leading-relaxed italic">"{s.insight}"</p>
                 </div>
 
-                {/* CTA — ghost style keeps sample preview as visual focus */}
+                {/* CTAs — read the real report, or run your own for this market */}
                 <div className="px-5 py-4">
+                  <button
+                    onClick={() => { trackEvent('sample_report_opened', { sample: s.slug }); onNavigate(`sample-${s.slug}`); }}
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    View Full Report
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => {
                       if (onRunSample) {
@@ -158,15 +186,10 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
                         onNavigate('home');
                       }
                     }}
-                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-300 text-indigo-600 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                    className="w-full mt-2 text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
                   >
-                    Analyze This Market
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
+                    Run my own report for this market →
                   </button>
-                  <p className="text-[10px] text-gray-400 text-center mt-1.5">Opens a new live report — separate from this example</p>
                 </div>
               </div>
             );
@@ -176,7 +199,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
         {/* Disclaimer + secondary CTA */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-gray-400">
-            Sample data is representative. Actual outputs vary by business type, location, and market conditions.
+            Results vary by business type, location, and market conditions.
           </p>
           <button
             onClick={() => onNavigate('pricing')}

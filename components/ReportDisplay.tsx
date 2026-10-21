@@ -75,6 +75,8 @@ interface ReportDisplayProps {
    * Normal (non-admin) users never see the confirmation — the load fires immediately.
    */
   isAdminOrDev?: boolean;
+  /** Public sample report: hides account actions (save) and the plan name. */
+  readOnly?: boolean;
 }
 
 // ─── Pro Insights: derived market metrics ────────────────────────────────────
@@ -607,7 +609,7 @@ const ReportSubNav: React.FC<{ activeSection: string; setActiveSection: (id: str
   );
 };
 
-export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPlan, onNavigate, onRegenerate, isAdminOrDev = false }) => {
+export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPlan, onNavigate, onRegenerate, isAdminOrDev = false, readOnly = false }) => {
   const [showMapModal, setShowMapModal] = useState(false);
   const [showUpgradeGateModal, setShowUpgradeGateModal] = useState<string | null>(null);
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
@@ -1034,7 +1036,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
             <div className="hidden print:block border-t border-gray-150 pt-4 mt-4 text-xs text-gray-500 flex justify-between uppercase font-mono">
               <span>BizScope Study &bull; Confidentially Generated</span>
               <span>Coordinates: Lat {report.targetCoordinates?.latitude ?? "N/A"} / Lng {report.targetCoordinates?.longitude ?? "N/A"}</span>
-              <span>{currentPlan} Plan</span>
+              <span>{readOnly ? 'Sample Report' : `${currentPlan} Plan`}</span>
             </div>
 
             {/* Quick Actions Footer Section */}
@@ -1060,6 +1062,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     <Map className="w-3.5 h-3.5" />
                     <span>View Competitor Map</span>
                 </button>
+                {!readOnly && (
                 <button 
                   onClick={handleSaveReport}
                   className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl transition-colors font-extrabold text-xs border cursor-pointer ${
@@ -1069,6 +1072,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                     <span>{canSaveReports(currentPlan) ? '💾' : '🔒'}</span> 
                     <span>{isSaved ? 'Saved to Dashboard' : canSaveReports(currentPlan) ? 'Save to Dashboard' : 'Save Report (Pro)'}</span>
                 </button>
+                )}
                 <button
                   onClick={handleExportPDF}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-xl transition-colors font-extrabold text-xs cursor-pointer"
@@ -1096,7 +1100,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Business</span> {report.businessType}</div>
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Location</span> {formatLocationDisplay(report.location)}</div>
                 <div><span className="text-[10px] font-black text-gray-400 uppercase block">Assessment</span> {viabilityScoreToAssessment(report.viabilityScore).label}</div>
-                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Plan</span> {currentPlan}</div>
+                <div><span className="text-[10px] font-black text-gray-400 uppercase block">Plan</span> {readOnly ? 'Sample' : currentPlan}</div>
             </div>
         </div>
 

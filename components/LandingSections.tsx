@@ -26,7 +26,7 @@ const WHAT_YOU_GET = [
   'The key risks, and what to check next',
 ];
 
-// "Artisan Coffee Shop · Austin, TX" — matches the coffee example people tap most.
+// "Coffee Shop · Austin, TX" — a real report, matching the coffee example people tap most.
 const EXAMPLE = SAMPLES.find((s) => s.location === 'Austin, TX') ?? SAMPLES[0];
 
 interface WhatYouGetProps {
@@ -225,7 +225,7 @@ interface HeroExampleProps {
 export const HeroExample: React.FC<HeroExampleProps> = ({ onNavigate }) => {
   const assessment = viabilityScoreToAssessment(EXAMPLE.viabilityScore);
   const openSamples = onNavigate
-    ? () => { trackEvent('hero_example_click'); onNavigate('samples'); }
+    ? () => { trackEvent('hero_example_click'); onNavigate(`sample-${EXAMPLE.slug}`); }
     : undefined;
   return (
     <>
@@ -271,7 +271,7 @@ export const HeroExample: React.FC<HeroExampleProps> = ({ onNavigate }) => {
         </div>
         {openSamples && (
           <button type="button" onClick={openSamples} className="w-full px-4 py-2.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 text-left cursor-pointer">
-            See sample reports →
+            See the full report →
           </button>
         )}
       </aside>

@@ -1,0 +1,334 @@
+{
+  "location": "Gurnee, IL",
+  "methodology": "This viability report was developed by synthesizing publicly available information from Google Maps and general industry knowledge for urgent care clinics. Competition analysis was based on direct competitor listings and their proximity to the target location. Financial projections are estimates based on industry benchmarks for similar businesses, adjusted for the competitive intensity of the Gurnee market. Demographic insights are derived from publicly available census data for Gurnee, IL. Risk assessment and success factors are based on standard business analysis principles applied to the specific market conditions. The viability score is calculated using a weighted formula considering market demand, competition intensity, financial feasibility, and overall risk level.",
+  "businessType": "Urgent Care Clinic",
+  "marketTrends": {
+    "trends": [
+      {
+        "trend": "Increasing demand for convenient care",
+        "impact": "Patients prefer urgent care for non-emergency issues due to convenience and cost-effectiveness compared to ERs."
+      },
+      {
+        "trend": "Shift towards value-based care",
+        "impact": "Urgent care clinics that can demonstrate quality outcomes and cost efficiency will be favored by patients and payers."
+      },
+      {
+        "trend": "Integration with larger health systems",
+        "impact": "Many urgent care centers are now affiliated with or owned by hospitals, offering seamless referrals and integrated patient records, posing a challenge for independent operators."
+      },
+      {
+        "trend": "Telemedicine expansion",
+        "impact": "The growth of virtual care options could impact in-person visit volumes for certain conditions, requiring clinics to adapt."
+      }
+    ],
+    "summary": "While specific trend data for urgent care in Gurnee, IL was not available, national trends indicate a continued growth in demand for convenient, accessible, and affordable healthcare alternatives to emergency rooms for non-life-threatening conditions. Patients increasingly seek walk-in options with shorter wait times. However, this national trend has also led to a proliferation of urgent care centers, intensifying competition in many local markets, including potentially Gurnee."
+  },
+  "generationMeta": {
+    "model": "gemini-2.5-flash",
+    "grounding": {
+      "mapsGrounded": true,
+      "groundingCalls": 1,
+      "searchGrounded": false
+    },
+    "generatedAt": "2026-08-30T21:55:43.832Z",
+    "sourceCount": 10,
+    "promptVersion": "2026-08-24",
+    "competitorCount": 10,
+    "isLiveGenerated": true,
+    "modelConfigVersion": "flash-synth16k-t0.4"
+  },
+  "recommendation": {
+    "decision": "Caution Advised",
+    "reasoning": "The Gurnee, IL market for urgent care clinics is characterized by a high concentration of established competitors, including several large healthcare systems. While there is a general demand for urgent care services, the existing supply appears to adequately meet or potentially exceed this demand. There is no clear evidence of an underserved segment or significant geographic gap that a new entrant could easily fill. A new clinic would face substantial challenges in attracting patients and building market share against well-known and integrated providers. Success would require significant capital investment, a highly compelling differentiation strategy, and a prolonged period to achieve profitability, making this a high-risk venture where caution is strongly advised."
+  },
+  "riskAssessment": {
+    "risks": [
+      {
+        "risk": "Market Saturation & Intense Competition",
+        "impact": "Difficulty in attracting and retaining patients, leading to lower-than-projected patient volumes and revenue.",
+        "severity": "High",
+        "mitigation": "Develop a strong differentiation strategy (e.g., specialized services, extended hours, superior patient experience, niche focus) and invest heavily in targeted local marketing and community outreach."
+      },
+      {
+        "risk": "Patient Acquisition & Brand Recognition",
+        "impact": "New clinics struggle to gain trust and visibility against established brands, leading to slow ramp-up times and financial strain.",
+        "severity": "High",
+        "mitigation": "Formulate a comprehensive marketing plan including digital presence, local partnerships (schools, employers), and community engagement. Focus on building a strong reputation for quality care and short wait times from day one."
+      },
+      {
+        "risk": "Staffing & Physician Recruitment",
+        "impact": "Shortage of qualified medical professionals can hinder service quality and operational efficiency.",
+        "severity": "Medium",
+        "mitigation": "Offer competitive compensation and benefits, foster a positive work environment, and explore partnerships with local medical schools or residency programs."
+      },
+      {
+        "risk": "Reimbursement & Payer Relations",
+        "impact": "Navigating complex insurance reimbursement policies and securing favorable contracts can impact profitability.",
+        "severity": "Medium",
+        "mitigation": "Engage experienced billing and coding specialists, establish relationships with major insurance providers early, and ensure transparent pricing for self-pay patients."
+      },
+      {
+        "risk": "High Startup Costs & Capital Requirements",
+        "impact": "Significant upfront investment can lead to cash flow issues if patient volumes are slow to materialize.",
+        "severity": "Medium",
+        "mitigation": "Secure adequate funding, meticulously manage expenses, and develop conservative financial projections with contingency plans."
+      }
+    ],
+    "summary": "The primary risks for a new urgent care clinic in Gurnee, IL stem from the intense competition and the challenge of establishing a new brand in a mature market. Operational and financial risks are also significant given the high startup costs and the need to quickly achieve patient volume."
+  },
+  "scoreBreakdown": {
+    "riskLevel": 70,
+    "marketDemand": 40,
+    "competitionIntensity": 80,
+    "financialFeasibility": 55
+  },
+  "successFactors": {
+    "factors": [
+      {
+        "factor": "Strategic Differentiation",
+        "importance": "Critical",
+        "description": "Offering unique services, a specialized focus (e.g., pediatrics, occupational health), or a superior patient experience (e.g., advanced technology, concierge-level service) to stand out from numerous competitors."
+      },
+      {
+        "factor": "Strong Local Marketing & Community Engagement",
+        "importance": "Critical",
+        "description": "Aggressively promoting the clinic through local channels, building relationships with community organizations, and establishing a visible presence to attract patients away from existing providers."
+      },
+      {
+        "factor": "Operational Efficiency & Patient Flow",
+        "importance": "High",
+        "description": "Minimizing wait times, streamlining check-in/check-out processes, and providing efficient, high-quality care to ensure patient satisfaction and positive word-of-mouth referrals."
+      },
+      {
+        "factor": "Experienced & Compassionate Medical Staff",
+        "importance": "High",
+        "description": "Hiring highly skilled, empathetic physicians and support staff who can deliver excellent medical care and create a welcoming environment, fostering patient loyalty."
+      },
+      {
+        "factor": "Robust Payer Network & Transparent Pricing",
+        "importance": "Medium",
+        "description": "Securing contracts with all major insurance providers and offering clear, competitive pricing for self-pay patients to maximize accessibility and financial viability."
+      }
+    ],
+    "summary": "Success for a new urgent care clinic in Gurnee, IL will depend heavily on strategic differentiation, operational excellence, and effective patient engagement in a highly competitive market."
+  },
+  "viabilityScore": 43,
+  "executiveSummary": "The Gurnee, IL market presents a challenging environment for a new urgent care clinic. While there is consistent demand for immediate medical services, the area is already well-served by a significant number of established competitors, including several prominent healthcare systems. A new clinic would face an uphill battle to capture market share and differentiate itself in a crowded landscape. Success would hinge on a highly effective strategy to attract patients, potentially through specialized services, extended hours, or a unique patient experience, in a market where many options already exist.",
+  "groundingSources": [
+    {
+      "uri": "https://maps.google.com/maps?cid=1941403928309123331",
+      "title": "Endeavor Health Immediate Care - Gurnee - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=15147012942625992700",
+      "title": "Advocate Condell Immediate Care Center - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=6392483389181282230",
+      "title": "Northwestern Medicine Immediate Care Gurnee - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=6426361830832637744",
+      "title": "PromptMed Urgent Care | Waukegan, IL - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=9352378241065359433",
+      "title": "PromptMed Urgent Care | Grayslake, IL - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=985288719213857813",
+      "title": "AFC Urgent Care Libertyville - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=7127398457324609672",
+      "title": "PromptMed Urgent Care | Antioch, IL - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=5178333292546835572",
+      "title": "Physicians Immediate Care - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=14181022906782908626",
+      "title": "Advocate Condell Immediate Care Center - Google Maps"
+    },
+    {
+      "uri": "https://maps.google.com/maps?cid=12508930284144900846",
+      "title": "Waukegan Immediate Care - Google Maps"
+    }
+  ],
+  "targetCoordinates": {
+    "latitude": 42.3789,
+    "longitude": -87.9367
+  },
+  "competitionAnalysis": {
+    "summary": "The urgent care market in Gurnee, IL and its immediate vicinity is highly saturated. There are numerous established immediate care centers, including those operated by major healthcare systems such as Endeavor Health, Advocate Condell, and Northwestern Medicine. Additionally, several PromptMed Urgent Care locations and other independent clinics further intensify the competitive landscape. This density of providers indicates that existing demand is likely well-met, making it challenging for a new entrant to secure a significant patient base without a highly differentiated offering.",
+    "competitors": [
+      {
+        "name": "Endeavor Health Immediate Care - Gurnee",
+        "address": "7900 Rollins Rd, Gurnee, IL 60031",
+        "details": "A well-established immediate care center part of a larger health system.",
+        "latitude": 42.3857,
+        "longitude": -87.9701
+      },
+      {
+        "name": "Advocate Condell Immediate Care Center",
+        "address": "1445 Hunt Club Rd, Gurnee, IL 60031",
+        "details": "Part of the Advocate Aurora Health network, offering comprehensive immediate care services.",
+        "latitude": 42.3683,
+        "longitude": -87.9542
+      },
+      {
+        "name": "Northwestern Medicine Immediate Care Gurnee",
+        "address": "6155 W Grand Ave Ste 100, Gurnee, IL 60031",
+        "details": "An immediate care facility backed by the reputable Northwestern Medicine system.",
+        "latitude": 42.3687,
+        "longitude": -87.9179
+      },
+      {
+        "name": "PromptMed Urgent Care | Waukegan, IL",
+        "address": "724 N Green Bay Rd, Waukegan, IL 60085",
+        "details": "One of several PromptMed locations in the broader area, providing urgent care services.",
+        "latitude": 42.3789,
+        "longitude": -87.8927
+      },
+      {
+        "name": "PromptMed Urgent Care | Grayslake, IL",
+        "address": "792 E Belvidere Rd Ste 300, Grayslake, IL 60030",
+        "details": "Another PromptMed branch serving the Grayslake community, close to Gurnee.",
+        "latitude": 42.3601,
+        "longitude": -88.0065
+      },
+      {
+        "name": "AFC Urgent Care Libertyville",
+        "address": "1366 S Milwaukee Ave, Libertyville, IL 60048",
+        "details": "An American Family Care franchise offering urgent care in a nearby town.",
+        "latitude": 42.2745,
+        "longitude": -87.9531
+      },
+      {
+        "name": "PromptMed Urgent Care | Antioch, IL",
+        "address": "420 IL-173 Suite 101, Antioch, IL 60002",
+        "details": "A PromptMed clinic located further north, serving the Antioch area.",
+        "latitude": 42.4839,
+        "longitude": -88.0931
+      },
+      {
+        "name": "Physicians Immediate Care",
+        "address": "416 S Milwaukee Ave, Libertyville, IL 60048",
+        "details": "A chain of urgent care clinics with a presence in Libertyville.",
+        "latitude": 42.2858,
+        "longitude": -87.9525
+      },
+      {
+        "name": "Advocate Condell Immediate Care Center",
+        "address": "2 E Rollins Rd, Round Lake Beach, IL 60073",
+        "details": "Another Advocate Condell location, extending their reach to Round Lake Beach.",
+        "latitude": 42.3805,
+        "longitude": -88.0691
+      },
+      {
+        "name": "Waukegan Immediate Care",
+        "address": "1075 N Green Bay Rd, Waukegan, IL 60085",
+        "details": "An immediate care clinic located in Waukegan, serving the eastern part of the region.",
+        "latitude": 42.3888,
+        "longitude": -87.8925
+      }
+    ]
+  },
+  "demographicInsights": {
+    "summary": "Gurnee, IL is a moderately sized suburban community with a solid economic base. The demographic profile suggests a population that would utilize urgent care services, given its family-oriented nature and median income. However, the existing density of urgent care providers indicates that this demand is likely already being met by current facilities.",
+    "demographics": [
+      {
+        "value": "30,757",
+        "metric": "Population (Gurnee, IL)",
+        "insight": "A substantial population base to draw from, indicating potential demand for healthcare services."
+      },
+      {
+        "value": "$94,334",
+        "metric": "Median Household Income (Gurnee, IL)",
+        "insight": "An affluent population generally has good health insurance coverage and willingness to pay for convenient medical services."
+      },
+      {
+        "value": "Relatively young, family-oriented population",
+        "metric": "Age Distribution",
+        "insight": "Families with children are frequent users of urgent care for acute illnesses and minor injuries."
+      },
+      {
+        "value": "High (estimated)",
+        "metric": "Insurance Coverage",
+        "insight": "Higher median income typically correlates with higher rates of private health insurance, which supports urgent care business models."
+      }
+    ]
+  },
+  "financialProjections": {
+    "roiTime": "4\n\n6 years",
+    "summary": "Opening an urgent care clinic in Gurnee, IL would require substantial initial investment, consistent with industry averages for medical facilities. Revenue generation in the initial years will be impacted by the highly competitive market, necessitating a robust patient acquisition strategy. Profitability will depend on achieving sufficient patient volume and efficient operational management to overcome the high startup costs and ongoing overhead.",
+    "keyStats": [
+      {
+        "label": "Average Patient Visits (Year 1)",
+        "value": "25-40 per day"
+      },
+      {
+        "label": "Average Patient Visits (Year 3)",
+        "value": "50-80 per day"
+      },
+      {
+        "label": "Average Revenue per Visit",
+        "value": "$150-$200"
+      },
+      {
+        "label": "Staffing (Full-Time Equivalent)",
+        "value": "8-12"
+      },
+      {
+        "label": "Occupancy Rate (Year 1)",
+        "value": "30%-45%"
+      }
+    ],
+    "scalability": "Medium",
+    "profitMargin": "10%\n\n15%",
+    "revenueYear1": "$700,000\n\n$1,200,000",
+    "revenueYear3": "$1,500,000\n\n$2,500,000",
+    "breakEvenTime": "24\n\n36 months",
+    "startupCostItems": [
+      {
+        "notes": "Depending on the condition of the leased space and required medical infrastructure.",
+        "amount": "$250,000\n\n$500,000",
+        "category": "Build-out / Tenant Improvements"
+      },
+      {
+        "notes": "Includes diagnostic equipment (X-ray, lab), EMR systems, and office technology.",
+        "amount": "$200,000\n\n$400,000",
+        "category": "Medical Equipment & Technology"
+      },
+      {
+        "notes": "Salaries for physicians, nurses, and administrative staff for 3-6 months.",
+        "amount": "$150,000\n\n$250,000",
+        "category": "Initial Staffing & Training"
+      },
+      {
+        "notes": "State and federal licenses, permits, and legal consultation.",
+        "amount": "$30,000\n\n$60,000",
+        "category": "Licensing & Legal Fees"
+      },
+      {
+        "notes": "Funds to cover operating expenses until positive cash flow is achieved.",
+        "amount": "$100,000\n\n$200,000",
+        "category": "Working Capital Reserve"
+      },
+      {
+        "notes": "Initial campaigns to establish presence in a competitive market.",
+        "amount": "$50,000\n\n$90,000",
+        "category": "Marketing & Patient Acquisition"
+      }
+    ],
+    "startupCostRange": "$800,000\n\n$1,500,000",
+    "startupSpaceContext": {
+      "sqft": "2,500\n\n4,000 sq ft",
+      "monthlyRent": "$8,000\n\n$15,000/month",
+      "buildOutIntensity": "Moderate"
+    },
+    "startupCostBreakdown": "Startup costs for an urgent care clinic typically include significant expenses for facility build-out or renovation, medical equipment, technology infrastructure, initial staffing, licensing, and working capital. The competitive landscape in Gurnee suggests that substantial marketing and patient acquisition costs will also be necessary."
+  },
+  "_generatedAt": "2026-08-30T21:55:44.193132+00:00"
+}
