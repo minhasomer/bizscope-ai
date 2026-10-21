@@ -23,6 +23,7 @@ export const TESTIMONIALS: Testimonial[] = [
     quote:
       "I dropped business ideas I was clinging to after running them through BizScope. Saved me so much time and money chasing ideas that weren't going anywhere. Now I test every idea first. The numbers tell me straight if it's worth it.",
     approved: true,
+    photo: '/testimonials/nisa.webp',
   },
   // Approved by the owner on 2026-10-20 (on behalf of both); titles/photos to follow.
   {
