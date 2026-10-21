@@ -1614,7 +1614,7 @@ const App: React.FC = () => {
                 <ul className="list-disc list-inside space-y-1 text-sm">
                   <li><strong>Account data:</strong> Email address, display name, and OAuth profile photo when you sign in via Google or email/password.</li>
                   <li><strong>Usage data:</strong> Business queries you run (business type and location strings), report counts, and feature usage to enforce plan quotas.</li>
-                  <li><strong>Technical data:</strong> Browser type, rough IP-derived region, and session tokens managed by Supabase Auth.</li>
+                  <li><strong>Technical data:</strong> Browser type, rough IP-derived region, and session tokens managed by Supabase Auth. When you run a free preview without an account, we store a one-way, keyed hash of your IP address (never the address itself) to limit free previews per day and prevent abuse.</li>
                   <li><strong>Saved reports:</strong> Reports you explicitly save to your Dashboard are stored associated with your account.</li>
                 </ul>
                 <p className="mt-2 text-sm">We do <strong>not</strong> collect payment card numbers directly — Stripe handles all billing data under their own privacy policy.</p>
