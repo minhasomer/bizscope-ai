@@ -38,6 +38,7 @@ interface WhatYouGetProps {
 
 export const WhatYouGet: React.FC<WhatYouGetProps> = ({ freePreviewAvailable, onTryIt, onNavigate }) => {
   const assessment = viabilityScoreToAssessment(EXAMPLE.viabilityScore);
+  const openExample = () => { trackEvent('landing_example_card_click'); onNavigate?.(`sample-${EXAMPLE.slug}`); };
   return (
     <section className="bg-white py-14 sm:py-16 border-t border-slate-200">
       <div className="max-w-5xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
@@ -79,8 +80,11 @@ export const WhatYouGet: React.FC<WhatYouGetProps> = ({ freePreviewAvailable, on
           </div>
         </div>
 
-        {/* Example report card */}
-        <div className="rounded-2xl border border-slate-200 shadow-xl overflow-hidden bg-white">
+        {/* Example report card — opens the full real report */}
+        <div
+          onClick={onNavigate ? openExample : undefined}
+          className={`rounded-2xl border border-slate-200 shadow-xl overflow-hidden bg-white ${onNavigate ? 'cursor-pointer hover:shadow-2xl hover:border-indigo-200 transition-all' : ''}`}
+        >
           <div className="px-5 pt-5 pb-4 border-b border-slate-100 flex items-start justify-between gap-2">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 block mb-1">
@@ -114,7 +118,16 @@ export const WhatYouGet: React.FC<WhatYouGetProps> = ({ freePreviewAvailable, on
             ))}
           </div>
           <p className="px-5 py-4 text-xs text-slate-500 leading-relaxed italic">“{EXAMPLE.insight}”</p>
-          <p className="px-5 pb-4 text-[10px] text-slate-400">Illustrative example. Your report is generated for your idea and location.</p>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); openExample(); }}
+              className="w-full px-5 py-3 border-t border-slate-100 text-left text-xs font-semibold text-indigo-600 hover:bg-indigo-50 cursor-pointer"
+            >
+              See the full report →
+            </button>
+          )}
+          <p className="px-5 py-3 text-[10px] text-slate-400">Real BizScope report. Yours is generated for your idea and location.</p>
         </div>
       </div>
     </section>

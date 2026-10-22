@@ -45,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, current
   const navLinks = [
     { page: 'home', label: 'Home' },
     { page: 'opportunities', label: 'Market Gaps' },
+    { page: 'samples', label: 'Sample Reports' },
     { page: 'pricing', label: 'Pricing' },
     { page: 'dashboard', label: 'Dashboard' },
     ...(user ? [{ page: 'billing', label: 'Billing' }] : []),
