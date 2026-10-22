@@ -29,6 +29,17 @@ interface SampleCard {
  */
 export const SAMPLES: SampleCard[] = [
   {
+    slug: 'mobile-pet-grooming-frisco-tx',
+    businessType: 'Mobile Pet Grooming',
+    location: 'Frisco, TX',
+    category: 'Pet Services',
+    viabilityScore: 62,
+    startupCost: '$35,000–$120,000',
+    year1Revenue: '$120,000–$180,000',
+    breakEven: '6–12 months',
+    insight: 'Frisco, TX presents a promising, albeit competitive, environment for a new mobile pet grooming service.',
+  },
+  {
     slug: 'urgent-care-clinic-gurnee-il',
     businessType: 'Urgent Care Clinic',
     location: 'Gurnee, IL',
@@ -65,6 +76,7 @@ export const SAMPLES: SampleCard[] = [
 
 /** Lazy loaders so the full report JSON is only downloaded on its own page. */
 export const SAMPLE_REPORT_LOADERS: Record<string, () => Promise<{ default: unknown }>> = {
+  'mobile-pet-grooming-frisco-tx':       () => import('../src/data/sampleReports/mobile-pet-grooming-frisco-tx.json'),
   'urgent-care-clinic-gurnee-il':        () => import('../src/data/sampleReports/urgent-care-clinic-gurnee-il.json'),
   'coffee-shop-austin-tx':               () => import('../src/data/sampleReports/coffee-shop-austin-tx.json'),
   'junk-removal-service-lake-county-il': () => import('../src/data/sampleReports/junk-removal-service-lake-county-il.json'),
@@ -108,7 +120,7 @@ export const SampleReports: React.FC<SampleReportsProps> = ({ onNavigate, onRunS
         <p className="text-xs text-gray-400 text-center mb-5">
           These are real BizScope reports, shown exactly as generated. Open any one to see the full analysis.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {SAMPLES.map((s) => {
             const assessment = viabilityScoreToAssessment(s.viabilityScore);
 
