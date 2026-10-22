@@ -26,8 +26,8 @@ const WHAT_YOU_GET = [
   'The key risks, and what to check next',
 ];
 
-// "Coffee Shop · Austin, TX" — a real report, matching the coffee example people tap most.
-const EXAMPLE = SAMPLES.find((s) => s.location === 'Austin, TX') ?? SAMPLES[0];
+// A real report with a positive (green) verdict, so the example reads as a go-ahead.
+const EXAMPLE = SAMPLES.find((s) => s.slug === 'mobile-pet-grooming-frisco-tx') ?? SAMPLES[0];
 
 interface WhatYouGetProps {
   /** Anonymous visitor who still has the free preview — only then do we promise a free report. */

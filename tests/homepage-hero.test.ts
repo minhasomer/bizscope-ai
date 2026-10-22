@@ -23,23 +23,23 @@ function check(name: string, fn: () => void) {
 
 // ── 1. Positioning line present ───────────────────────────────────────────────
 
-check('ad-matched headline "Gut Feelings Don’t Build Successful Businesses." is present in Hero', () => {
+check('ad-matched headline "Market Research" is present in Hero', () => {
   assert.ok(
-    heroSrc.includes('Gut Feelings Don’t Build Successful Businesses.'),
+    heroSrc.includes('Market Research'),
     'Expected headline not found in Hero.tsx',
   );
 });
 
-check('headline accent "Data Does." uses indigo-300 color', () => {
+check('headline accent "in Minutes" uses indigo-300 color', () => {
   assert.ok(
-    /text-indigo-300">Data Does\./.test(heroSrc),
-    'indigo-300 "Data Does." accent missing from the headline',
+    /text-indigo-300">in Minutes</.test(heroSrc),
+    'indigo-300 "in Minutes" accent missing from the headline',
   );
 });
 
-check('subheadline "Know if your idea will work before you spend a cent." is present in Hero', () => {
+check('subheadline "Know If Your Idea Works Before You Spend a Cent." is present in Hero', () => {
   assert.ok(
-    heroSrc.includes('Know if your idea will work before you spend a cent.'),
+    heroSrc.includes('Know If Your Idea Works Before You Spend a Cent.'),
     'Expected subheadline not found in Hero.tsx',
   );
 });

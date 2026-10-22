@@ -448,11 +448,11 @@ export const Hero: React.FC<HeroProps> = ({
 
                 {/* Main Headline */}
                 <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
-                    Gut Feelings Don’t Build Successful Businesses.
-                    <span className="block text-indigo-300">Data Does.</span>
+                    Market Research
+                    <span className="block text-indigo-300">in Minutes</span>
                 </h1>
                 <p className="text-lg sm:text-xl text-slate-200 mb-8 max-w-2xl mx-auto leading-relaxed">
-                    Know if your idea will work before you spend a cent.
+                    Know If Your Idea Works Before You Spend a Cent.
                     {freePreviewAvailable && !hasResults && (
                       <span className="font-bold text-emerald-300"> First report is free.</span>
                     )}

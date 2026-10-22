@@ -1,0 +1,513 @@
+{
+  "businessType": "Mobile Pet Grooming",
+  "location": "Frisco, TX",
+  "viabilityScore": 62,
+  "scoreBreakdown": {
+    "marketDemand": 70,
+    "competitionIntensity": 65,
+    "financialFeasibility": 70,
+    "riskLevel": 50
+  },
+  "executiveSummary": "Frisco, TX presents a promising, albeit competitive, environment for a new mobile pet grooming service. The area boasts a rapidly growing, affluent population with high pet ownership rates, driving strong demand for convenient, at-home pet care. While several mobile groomers already operate in the vicinity, the overall market for pet grooming services is expanding significantly, with mobile grooming identified as a high-growth segment. Success will hinge on effective differentiation, superior customer service, and efficient operational management to capture a share of this robust market.",
+  "financialProjections": {
+    "summary": "The financial outlook for a mobile pet grooming business in Frisco, TX, is favorable, with strong revenue potential driven by premium pricing and high demand for convenience. Startup costs are primarily influenced by the choice of grooming vehicle, ranging from moderate for a used van to substantial for a new custom build. With efficient operations, healthy profit margins are achievable, allowing for a relatively quick break-even and return on investment.",
+    "startupCostRange": "$35,000\n\n$120,000",
+    "startupCostBreakdown": "Startup costs are largely dominated by the acquisition and outfitting of a grooming vehicle. Additional expenses include essential grooming equipment, initial marketing, business registration, and working capital.",
+    "startupCostItems": [
+      {
+        "category": "Grooming Van (used/converted)",
+        "amount": "$15,000\n\n$40,000",
+        "notes": "Used, converted van or trailer"
+      },
+      {
+        "category": "Grooming Van (new/custom)",
+        "amount": "$70,000\n\n$100,000+",
+        "notes": "New, custom-built grooming van"
+      },
+      {
+        "category": "Equipment & Technology",
+        "amount": "$8,000\n\n$12,000",
+        "notes": "Hydraulic table, bathing system, dryers, clippers, software"
+      },
+      {
+        "category": "Initial Supplies & Products",
+        "amount": "$1,000\n\n$2,000"
+      },
+      {
+        "category": "Licenses, Permits & Insurance",
+        "amount": "$1,500\n\n$3,000"
+      },
+      {
+        "category": "Marketing & Website",
+        "amount": "$1,000\n\n$2,000"
+      },
+      {
+        "category": "Working Capital Reserve",
+        "amount": "$5,000\n\n$10,000",
+        "notes": "For initial operating expenses"
+      }
+    ],
+    "revenueYear1": "$120,000\n\n$180,000",
+    "revenueYear3": "$180,000\n\n$250,000+",
+    "breakEvenTime": "6\n\n12 months",
+    "roiTime": "1.5\n\n3 years",
+    "profitMargin": "20\n\n30% (net for owner-operator)",
+    "scalability": "Medium",
+    "keyStats": [
+      {
+        "label": "Average Price Per Groom",
+        "value": "$85\n\n$150"
+      },
+      {
+        "label": "Daily Grooms (solo groomer)",
+        "value": "5\n\n8"
+      },
+      {
+        "label": "Monthly Operating Costs",
+        "value": "~$3,375"
+      },
+      {
+        "label": "Potential Annual Net Profit (owner-operator)",
+        "value": "$60,000\n\n$90,000"
+      }
+    ],
+    "startupSpaceContext": {
+      "buildOutIntensity": "Low",
+      "monthlyRent": "N/A (mobile business)",
+      "sqft": "N/A (mobile business)"
+    }
+  },
+  "competitionAnalysis": {
+    "summary": "The mobile pet grooming market in Frisco, TX, is moderately competitive with several established players already serving the area. While this indicates existing demand, a new entrant will need to clearly differentiate itself to capture market share. Competitors range from dedicated mobile services to those with physical locations that also offer mobile options, suggesting a need for a strong value proposition.",
+    "competitors": [
+      {
+        "name": "Barking Paws Mobile Dog Spa",
+        "details": "A mobile service directly serving the Frisco, TX area.",
+        "address": "Frisco, TX area (Mobile Service)",
+        "latitude": 33.0967,
+        "longitude": -96.8122
+      },
+      {
+        "name": "Poochies Mobile Pet Grooming",
+        "details": "A mobile pet grooming service with a listed address outside Frisco, but likely serving the broader North Texas region.",
+        "address": "4215 N Beltwood Pkwy Ste 105, Farmers Branch, TX 75244",
+        "latitude": 32.9377,
+        "longitude": -96.8779
+      },
+      {
+        "name": "Fresh Mobile Dog Spa",
+        "details": "A mobile service actively serving the Frisco, TX area.",
+        "address": "Frisco, TX area (Mobile Service)",
+        "latitude": 33.0755,
+        "longitude": -96.8001
+      },
+      {
+        "name": "Lilos Mobile Pet Spa Dallas",
+        "details": "A mobile service covering Dallas and Fort Worth, including Frisco.",
+        "address": "Dallas/Fort Worth, TX area (Mobile Service)",
+        "latitude": 33.0501,
+        "longitude": -96.835
+      },
+      {
+        "name": "Little Munchkins Mobile Pet Grooming",
+        "details": "A mobile service specifically serving the Frisco, TX area.",
+        "address": "Frisco, TX area (Mobile Service)",
+        "latitude": 33.102,
+        "longitude": -96.7905
+      }
+    ]
+  },
+  "marketTrends": {
+    "summary": "The mobile pet grooming market in Frisco, TX, is buoyed by robust and favorable trends. Significant population growth, increasing pet ownership, and a strong consumer preference for convenience and personalized services are key drivers. The overall pet grooming industry is experiencing substantial growth, with mobile services leading this expansion, indicating a healthy and expanding market for new entrants.",
+    "trends": [
+      {
+        "trend": "Growing Pet Ownership",
+        "impact": "Two-thirds of US households own a pet, with North Texas seeing a 41% surge in pet adoptions. This directly translates to a larger potential client base for grooming services."
+      },
+      {
+        "trend": "High Demand for Convenience",
+        "impact": "Affluent consumers in Frisco are willing to pay a premium for at-home, stress-free grooming services, eliminating travel and wait times. This supports higher pricing for mobile groomers."
+      },
+      {
+        "trend": "Premium Pricing Acceptance",
+        "impact": "Mobile groomers can charge 15-30% more than traditional salons, enhancing revenue potential and profitability due to the added value of convenience and personalized service."
+      },
+      {
+        "trend": "Industry Growth & Mobile Segment Leadership",
+        "impact": "The U.S. pet grooming market is projected to reach $13 billion by 2026, with mobile grooming being the fastest-growing segment. This indicates a strong and expanding market for new mobile businesses."
+      },
+      {
+        "trend": "Groomer Shortage",
+        "impact": "A nationwide shortage of groomers leads to longer wait times (3-6 weeks) at existing businesses, creating an opportunity for new entrants to capture unmet demand and maintain pricing power."
+      }
+    ]
+  },
+  "demographicInsights": {
+    "summary": "Frisco, TX, presents an ideal demographic profile for a mobile pet grooming business. The city's rapid population growth, high median household income, and strong pet ownership rates indicate a large and affluent customer base with disposable income to spend on premium pet services. This demographic is highly likely to value and afford the convenience and personalized experience offered by mobile grooming.",
+    "demographics": [
+      {
+        "metric": "Total Population (2025 estimate)",
+        "value": "236,955",
+        "insight": "A large and rapidly growing population base ensures a continually expanding pool of potential customers."
+      },
+      {
+        "metric": "Median Household Income",
+        "value": "$150,212",
+        "insight": "High median household income indicates significant disposable income, making residents more likely to afford premium, convenient services like mobile pet grooming."
+      },
+      {
+        "metric": "Pet Ownership (Texas Households)",
+        "value": "58%",
+        "insight": "A high percentage of pet-owning households directly translates to a substantial target market for pet grooming services."
+      },
+      {
+        "metric": "Pet Adoptions (North Texas)",
+        "value": "41% surge",
+        "insight": "Recent increases in pet adoptions further expand the potential client base, indicating a sustained growth in pet ownership."
+      }
+    ]
+  },
+  "riskAssessment": {
+    "summary": "While the market is attractive, a new mobile pet grooming business in Frisco faces several risks, primarily related to competition and operational efficiency. Mitigating these risks through strategic planning, strong customer focus, and robust operational management will be crucial for long-term success.",
+    "risks": [
+      {
+        "risk": "High Competition Intensity",
+        "impact": "Multiple existing mobile groomers and traditional salons could make customer acquisition challenging and potentially lead to pricing pressure.",
+        "severity": "Medium",
+        "mitigation": "Differentiate through niche services (e.g., specialized breeds, eco-friendly products, specific health needs), superior customer service, and a strong local marketing strategy focusing on unique value propositions."
+      },
+      {
+        "risk": "Significant Startup Capital for Vehicle",
+        "impact": "The high cost of a new, custom grooming van can create a substantial financial barrier and increase initial debt burden.",
+        "severity": "Medium",
+        "mitigation": "Consider starting with a well-maintained used or converted van to reduce initial outlay, or explore financing options specifically for commercial vehicles. Prioritize essential equipment first."
+      },
+      {
+        "risk": "Operational Inefficiencies (Routing & Scheduling)",
+        "impact": "Poor route planning can lead to excessive fuel costs, wasted time, and reduced daily appointment capacity, directly impacting profitability.",
+        "severity": "High",
+        "mitigation": "Invest in robust scheduling and routing software. Optimize routes daily based on customer locations to maximize appointments per day and minimize travel time and fuel consumption."
+      },
+      {
+        "risk": "Customer Acquisition & Retention",
+        "impact": "Building a loyal client base in a competitive market requires consistent effort and can be slow initially.",
+        "severity": "Medium",
+        "mitigation": "Implement a strong referral program, leverage online reviews, maintain an active social media presence, and provide exceptional, personalized service to encourage repeat business and positive word-of-mouth."
+      },
+      {
+        "risk": "Vehicle Maintenance & Downtime",
+        "impact": "Mechanical issues with the grooming van can lead to service interruptions, lost revenue, and unexpected repair costs.",
+        "severity": "Medium",
+        "mitigation": "Implement a rigorous preventative maintenance schedule for the vehicle and grooming equipment. Have a contingency plan for vehicle breakdown, such as partnerships with other groomers or a backup vehicle option if feasible."
+      }
+    ]
+  },
+  "successFactors": {
+    "summary": "Success in the Frisco mobile pet grooming market will be driven by a combination of operational excellence, strategic differentiation, and a strong commitment to customer satisfaction. Focusing on these key areas will enable a new business to carve out its niche and thrive amidst existing competition.",
+    "factors": [
+      {
+        "factor": "Efficient Routing & Scheduling",
+        "description": "Maximizing the number of appointments per day and minimizing drive time is critical for profitability and operational efficiency. This directly impacts revenue and fuel costs.",
+        "importance": "Critical"
+      },
+      {
+        "factor": "Exceptional Customer Service & Pet Care",
+        "description": "Building trust with pet owners and providing a stress-free, high-quality grooming experience for pets will drive repeat business and positive referrals in a service-oriented market.",
+        "importance": "Critical"
+      },
+      {
+        "factor": "Strong Local Marketing & Online Presence",
+        "description": "Effectively reaching the target demographic through local SEO, social media, community engagement, and a professional website with easy booking will be essential for client acquisition.",
+        "importance": "High"
+      },
+      {
+        "factor": "Clear Differentiation & Value Proposition",
+        "description": "Identifying and promoting unique selling points (e.g., specialized services, eco-friendly products, specific breed expertise, advanced booking system) to stand out from competitors.",
+        "importance": "High"
+      },
+      {
+        "factor": "Financial Management & Cost Control",
+        "description": "Careful management of operating expenses, particularly fuel, supplies, and vehicle maintenance, is crucial for maintaining healthy profit margins.",
+        "importance": "Medium"
+      }
+    ]
+  },
+  "recommendation": {
+    "decision": "Caution Advised",
+    "reasoning": "The Frisco market for mobile pet grooming is highly attractive due to its affluent, growing population and strong pet ownership trends, indicating substantial underlying demand. However, the presence of multiple direct mobile competitors, as well as traditional salons, suggests that while demand is robust, the market is not underserved in terms of existing supply. A new entrant would need to execute a very strong differentiation strategy and achieve operational excellence to capture market share. The opportunity is viable, but requires careful strategic planning and a clear competitive edge to succeed against established players."
+  },
+  "methodology": "This viability report synthesizes market research, demographic data from the U.S. Census Bureau, industry benchmarks, and competitive analysis from Google Maps and search results. A proprietary scoring model was applied to assess market demand, competition intensity, financial feasibility, and overall risk. The viability score was calculated using the formula: (0.30 \n\n Market Demand) + (0.25 \n\n (100 - Competition Intensity)) + (0.25 \n\n Financial Feasibility) + (0.20 \n\n (100 - Risk Level)). The final recommendation is based on the calculated score and a qualitative assessment of the reconciled positive and negative evidence.",
+  "targetCoordinates": {
+    "latitude": 33.0805,
+    "longitude": -96.8066
+  },
+  "groundingSources": [
+    {
+      "title": "Barking Paws Mobile Dog Spa - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=7068196363113448488"
+    },
+    {
+      "title": "Poochies Mobile Pet Grooming - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=11869427946250465599"
+    },
+    {
+      "title": "Fresh Mobile Dog Spa - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=14398635533855243378"
+    },
+    {
+      "title": "Lilos Mobile Pet Spa Dallas - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=13254548585096196833"
+    },
+    {
+      "title": "Little Munchkins Mobile Pet Grooming - Google Maps",
+      "uri": "https://maps.google.com/maps?cid=4720509591847423765"
+    },
+    {
+      "title": "Review of Barking Paws Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT25SQ1lqQllPVWxaUzJWQmIweEhZMlpuUlZSb2JHYxAB!2m1!1s0x2d66eb4d2980b5d7:0x62174724b215c428"
+    },
+    {
+      "title": "Review of Barking Paws Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2psa1pYbFlSSGR2Ym1SamF6aFliM05ZYmpWRFJrRRAB!2m1!1s0x2d66eb4d2980b5d7:0x62174724b215c428"
+    },
+    {
+      "title": "Review of Barking Paws Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tSbk1qaDJkMGh6TkVrelFsVXhjMEpIYW5aV09XYxAB!2m1!1s0x2d66eb4d2980b5d7:0x62174724b215c428"
+    },
+    {
+      "title": "Review of Barking Paws Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2w4dFRubGlTMlJXVkhORE0ySTVNemh5UkZWa2RrRRAB!2m1!1s0x2d66eb4d2980b5d7:0x62174724b215c428"
+    },
+    {
+      "title": "Review of Barking Paws Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2xKV05sZElZMjFxZWxaTlVrOTJUbEZYVmtwRWIyYxAB!2m1!1s0x2d66eb4d2980b5d7:0x62174724b215c428"
+    },
+    {
+      "title": "Review of Poochies Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURKOTdMWXZRRRAB!2m1!1s0x864e9dacca3634e7:0xa4b8add4875a713f"
+    },
+    {
+      "title": "Review of Poochies Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURCLTkyUjdBRRAB!2m1!1s0x864e9dacca3634e7:0xa4b8add4875a713f"
+    },
+    {
+      "title": "Review of Poochies Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSURKbnI2LW1RRRAB!2m1!1s0x864e9dacca3634e7:0xa4b8add4875a713f"
+    },
+    {
+      "title": "Review of Poochies Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT25SRFUxUm9iRUp1WkZaZmF6TjRWMHAwZUdKdE0xRRAB!2m1!1s0x864e9dacca3634e7:0xa4b8add4875a713f"
+    },
+    {
+      "title": "Review of Poochies Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNKbl9YV21RRRAB!2m1!1s0x864e9dacca3634e7:0xa4b8add4875a713f"
+    },
+    {
+      "title": "Review of Fresh Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pVNExXZG5WVjlHWmxNMFNESjVValZYVFhwWGMxRRAB!2m1!1s0x4d1a49e8bab6a34f:0xc7d23abb15c23c72"
+    },
+    {
+      "title": "Review of Fresh Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnTUNRbklIQ1RnEAE!2m1!1s0x4d1a49e8bab6a34f:0xc7d23abb15c23c72"
+    },
+    {
+      "title": "Review of Fresh Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VNeW04SjZNak11cllREAE!2m1!1s0x4d1a49e8bab6a34f:0xc7d23abb15c23c72"
+    },
+    {
+      "title": "Review of Fresh Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21wSVNYUTNaMlpDYmxOQlpXMHhiVVJKUjNoMVJYYxAB!2m1!1s0x4d1a49e8bab6a34f:0xc7d23abb15c23c72"
+    },
+    {
+      "title": "Review of Fresh Mobile Dog Spa - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChZDSUhNMG9nS0VJQ0FnSUNYd19uaFZ3EAE!2m1!1s0x4d1a49e8bab6a34f:0xc7d23abb15c23c72"
+    },
+    {
+      "title": "Review of Lilos Mobile Pet Spa Dallas - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21zeFRrbHBPVzF2TW1VMGRDMUZhMDVqTmpCNmNrRRAB!2m1!1s0x8978a3708259f841:0xb7f19db668d0b2e1"
+    },
+    {
+      "title": "Review of Lilos Mobile Pet Spa Dallas - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2tWR1VGTjFVMVk1Tm5CeVpISXlZbWg1T1cxbGFFRRAB!2m1!1s0x8978a3708259f841:0xb7f19db668d0b2e1"
+    },
+    {
+      "title": "Review of Lilos Mobile Pet Spa Dallas - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT21GbVkyWlZPVzV1UzB0UkxWSkxjREV6UlhaaFVVRRAB!2m1!1s0x8978a3708259f841:0xb7f19db668d0b2e1"
+    },
+    {
+      "title": "Review of Lilos Mobile Pet Spa Dallas - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUMzNElUcGdRRRAB!2m1!1s0x8978a3708259f841:0xb7f19db668d0b2e1"
+    },
+    {
+      "title": "Review of Lilos Mobile Pet Spa Dallas - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sCi9DQUlRQUNvZENodHljRjlvT2pWdVVqUlpZbXBpWmpsS1NtTnFjSGx3ZVdoSVMxRRAB!2m1!1s0x8978a3708259f841:0xb7f19db668d0b2e1"
+    },
+    {
+      "title": "Review of Little Munchkins Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNCdFphb3BnRRAB!2m1!1s0x864c3bc36ea073ef:0x41829e76a4e3cf15"
+    },
+    {
+      "title": "Review of Little Munchkins Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUMzX182NnNBRRAB!2m1!1s0x864c3bc36ea073ef:0x41829e76a4e3cf15"
+    },
+    {
+      "title": "Review of Little Munchkins Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUNPbDQ3UTR3RRAB!2m1!1s0x864c3bc36ea073ef:0x41829e76a4e3cf15"
+    },
+    {
+      "title": "Review of Little Munchkins Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUQteWNqRTFBRRAB!2m1!1s0x864c3bc36ea073ef:0x41829e76a4e3cf15"
+    },
+    {
+      "title": "Review of Little Munchkins Mobile Pet Grooming - Google Maps",
+      "uri": "https://www.google.com/maps/reviews/data=!4m6!14m5!1m4!2m3!1sChdDSUhNMG9nS0VJQ0FnSUMtd2UzUXJRRRAB!2m1!1s0x864c3bc36ea073ef:0x41829e76a4e3cf15"
+    },
+    {
+      "title": "everycityintheusa.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF0_vFJgyUMwVu1h6_GTQ_QgsbGp1L8EyHMUxyMpX5kf5U_lnNEyUt0-YxdAn-SLZC7S9vGgmBcQ6s3rbWo01sCGXbIcuG5JJNxLwhlxJDVsjXJfIu8dND5mdzAx9Obc2w4xIkYWgdN04kOIeMvHQ=="
+    },
+    {
+      "title": "worldpopulationreview.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEVDVqzkfohsot_rdTNM_XFH_8nyPAH-e6c-a9NEh1DumrgYxcIHsOe5M0Ev3f2yILQZD-N7pNBNhYh4qyBDbOXtIAqWfVkdJPAf-ISMs1otKFkxxD6a0v-wQp9pAI_-oKEYaHuX_qp0rTHqU76jKAWiFz8"
+    },
+    {
+      "title": "wikipedia.org",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE71WxUeulBdbJzrcgP1Ugd2R2nSOjRzmHKw5wCcVPboAlQIE2fgo12xrWwksqigIl5I73f8xR81c9BfBFNhpeeZ8oIzZ9Ur_7whcW4xRoRqyxpV6FYnRjLS6autmm0lWTDqp-cs9o="
+    },
+    {
+      "title": "census.gov",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGcYKMKUO4VY_UfcBO_3repk0SrF2V_dloqaq-ZfeNIsobz3gGDsLh1gEaVMaTRSnHRC1xGVq6GZVELZ5w9zMKDgdY9woUZ4kKo7AI1QrdWUnThfZBSQiItrjvVZFPltEciOffaj-zOb037iVk="
+    },
+    {
+      "title": "point2homes.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGJS7QIQHVkJEbOp9eT1hS1V4VU-x6iA1jR962in0m3_9MA-niaU6aHYp-l1ka7ZEjmik00YP2js9SXBirDv8-36T9fAQzPRwQHlLBtyd4V-dY3YVWMKq_72fh5BDQYEoM_sakO4L1I9ld_-dna6Cghj51MOIPnJBzhLHG51-NXLAOx"
+    },
+    {
+      "title": "texas-demographics.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFSeQoFqmNtfd4fl5nljpU9jYhNlYl1mh4FR-irpbMJTnFSb0_5kytYF5WLlpkDkH17WyOnpqKrcBzx6yUN-UEw79_p--xC9g4i5MfcID-gdPLJDjIRmCwNXFb1dV6riC0RrpaP0IT9jp9ud5nT8kdO3Q=="
+    },
+    {
+      "title": "neilsberg.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7ce0MQQLTsSdc9TKqnLG35eco7RQ5kIsAmFJKDG7pHOCi5tuxopxOEM9JSHe7e7lqVoYVTsZg8O9Cv6QBp8VwjIBakG4SEljZpK_SvXIQD6BISXEmAn8deWFe5Dye7Q_OyCkdOmwECHSh-PSfBNvGK1nmfVXRSsS1h4BnIh3DwQ=="
+    },
+    {
+      "title": "census.gov",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF2qMq23P_L9LD17XNOnij5XcDq8Rys-WAT9dUEsjL9a4gtvTkqrPh4hZDQ8cuuggMYGqScXbDwPxvpnD7i3Qp8P8IYYS0sXBKMkNkhCouFWzcbuFKS6XuNMmn4D6sfI56JZpBJl0Fl3Niq-m7mw6ztAPWx4AGU41VggPoHbQAR3vK6ZNJ-j_IjCzT8a6pI147Xey1ynzcw0v3dpptWP2yx2bRPK1Nt2-UnKGWeKOcRD8s1lhi6h9caBj0="
+    },
+    {
+      "title": "dogster.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEQn0FOobAs8nB1SuDidDfYN4aiVo8omAKwx1Yv5xKpf4r2PXSC08lmJFsMLrXAejqUfUtDcv9Q51ZGFQllmpgMxzXwtjMitLFe3Vq3KzDDogoF61jGWHhH-ADznhvM-CyYBjEQj_53IkmFEHkvPqkrzpFj6k6I63KACmclFnRLQw=="
+    },
+    {
+      "title": "kfyo.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFyN-jAUoZNxLAlg7i_Q8zqV2y1tGi1ggG5Tu5_sP-Hf4vAmf-XZYeZQKmw0FgSlmZwGfkPinCRsZeFTTb8oQI7MI8r_Dw1pUsNAgfaupZ3lOO8b8ra1bUYKDydqfLCL34BdOiXzh3slp-QmyNPvgJmuWwkXMgD"
+    },
+    {
+      "title": "pawlicy.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGplV-HIyAGMqv9nbdHsCZ80k4qD2UMXwqdYh5ox3F42kAVsZFjYzOavhS2ZmbjOM_6xM9CS5vkKkcq7b0kDy3HGbpi-4ThXepEsH_hNKc6kaYSlOSf5wKWnuXij42shmnqt2rRu7xFij93yty17OkCFa6Auw=="
+    },
+    {
+      "title": "ntxe-news.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF08eOyZR-Pt-MV7ixSG78eyO9MzRn34dL5TtcTGWQ6ZjRHvrhg19qPB6n-av2KjmvW6I3hDIKNneHMXfXUxHWlMe-BDFL4wd8nyFFoJ1N4s5CxFaNI9I7wfuyKgoVtpj97BCiXFh7h8Rk43CiXeSBe3p6Qu1LX2N0="
+    },
+    {
+      "title": "mobilegroomingtrailers.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGW2p8HoyndjD6O2wXj4C8XZlzovDiF0nlnfAYJl16F3nrlTt7ZFgKS-qMztzg-yDrMxJ7dmveC3s-nE1UEHsVFSdLiNjF9QI-7ziviBLRC90GipxIGrxbpXtBtxUeRu-jpLOELb4trRQpwd4UYEnPH5DO2MhUBrREdu5CEyBqGd1FZDhV_"
+    },
+    {
+      "title": "wexfordins.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEm0hCELWmJbSK2J4thN7cMdgyzeDcEt62xE7Qn_L7fZbAQvdHcqwFtrYUdmaUjvhCOL_mJLsVxCq18WLv1qqhHvisa0OyBekOpoqnrDCGnfPQf2EprEug0YjmFdFFxxdbHvdCni3-JMVPTYIiBC8RyBNr3OnhLr2YvYIdZ7Q8Yq-_p9sa-ykuN1Ai-rbZQ"
+    },
+    {
+      "title": "pennilessparenting.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHyR49S2HD8khaH0wVnNP5QbiGNauDR4LxhJTZZrjWESxHVOoG5t8FHFCQl5lT3U27XZjWRdlUGboRZymst5FYk_aA9QFfZg34pb7annGX3ETJZSSOV6pTJQ-K2mbGcpZ2DV4a0c_PpHEx7xyofjM24DqCSgwnYGhz_LYgR3ITEpJv0mVqqU37alFlmCTbA"
+    },
+    {
+      "title": "einnews.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGFVjPXViHTYBdnbzm7hL0aIFZRxULQrSFbI1eN3q1I6EhktGBSrEZ32RfrQLytkkK8xgFjDxTZNK1POflRQXhGImfDMZQCg-_4rQUFh1WgaVpuXfnzI0OX2J0PcDI8ge90o5KEjhd-xYJJTkSWkHr7KWy-cCK5k1YFmR-ISFbL4Zld9jwqwviB_zrDYKG2eQkR78IjqtY_a1EdtoctsU-t_7PGw8u_LFl3sUbd0DmuJ3rr-vRSCoKTLEUB5824qCBbBc4p6_QSEF971TL5hib2UyIiK6139lmt6cf1"
+    },
+    {
+      "title": "bowtiegrooming.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFOEvyJxBJ7XRwfSTEtVhUG9L92LC3VVstivmszg6S9DW64hcVPP40H0FfrUcPIKYJ3LRXs19wH9jIq2En81lFYrIkS0gpnjKIGwR336VXNmnBYxWzv6AoWirM="
+    },
+    {
+      "title": "mangovans.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHEeFSEle0DLySRFnLPowxt19XyPdOivC1aBTlfcLw92XFqj7TQAOMDHPB__tVWckJc9q-WmgPvwVIAPGemQvMAsTduVhX_EFlAETSolW8geGRj5MGMGdMTK9_8Y-0VHw4m41dBVFH3BwfSjQLkpBeI44i9LOhpZykG"
+    },
+    {
+      "title": "wagsupply.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBOfbyq6PIEAoAjKai8r_AZunuqCXOZRtgZaOfeT-xkPKooCEQkbtzxPdbyoHJ5K1YzVtG3OKSTVnFeRVdLdmJ03mBoQ9MI5janj1HcP0uAnsGMpKlCOWWIbGSVijtHZv-MZlUkjWvQhXPChiIup_MKUyKzYs5WtYPUsNniuMqygvK6NFm2baCfpoSAmyFP9Qg1SKxJinR-k816BqPdArGp29_NPOcpA=="
+    },
+    {
+      "title": "jupiterhadley.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHNHtJ1R_0WCqYfB-S8N5V5n6fj0F5FYpPRMahsFC2XU1yrxg9JymiCyLZbl1fbofm2HjNHTMX8sHJwolTU7_d2WQTbQGd3YuUwssjOCb7T0SSoA8ISBjT2fJMXvTGsSD5oGbzuRUn1jwsitrZLo0CjFAlntH7eQrQxJWXOiH-t6Vs1agsL6l4uWwfw2w=="
+    },
+    {
+      "title": "prettyfluffy.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaBhCZJGN0PCyfQI_06qPNBPDHIfG0cbOpqHzIuJ9fui7uTC-kJlPf8nYmSiWJiwn8l4mOjOhpxB7OvrTVCGMcmx7-cIyBllTfY4JxyR964RfYM9lVvK8TSrORR0_SbUjoDIG-pj230mtVBJu-GSm41PYUYHHYaImNN07GLP8l5rbGyZba3hgyQI5N"
+    },
+    {
+      "title": "furbello.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGmCCRYeThmGP77z53DnY4IJsETg4bULmlI9ffbkeCQ_cL2OGNR0nVLKN-sVLvqtTK1CW8jwnB1_kTSLqC8oEwBBtvisv3Q6Fyuno-FAW0APqYFND4hsjmzIffpaBRL03V8V9Zm0mXkrNVZHCzFCaR68Cat9A8uXOdsE90AfU2tRYoxLl6RKZXnEw=="
+    },
+    {
+      "title": "zendpaw.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWOGRntsdMzewUJyVAEDCc8H4nK-ZiZc8dAFs58qMr_o1Cb3oGMbO00WE7YpzWc7dSioE73UNg-Sr62j-suEZT0RdXrlbHuRj7AjNRv0v7PlIR-aqy2MnbEqpKbxpWZTXVdI3_X-snqS3qBhGK6ZcnJS2C9uxGcpc="
+    },
+    {
+      "title": "wagntails.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHa5r9DW6W3udiOGSNQ8WynRE2CiDdVKXzDIx4DkY2J9fk6UCzdqUoRFz4fP8AmuRpclkDEi3P5VhIvXk6w86sM9_zi1_Tc5lOv8EbsAufRpHvAsJFvcjVaNdNsK2SY-zarSS__QL5f2UguZucpo_sOwwfu7wdeuP2cMsm0m3g="
+    },
+    {
+      "title": "tryteddy.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFv4z039GjyjcnE3Mu-cqdh63p4a3vLQoZ2s_xr09KrcnAbzo1jpsnB7E0wSQMXJ9Urxs-wvlnvAg_8WCj39SusO5-WQeMoVS5kYlyn24M-PpuMAnHZizWlEUAYkI9R0WX2U3hr7gvdv4StN8g5UFXjBs6brWffky4E9DrYAwYzR7o5CptgiNDPLiY="
+    },
+    {
+      "title": "mordorintelligence.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHIk95Cy5aIKn6dcEIz-MnoyxoFomqcVlQiqgxZeYgNroozdVp43ZzBpvf-jKyGlkVLCAH7lDYAyqATfpZPn3l52bSjAg6rv0P-3SPKgAFzhGjHAzmj1QKlveWB7NBLqzRx-XecR7jVTXEfLTGfl-3sbnyOVbTJ_okt0W8t9qIMrvFvbPwX3J-kaFYYDrbX"
+    },
+    {
+      "title": "marketresearchfuture.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGd4bZaVGGa2no3qajuy8_2Ki-xR5xffCMr9a361VYFbjrNqVNy76-sGOp5fEvGhr0Ypj477s3yqVO-GzTAv98hYIO5qT3UQe0V-ulI7cNwM22cXT0LRRH2eVlqRId0JRHvh3yEIbNhboN_98J19_gsK-MRYwoWDqs4giIoPTW_9Fw="
+    },
+    {
+      "title": "thekoalamom.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEiN5wi-ndWUuADHRakyuMtRQ5478NKQ3rFnAZPovOKsi3TR8HmhNTYOOWcRZogDDMdtoGdybxfPGVmwGHUtiCPme3YOwyHhh7oV8mw9cWsvlgqGk1HdZMd1DFRNWqiFGMAxe76G-LQwTesuOH6OG3d3Ho8HLnlYApM"
+    },
+    {
+      "title": "wagntails.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF5UJMvsSmdvwxWACnhEuYopiHKI6Wx6gvRkQokBx1VaSFAo_WSLRvdTYYejpiixsGNi_vZpN5itBNlIVrn7ls2ZCUs596c09bPkZ-NuXNNiwrxnInHfm4caRABnusHmL_d3oe5npmkayfmfnd_ayjCVHX3Yg7VyNRVWTuHxJp_PXYq0dtg78Mg5C7Wn4hDTrvQM5SKzEEkHmcdwWY="
+    },
+    {
+      "title": "serif.ai",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEEdb-ychJwgp5AmzXdAHZuVV5yc4TRck-Nc01H81oFy5nSWoJGcmxCcorpMphDX_R3xtdamOzySV-GO4XCakT1fjciJ8y7nvF03SPAIVx2jtcQpxpDusbaeSmGasMk0QX3cQnGQ2oZrFTzq-qRDuw1rPVtK9oX6bEiDUfIfCB8-c_lWjJp_eC-YwiC9tKZ1KRky3bkYw_jt5ff5DVknGiAKuicWKmLsxN_pZUrZp6xaMiU"
+    },
+    {
+      "title": "ideacrystal.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF2cd2T1iPHU6k_biXdQ5IZRakGqJCtjfAdsVDQKpkV2cfh0sJrp7HtsxWBap-uaJWvRRilP3BUH8qb_C-ww4gmem2gJNB6WbJvqEeUdrTGvD4kfuy7B8pig71WKdnPQWT5p7NX1r1zLSFCpiw_q-dm4whhRYljf5td0A=="
+    },
+    {
+      "title": "youtube.com",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQERs9LIMxEzVOKSpPtVTX6dH5iWh2LX41lZQggwkTwpCmSVuT6jKRTAoG2gDOhgQCJaWOlT8QF9mOwVeSDRfRNufiM8Z7JvMksGNaFu_fnZlDt-sWTCKpPR8UUkzyYBZ88w1qs42NE="
+    },
+    {
+      "title": "pennfoster.edu",
+      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEZojySkEcYJrghdVGvPOOcazfq6-VH7XQlCeZDi-H_9McD86ayM6Kwf3Hf9uIx3B69hA-gCFxIET1NYnZS-tHmg4uG_qt89SrVp5qdSQwyfsraf1gzzxArTOnpxsDPj87nnJ4hYXrN_D-UxjRtSx6ZznjZLXLEF4z-1C2DyY3BCbHX"
+    }
+  ],
+  "generationMeta": {
+    "model": "gemini-2.5-flash",
+    "isLiveGenerated": true,
+    "generatedAt": "2026-10-22T19:17:19.486Z",
+    "promptVersion": "2026-08-24",
+    "modelConfigVersion": "flash-synth16k-t0.4",
+    "grounding": {
+      "mapsGrounded": true,
+      "searchGrounded": true,
+      "groundingCalls": 2
+    },
+    "competitorCount": 5,
+    "sourceCount": 63
+  },
+  "_generatedAt": "2026-10-22T19:17:19.486Z"
+}

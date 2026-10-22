@@ -44,8 +44,9 @@ const cards = samplesBlock.split(/\n\s*\{\s*\n/).slice(1).map((b) => ({
 const dataDir = path.join(root, 'src', 'data', 'sampleReports');
 const load = (slug: string) => JSON.parse(fs.readFileSync(path.join(dataDir, `${slug}.json`), 'utf8'));
 
-check('three sample cards', () => {
-  assert.equal(cards.length, 3);
+check('four sample cards, the first with a green verdict (60+)', () => {
+  assert.equal(cards.length, 4);
+  assert.ok(cards[0].viabilityScore >= 60);
 });
 
 for (const card of cards) {
