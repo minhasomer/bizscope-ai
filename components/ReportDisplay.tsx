@@ -1015,7 +1015,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, currentPla
 
             {/* Decision Guidance + Confidence Level */}
             {(() => {
-              const nextStep = getNextStep(report.recommendation?.decision ?? 'Verification Required', report.viabilityScore);
+              const nextStep = getNextStep(report.viabilityScore);
               const confidence = getConfidenceLevel(report);
               return (
                 <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3 print:hidden">
