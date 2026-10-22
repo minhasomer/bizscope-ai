@@ -56,6 +56,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const productLinks: { label: string; page?: string; soon?: boolean }[] = [
     { label: 'Overview',     page: 'home' },
     { label: 'Market Gaps',  page: 'opportunities' },
+    { label: 'Sample Reports', page: 'samples' },
     { label: 'Pricing',      page: 'pricing' },
     { label: 'Dashboard',    page: 'dashboard' },
     { label: 'API',          soon: true },
