@@ -199,16 +199,17 @@ export function scoreToRiskRating(riskLevelScore: number): Rating {
 
 // ─── Decision Guidance ────────────────────────────────────────────────────────
 
-export function getNextStep(decision: string, score?: number): string {
-  switch (decision) {
-    case 'Recommended':           return 'Proceed to Due Diligence';
-    case 'Caution Advised':       return 'Further Validation Recommended';
-    case 'Not Recommended':       return 'Do not proceed without major reassessment';
-    case 'Verification Required': return 'Proceed Carefully';
-    default: return score != null && score >= 60
-      ? 'Further Validation Recommended'
-      : 'Do not proceed without major reassessment';
-  }
+/**
+ * "Recommended Next Step" for a report. Bands mirror viabilityScoreToAssessment
+ * so the next step always tracks the Overall Assessment badge (the AI's own
+ * recommendation.decision has only three bands and spans 40–69 as one).
+ */
+export function getNextStep(score: number): string {
+  if (score >= 70) return 'Proceed to Due Diligence';
+  if (score >= 60) return 'Further Validation Recommended';
+  if (score >= 50) return 'Review Key Risks Before Investing';
+  if (score >= 35) return 'Investigate Thoroughly Before Proceeding';
+  return 'Do not proceed without major reassessment';
 }
 
 // ─── Confidence Level ─────────────────────────────────────────────────────────
